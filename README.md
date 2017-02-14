@@ -2,8 +2,7 @@
 Plugin that adds Schema (in JSON-LD format), Facebook and Twitter structured markup to all pages.
 Schema markup is added in three blocks : organisation, breadcrumbs and product (including reviews).
 
-This plugin was originally based on the Super Data code with reviews and breadcrumbs added from Zen 4All Github.
-But my modifications got out of hand and I redid it completely.
+This plugin was originally based on the Super Data code with reviews and breadcrumbs added from Zen 4All Github but my modifications got out of hand and I redid it completely.
 I made considerable changes for some bugs, multilanguage site with multibyte characters and removed added fields as demanded by the various validators.
 
 INSTALLATION
@@ -109,5 +108,6 @@ Removed attributes: product: inventoryLevel
 
 2015 Zen Cart - forked into Super Data - mprough
 https://www.zen-cart.com/downloads.php?do=file&id=1984
+
 2014 Zen Cart - Facebook Open Graph - Numinix
 https://www.zen-cart.com/downloads.php?do=file&id=1820
