@@ -323,7 +323,7 @@ if (PLUGIN_SDATA_ENABLE == 'true') {
             <?php }
         } ?>
 <?php $image = ($image_default ? $image_default_facebook : $image);
-list($image_width, $image_height, $image_type, $image_type) = getimagesize(str_replace(HTTP_SERVER . DIR_WS_CATALOG, '', $image));
+list($image_width, $image_height, $image_type) = getimagesize(str_replace(HTTP_SERVER . DIR_WS_CATALOG, '', $image));
 ?>
 <meta property="og:image" content="<?php echo $image; ?>" />
 <meta property="og:image:url" content="<?php echo $image; ?>" />
