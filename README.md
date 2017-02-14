@@ -30,8 +30,9 @@ from:
 <html <?php echo HTML_PARAMS; ?>>
 to:
 <!DOCTYPE html>
-<html <?php echo HTML_PARAMS; ?> prefix="og: http://ogp.me/ns# fb: http://ogp.me/ns/fb# website: http://ogp.me/ns/website#">
- prefix="og: http://ogp.me/ns# fb: http://ogp.me/ns/fb# website: http://ogp.me/ns/website#"
+<html <?php echo HTML_PARAMS; ?> prefix="og: http://ogp.me/ns# fb: http://ogp.me/ns/fb# product: http://ogp.me/ns/product#">
+
+This adds the namespaces for the properties og:, fb:, product:
 
 5) Check the output on all your pages that there are no empty parameters or properties that don't reflect what they should.
 Use the various debuggers:
@@ -73,17 +74,25 @@ minimum:160x90
 maximum: 1920x1080
 
 Facebook
+tags have been referenced to type product:
+https://developers.facebook.com/docs/reference/opengraph/object-type/product/
+and NOT product.item:
+https://developers.facebook.com/docs/reference/opengraph/object-type/product.item/
+some tags are different...
+
+Note that an error in the OG debugger will stop the app id from showing up in the example of thescraped tags, even though you would assume it to be unrelated to the error...so fix the reported error!
+
 og:image
-Also there must be a type for each image
+There must be a type for each image.
 minimum dimensions (or will not display): 200*200px or will not be shown
 maximum dimensions: 1200/630px
 "recommended" dimensions by users: 600/315 (1.91:1)
-Type may need editing:
+Type may need editing to suit your businss.
 <meta property="og:type" content="business.business" />
 
-condition: new, refurbished, used. The Schema definitions are slightly different so are in an array in the code.
+condition: new, refurbished, used. The Schema definitions are slightly different so there are hard-coded/listed in an array in the code.
 
-The availability of the product is 'instock', 'oos', or 'pending'. Hardcoded to instock and pending depending on stock = 0.
+The availability of the product is 'instock', 'oos', or 'pending'. Hardcoded to instock and pending depending on if stock = 0 or not.
 
 Background info for type business.business
 https://developers.facebook.com/docs/reference/opengraph/object-type/business.business
@@ -101,6 +110,9 @@ maximum size: approx 1MB.
 Changelog
 
 2017 02 - torvista
+og: product_retailer changed from AdminID to Appid
+og: product:retailer_title removed (not in spec)
+
 complete overhaul...
 revised Super Data, breadcrumb code and added/revised Review code for products from Zen4all:
 https://github.com/Zen4All-nl/Zen-Cart-Structured-Data-using-Json
