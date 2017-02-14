@@ -24,7 +24,16 @@ CHECK THE ADMIN PAGE WORKS BEFORE GOING FURTHER.
 includes/templates/YOUR_TEMPLATE/jscript
 it should be included on all pages automagically.
 
-4) Check the output on all your pages that there are no empty parameters or properties that don't reflect what they should.
+4) Although the markup should work without any template modifications, strictly you should add this to the html_header.php, assuming you have a html5 template.
+from:
+<!DOCTYPE html>
+<html <?php echo HTML_PARAMS; ?>>
+to:
+<!DOCTYPE html>
+<html <?php echo HTML_PARAMS; ?> prefix="og: http://ogp.me/ns# fb: http://ogp.me/ns/fb# website: http://ogp.me/ns/website#">
+ prefix="og: http://ogp.me/ns# fb: http://ogp.me/ns/fb# website: http://ogp.me/ns/website#"
+
+5) Check the output on all your pages that there are no empty parameters or properties that don't reflect what they should.
 Use the various debuggers:
 
 Google Structured Data
