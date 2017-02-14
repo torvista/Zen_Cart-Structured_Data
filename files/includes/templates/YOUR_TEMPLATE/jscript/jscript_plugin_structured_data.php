@@ -323,13 +323,13 @@ if (PLUGIN_SDATA_ENABLE == 'true') {
             <?php }
         } ?>
 <?php $image = ($image_default ? $image_default_facebook : $image);
-list($image_width, $image_height, $image_type) = getimagesize(str_replace(HTTP_SERVER . DIR_WS_CATALOG, '', $image));
+      $image_info = getimagesize(str_replace(HTTP_SERVER . DIR_WS_CATALOG, '', $image));
 ?>
 <meta property="og:image" content="<?php echo $image; ?>" />
 <meta property="og:image:url" content="<?php echo $image; ?>" />
-<meta property="og:image:type" content="<?php echo image_type_to_mime_type($image_type); ?>" />
-<meta property="og:image:width" content="<?php echo $image_width; ?>" />
-<meta property="og:image:height" content="<?php echo $image_height; ?>" />
+<meta property="og:image:type" content="<?php echo $image_info['mime']; ?>" />
+<meta property="og:image:width" content="<?php echo $image_info[0]; ?>" />
+<meta property="og:image:height" content="<?php echo $image_info[1]; ?>" />
 <meta property="og:description" content="<?php echo $description; ?>" />
     <?php if  ( $facebook_type != 'product') { ?>
 <meta property="og:type" content="<?php echo PLUGIN_SDATA_FOG_TYPE_SITE; ?>" />
@@ -370,10 +370,9 @@ list($image_width, $image_height, $image_type) = getimagesize(str_replace(HTTP_S
 <meta property="product:price:amount" content="<?php echo $product_display_price_value; ?>" />
 <meta property="product:price:currency" content="<?php echo PLUGIN_SDATA_PRICE_CURRRENCY; ?>" />
 <meta property="product:product_link" content="<?php echo htmlentities($canonicalLink); ?>" />
-<meta property="product:retailer" content="<?php echo PLUGIN_SDATA_FOG_ADMINID; ?>" />
+<meta property="product:retailer" content="<?php echo PLUGIN_SDATA_FOG_APPID; ?>" />
 <meta property="product:retailer_category" content="<?php echo $category_name; ?>" />
 <meta property="product:retailer_part_no" content="<?php echo $product_model; ?>" />
-<meta property="product:retailer_title" content="<?php echo STORE_NAME; ?>" />
 <!-- eof Facebook structured data -->
 <?php } }//end facebook enabled  ?>
 <?php if (PLUGIN_SDATA_TWITTER_CARD_ENABLE == 'true') { ?>
