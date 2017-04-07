@@ -74,6 +74,10 @@ minimum:160x90
 maximum: 1920x1080
 
 Facebook
+Google Structured Data Testing tools complains about "Unspecified Type".
+Ignore it, discussed here:
+https://productforums.google.com/forum/#!msg/webmasters/tOewAWTfMDM/l8ZYnmk-BQAJ
+
 tags have been referenced to type product:
 https://developers.facebook.com/docs/reference/opengraph/object-type/product/
 and NOT product.item:
@@ -108,6 +112,10 @@ maximum size: approx 1MB.
 
 
 Changelog
+
+2017 04 - torvista
+changed review, datepublished to required format yyy-mm-dd
+bugfix: corrected product, offer, acceptedPaymentMethods
 
 2017 02 - torvista
 og: product_retailer changed from AdminID to Appid

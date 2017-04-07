@@ -127,12 +127,12 @@ if (PLUGIN_SDATA_ENABLE == 'true') {
     $sameAs = implode(",\n", $sameAs_array);
 
     //build acceptedPaymentMethod list
-    $acceptedPaymentMethod_array = explode(", ", PLUGIN_SDATA_ACCEPTED_PAYMENT_METHODS);
-    foreach ($acceptedPaymentMethod_array as &$payment_method) {
+    $PaymentMethod_array = explode(", ", PLUGIN_SDATA_ACCEPTED_PAYMENT_METHODS);
+    foreach ($PaymentMethod_array as &$payment_method) {
         $payment_method = '"http://purl.org/goodrelations/v1#' . $payment_method . '"';
     }
     unset($payment_method);
-    $acceptedPaymentMethods = implode(",\n", $acceptedPaymentMethod_array);
+    $PaymentMethods = implode(",\n", $PaymentMethod_array);
 
     //build Facebook locales
     $locales_array = explode(",", PLUGIN_SDATA_FOG_LOCALES);
@@ -243,10 +243,13 @@ if (PLUGIN_SDATA_ENABLE == 'true') {
      "deliveryLeadTime" : "<?php echo ($stock > 0 ? PLUGIN_SDATA_DELIVERYLEADTIME : PLUGIN_SDATA_DELIVERYLEADTIME_OOS); ?>",
              "category" : <?php echo json_encode($category_name); ?>,
           "itemOffered" : <?php echo json_encode($product_name); ?>,
-<?php if (PLUGIN_SDATA_ELIGIBLE_REGION != '') { ?>"eligibleRegion" : "<?php echo PLUGIN_SDATA_ELIGIBLE_REGION; ?>",<?php } ?>
-"acceptedPaymentMethod" : [<?php echo $acceptedPaymentMethods; ?>
-]
-              }
+<?php if (PLUGIN_SDATA_ELIGIBLE_REGION != '') { ?>       "eligibleRegion" : "<?php echo PLUGIN_SDATA_ELIGIBLE_REGION . '",' . "\n"; } ?>
+"acceptedPaymentMethod" : {
+            "@type" : "PaymentMethod",
+            "name" : [<?php echo $PaymentMethods; ?>]
+                           }
+                }
+
 <?php //reviews
     $reviewQuery = "SELECT r.reviews_id, r.customers_name, r.reviews_rating, r.date_added, r.status, rd.reviews_text
                 FROM " . TABLE_REVIEWS . " r
@@ -292,7 +295,7 @@ if (PLUGIN_SDATA_ENABLE == 'true') {
       "name" : <?php echo json_encode(strtok($reviewArray[$i]['customerName']," ")); //steve to use only the forename, encoded, does NOT need enclosing quotation marks ?>
     },
     "reviewBody" : <?php echo json_encode($reviewArray[$i]['reviewText']); //steve added json_encode to catch quotation marks and pesky accents etc., does NOT need enclosing quotation marks ?>,
-    "datePublished" : "<?php echo zen_date_short($reviewArray[$i]['dateAdded']); ?>",
+    "datePublished" : "<?php echo substr($reviewArray[$i]['dateAdded'], 0, 10); ?>",
     "reviewRating" : {
       "@type" : "Rating",
       "ratingValue" : "<?php echo $reviewArray[$i]['reviewRating']; //steve bug: was fixed at $ratingValue ?>"
