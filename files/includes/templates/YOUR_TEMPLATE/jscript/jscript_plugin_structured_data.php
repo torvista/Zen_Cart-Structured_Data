@@ -325,14 +325,17 @@ if (PLUGIN_SDATA_ENABLE == 'true') {
                 <meta property="og:locale:alternate" content="<?php echo $value; ?>" />
             <?php }
         } ?>
-<?php $image = ($image_default ? $image_default_facebook : $image);
-      $image_info = getimagesize(str_replace(HTTP_SERVER . DIR_WS_CATALOG, '', $image));
-?>
+<?php $image = ($image_default ? $image_default_facebook : $image); ?>
 <meta property="og:image" content="<?php echo $image; ?>" />
 <meta property="og:image:url" content="<?php echo $image; ?>" />
+<?php 
+    if (is_readable(str_replace(HTTP_SERVER . DIR_WS_CATALOG, '', $image))) {
+      $image_info = getimagesize(str_replace(HTTP_SERVER . DIR_WS_CATALOG, '', $image));
+?>
 <meta property="og:image:type" content="<?php echo $image_info['mime']; ?>" />
 <meta property="og:image:width" content="<?php echo $image_info[0]; ?>" />
 <meta property="og:image:height" content="<?php echo $image_info[1]; ?>" />
+<?php } ?>
 <meta property="og:description" content="<?php echo $description; ?>" />
     <?php if  ( $facebook_type != 'product') { ?>
 <meta property="og:type" content="<?php echo PLUGIN_SDATA_FOG_TYPE_SITE; ?>" />
