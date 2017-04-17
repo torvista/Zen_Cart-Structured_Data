@@ -136,8 +136,8 @@ if (PLUGIN_SDATA_ENABLE == 'true') {
 
     //build Facebook locales
     $locales_array = explode(",", PLUGIN_SDATA_FOG_LOCALES);
-	if ( sizeof($locales_array) > 1 && (sizeof($locales_array) % 2 == 0) ) {//more than one value and is actually a pair
-	$locales_keys_array = array();
+    if ( sizeof($locales_array) > 1 && (sizeof($locales_array) % 2 == 0) ) {//more than one value and is actually a pair
+    $locales_keys_array = array();
     $locales_values_array = array();
     $i = 0;
     while ($i < sizeof($locales_array)) {
@@ -154,8 +154,8 @@ if (PLUGIN_SDATA_ENABLE == 'true') {
         $locale = $locales_array[$_SESSION['languages_id']];
     }
     unset($locales_array[$_SESSION['languages_id']]);
-	} else {//not pairs
-		}
+    } else {//not pairs
+        }
 
     //clean $description
     $description = str_replace(array('  ', "\n", "\t", "\r"), "", htmlentities(strip_tags($description)));
@@ -255,9 +255,9 @@ if (PLUGIN_SDATA_ENABLE == 'true') {
                 FROM " . TABLE_REVIEWS . " r
                 LEFT JOIN " . TABLE_REVIEWS_DESCRIPTION . " rd ON rd.reviews_id = r.reviews_id
                 WHERE products_id = " . (int)$_GET['products_id'] . " 
-				AND status = 1
-				AND languages_id= " . $_SESSION['languages_id'] . " 
-				ORDER BY reviews_rating DESC";//steve added status, languages id
+                AND status = 1
+                AND languages_id= " . $_SESSION['languages_id'] . " 
+                ORDER BY reviews_rating DESC";//steve added status, languages id
     $review = $db->Execute($reviewQuery);
     while (!$review->EOF) {
         $reviewArray[] = array(
