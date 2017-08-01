@@ -272,7 +272,7 @@ if (PLUGIN_SDATA_ENABLE == 'true') {
     $ratingSum = 0;
     $ratingValue = 0;
     $reviewCount = 0;
-    if (is_array($reviewArray)) {
+    if ( isset($reviewArray) && (is_array($reviewArray) ) {
         $reviewCount = sizeof($reviewArray);
         foreach ($reviewArray as $row) {
             $ratingSum += $row['reviewRating'];
