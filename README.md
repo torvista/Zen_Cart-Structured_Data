@@ -1,29 +1,34 @@
 # Structured-Data-for-Zen-Cart
 Plugin that adds Schema (in JSON-LD format), Facebook and Twitter structured markup to all pages.
-Schema markup is added in three blocks : organisation, breadcrumbs and product (including reviews).
+Schema markup is added in three blocks: organisation, breadcrumbs and product (including reviews).
 
 This plugin was originally based on the Super Data code with reviews and breadcrumbs added from Zen 4All Github but my modifications got out of hand and I redid it completely.
 I made considerable changes for some bugs, multilanguage site with multibyte characters and removed added fields as demanded by the various validators.
 
+Plugin Forum Thread:
+https://www.zen-cart.com/showthread.php?221868-Structured-Data-Markup-for-Schema-Facebook-Open-Graph-Twitter
+
 ## INSTALLATION
 
 As ALWAYS, expect that ANY new code will self-destruct your shop so test ALL new code on your development server FIRST.
-When you are satisfied, ensure you are ready ensure your production files and database are backed up prior to installing in the production site. 
+When you are satisfied, ensure your production files and database are backed up prior to installing in the production site. 
 
 Super Data: If you wish to uninstall the old Super Data plugin, please note that the uninstall sql included with that plugin is incorrect. A corrected version is included with these files.
 
 1. Use the installation sql to install constant definitions and register the new admin configuration page into the database.
 
 In my testing it was possible to run the sql code in the ZC->Admin->SQL Patch tool on a ZC155e vanilla installation.
-But, it's known to be pretty strict (https://www.zen-cart.com/showthread.php?216551-ERROR-Cannot-insert-configuration_key-quot-quot-because-it-already-exists-empty-db-key) so if this gives you an error, you can restore the database (from the backup you did immediately before trying this...), and try via phpmyadmin instead. 
+But, it's known to be pretty strict (https://www.zen-cart.com/showthread.php?216551-ERROR-Cannot-insert-configuration_key-quot-quot-because-it-already-exists-empty-db-key) so if this gives you an error, you can restore the database (from the backup you did immediately before trying this...), and try again using phpmyadmin instead. 
 
 2. Copy the admin file to enable the admin page to display.
 
-CHECK THE ADMIN PAGE WORKS BEFORE GOING FURTHER.
+CHECK THE ADMIN PAGE WORKS BEFORE GOING ANY FURTHER.
 
-The plugin in disabled by default so you need to enable it in the configuration page and add values to the contants before it will show up in the catalog.
+The plugin in disabled by default so you need to enable it in the configuration page and add values to the constants before it will show up in the catalog.
 
-Optional. There are 38 constants and it's tedious to update them one by one (especially if repeatedly testing the sql install and thereby starting from scratch each time). There is a spreadsheet included where you can enter all the constant values into a worksheet to generate sql UPDATE queries to enter all the values into the database in one go (via the ZC admin SQL patch tool or phpmyadmin).
+Optional
+There are 38 constants and it's very tedious to update them one by one (especially if repeatedly testing the sql install and thereby starting from scratch each time).
+I have included a spreadsheet where you can enter all the constant values into a worksheet to generate sql UPDATE queries. Hence you can copy and paste the queries to enter all the values into the database in one go (via the ZC admin SQL patch tool or phpmyadmin).
 
 4. Copy catalog file to: `includes/templates/YOUR_TEMPLATE/jscript`
 
@@ -46,7 +51,7 @@ to:
 
 6. Check the output on all your pages for empty parameters or properties that don't reflect what they should.
 
-Every site is different so it is impossible to make this particular plugin plug and play, you DO need to check the output to ensure it reflects yours business and be prepared to modify accordingly or report any omissions if you think they are relevant to other users.
+Every site is different, so it is impossible to make this particular plugin 100% plug and play, you DO need to check the markup output carefully to ensure it reflects your business and be prepared to modify accordingly or report any omissions if you think they are relevant generally.
 
  Use the various debuggers to check the various blocks:
  
@@ -123,7 +128,7 @@ Background info for type business.business:
 https://developers.facebook.com/docs/reference/opengraph/object-type/business.business
 
 #### `Condition`
-`condition`: new, refurbished, used. The Schema definitions are slightly different so they are hard-coded/listed in an array in the code.
+`condition`: new, refurbished, used. The Schema definitions are slightly different, so they are hard-coded/listed in an array in the code.
 
 The availability of the product is `instock`, `oos`, or `pending`. Hardcoded to `instock` and `pending` depending on if stock = 0 or not.
 
@@ -135,12 +140,14 @@ The availability of the product is `instock`, `oos`, or `pending`. Hardcoded to 
 
 minimum dimensions =: 280x150px or will not display 
 
-maximum size: approx 1MB.
+maximum size: approx. 1MB.
 
 "recommended" dimensions by users: 600x321 (1.867:1)
 
 
 ## Changelog
+2018 10 03 - torvista
+Minor readme corrections. Uploaded to Zen Cart Plugins
 
 2017 04 24 - Dr. Byte
 improved readme (and further modified by torvista to use Github markdown), install sql, trap error for getimagesize
