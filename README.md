@@ -147,7 +147,7 @@ maximum size: approx. 1MB.
 
 ## Changelog
 2018 10 03 - torvista
-Minor readme corrections. Uploaded to Zen Cart Plugins
+Minor readme corrections. Uploaded to Zen Cart Plugins as v1.0
 
 2017 04 24 - Dr. Byte
 improved readme (and further modified by torvista to use Github markdown), install sql, trap error for getimagesize
