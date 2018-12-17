@@ -7,7 +7,7 @@
  * @license http://www.zen-cart.com/license/2_0.txt GNU Public License V2.0
  */
 
-if (PLUGIN_SDATA_ENABLE == 'true') {
+if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE == 'true') {
 
     //product condition mapping for Schema
     $itemCondition_array = array('new' => 'NewCondition', 'used' => 'UsedCondition', 'refurbished' => 'RefurbishedCondition');
