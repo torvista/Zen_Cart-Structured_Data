@@ -151,12 +151,14 @@ maximum size: approx. 1MB.
 added schema: priceValidUntil
 	Used last day of the year.
 added schema: SKU
-	current sku, mpn, ProductID all use the same products_model.
+	sku, mpn, ProductID all use the same products_model.
 Misc
 Moved fields around to mirror Google Structured Data Tool example.
+Edited the layout spacing for better visual presentation.
+
 Bugfix
-Cleaning of product description for schema was replacing double spaces with no space at all. Changed to single space.
-meta property="og:description" was always using Meta Tag description instead of category description if defined.
+Improved cleaning of product description for schema (line feeds, carriage returns, extra spaces).
+meta property="og:description" was always using Meta Tag description instead of category description when defined.
 
 2018 10 03 - torvista
 Minor readme corrections. Uploaded to Zen Cart Plugins as v1.0

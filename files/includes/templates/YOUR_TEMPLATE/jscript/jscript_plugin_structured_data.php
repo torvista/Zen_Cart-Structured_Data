@@ -105,8 +105,9 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE == 'true') {
     if (function_exists('mv_get_boilerplate')) $description = mv_get_boilerplate($description, $descr_stringlist);
     //eof
     //clean $description
-    $description = str_replace(array("\n", "\t", "\r"), "", htmlentities(strip_tags(trim($description))));
-    $description = str_replace('  ', ' ', $description);//replace double spaces with a single space
+    $description = htmlentities(strip_tags(trim($description)));//remove tags
+    $description = str_replace (array("\r\n", "\n", "\r"), '', $description);//remove LF, CR
+    $description = preg_replace('/\s+/', ' ',$description);//remove multiple spaces
 
     //build sameAs list
     $sameAs_array = explode(", ", PLUGIN_SDATA_SAMEAS);
@@ -156,8 +157,7 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE == 'true') {
         $locale = $locales_array[$_SESSION['languages_id']];
     }
     unset($locales_array[$_SESSION['languages_id']]);
-    } else {//not pairs
-        }
+    }
 
     //reviews
     $reviewQuery = "SELECT r.reviews_id, r.customers_name, r.reviews_rating, r.date_added, r.status, rd.reviews_text
@@ -192,50 +192,52 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE == 'true') {
 <?php if (PLUGIN_SDATA_SCHEMA_ENABLE == 'true') { ?>
 <script type="application/ld+json" title="schemaOrganisation">
 {
-  "@context": "http://schema.org",
-  "@type": "Organization",
-  "url": "<?php echo HTTP_SERVER; //root website ?>",
-  "logo": "<?php echo PLUGIN_SDATA_LOGO; ?>",
-  "contactPoint" : [{
-    "@type" : "ContactPoint",
-    "telephone" : "<?php echo PLUGIN_SDATA_TELEPHONE; ?>",
-<?php //"openingHours": "Mo, Tu, We, Th 10:00-19:00 Fr 10:00-17:00", //LocalBusiness only ?>
-    "contactType" : "customer service"<?php echo(PLUGIN_SDATA_AREA_SERVED != '' ? ",\n" . '"areaServed" : "' . PLUGIN_SDATA_AREA_SERVED . '"' : ''); //if not declared, assumed worldwide ?><?php echo(PLUGIN_SDATA_AVAILABLE_LANGUAGE != '' ? ",\n" . '"availableLanguage" : "' . PLUGIN_SDATA_AVAILABLE_LANGUAGE . '"' : ''); //if not declared, assumed English ?><?php echo "\n     }],\n"; ?>
-<?php if ($sameAs != '' ) { ?>"sameAs" : [<?php echo $sameAs . "\n"; ?>
-         ],<?php echo "\n"; } ?>
-<?php if ( PLUGIN_SDATA_DUNS != '') { ?> "duns" : "<?php echo PLUGIN_SDATA_DUNS; ?>",<?php echo "\n"; } ?>
-<?php if ( PLUGIN_SDATA_LEGAL_NAME != '') { ?> "legalName" : "<?php echo PLUGIN_SDATA_LEGAL_NAME; ?>",<?php echo "\n"; } ?>
-<?php if ( PLUGIN_SDATA_TAXID != '') { ?> "taxID" : "<?php echo PLUGIN_SDATA_TAXID; ?>",<?php echo "\n"; } ?>
-<?php if ( PLUGIN_SDATA_VATID != '') { ?> "vatID" : "<?php echo PLUGIN_SDATA_VATID; ?>",<?php echo "\n"; } ?>
-<?php if ( PLUGIN_SDATA_EMAIL != '') { ?> "email" : "<?php echo PLUGIN_SDATA_EMAIL; ?>",<?php echo "\n"; } ?>
-<?php if ( PLUGIN_SDATA_FAX != '') { ?> "faxNumber" : "<?php echo PLUGIN_SDATA_FAX; ?>",<?php echo "\n"; } ?>
-     "address": {
+     "@context": "http://schema.org",
+        "@type": "Organization",
+          "url": "<?php echo HTTP_SERVER; //root website ?>",
+         "logo": "<?php echo PLUGIN_SDATA_LOGO; ?>",
+"contactPoint" : [{
+            "@type" : "ContactPoint",
+        "telephone" : "<?php echo PLUGIN_SDATA_TELEPHONE; ?>",
+      "contactType" : "customer service"<?php //a comma may not be necessary here as the following items are optional?>
+<?php echo (PLUGIN_SDATA_AREA_SERVED != '' ? ",\n" . '       "areaServed" : "' . PLUGIN_SDATA_AREA_SERVED . '"' : ''); //if not declared, assumed worldwide ?>
+<?php echo (PLUGIN_SDATA_AVAILABLE_LANGUAGE != '' ? ",\n" . '"availableLanguage" : "' . PLUGIN_SDATA_AVAILABLE_LANGUAGE . '"' : ''); //if not declared, english is assumed?>
+<?php echo "\n                  }],\n"; ?>
+<?php if ($sameAs != '' ) { ?>      "sameAs" : [<?php echo $sameAs . "\n"; ?>
+                 ],<?php echo "\n"; } ?>
+<?php if (PLUGIN_SDATA_DUNS != '') { ?>        "duns" : "<?php echo PLUGIN_SDATA_DUNS; ?>",<?php echo "\n"; } ?>
+<?php if (PLUGIN_SDATA_LEGAL_NAME != '') { ?>   "legalName" : "<?php echo PLUGIN_SDATA_LEGAL_NAME; ?>",<?php echo "\n"; } ?>
+<?php if (PLUGIN_SDATA_TAXID != '') { ?>       "taxID" : "<?php echo PLUGIN_SDATA_TAXID; ?>",<?php echo "\n"; } ?>
+<?php if (PLUGIN_SDATA_VATID != '') { ?>       "vatID" : "<?php echo PLUGIN_SDATA_VATID; ?>",<?php echo "\n"; } ?>
+<?php if (PLUGIN_SDATA_EMAIL != '') { ?>       "email" : "<?php echo PLUGIN_SDATA_EMAIL; ?>",<?php echo "\n"; } ?>
+<?php if (PLUGIN_SDATA_FAX != '') { ?>     "faxNumber" : "<?php echo PLUGIN_SDATA_FAX; ?>",<?php echo "\n"; } ?>
+      "address": {
             "@type": "PostalAddress",
    "streetAddress" : "<?php echo PLUGIN_SDATA_STREET_ADDRESS; ?>",
   "addressLocality": "<?php echo PLUGIN_SDATA_LOCALITY; ?>",
     "addressRegion": "<?php echo PLUGIN_SDATA_REGION; ?>",
        "postalCode": "<?php echo PLUGIN_SDATA_POSTALCODE; ?>",
   "addressCountry" : "<?php echo PLUGIN_SDATA_COUNTRYNAME; ?>"
-        }
+                 }
 }
 </script>
 <?php if (is_object($breadcrumb)) { ?>
 <script type="application/ld+json" title="schemaBreadcrumb">
 {
-  "@context": "http://schema.org",
-  "@type": "BreadcrumbList",
-  "itemListElement": [
+       "@context": "http://schema.org",
+          "@type": "BreadcrumbList",
+"itemListElement": [
 <?php
                 foreach ($breadcrumb as $key => $value) {
                     for ($i = 0, $n = sizeof($value); $i < $n; $i++) {
                         ?>
   {
-    "@type": "ListItem",
-    "position": <?php echo $i + 1; ?>,
-    "item": {
-      "@id": "<?php echo $value[$i]['link']; ?>",
-      "name": <?php echo json_encode($value[$i]['title']) . "\n"; ?>
-     }
+      "@type": "ListItem",
+   "position": <?php echo $i + 1; ?>,
+       "item": {
+           "@id": "<?php echo $value[$i]['link']; ?>",
+          "name": <?php echo json_encode($value[$i]['title']) . "\n"; ?>
+               }
 <?php if ($i + 1 != $n) { ?>
   },
 <?php } else { ?>
@@ -243,10 +245,9 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE == 'true') {
 <?php }
                     }
                 }
-                ?>]
+?>                   ]
 }
-
-            </script>
+</script>
         <?php } //eof breadcrumb ?>
     <?php
     if ($current_page_base == 'product_info' && isset($_GET['products_id'])) {//product page only ?>
@@ -261,7 +262,6 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE == 'true') {
         "mpn": <?php echo json_encode($product_model); //The Manufacturer Part Number (MPN) of the product, or the product to which the offer refers. ?>,
       "brand": <?php echo json_encode($manufacturer_name); ?>,
   "productID": <?php echo json_encode($product_model); //The product identifier, such as ISBN. ?>,
-
      "offers": {
                 "@type" : "Offer",
                    "url": "<?php echo $canonicalLink; ?>",
@@ -276,12 +276,10 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE == 'true') {
           "itemOffered" : <?php echo json_encode($product_name); ?>,
 <?php if (PLUGIN_SDATA_ELIGIBLE_REGION != '') { ?>       "eligibleRegion" : "<?php echo PLUGIN_SDATA_ELIGIBLE_REGION . '",' . "\n"; } ?>
 "acceptedPaymentMethod" : {
-            "@type" : "PaymentMethod",
-            "name" : [<?php echo $PaymentMethods; ?>]
-                           }
-                }
-
-
+                  "@type" : "PaymentMethod",
+                   "name" : [<?php echo $PaymentMethods; ?>]
+                          }
+               }
 <?php if ( $reviewCount > 0 ) { //do not bother if no reviews at all. Note note best/worstRating is for the max and min rating used in this review system. Default is 1 and 5 so no need to be declared ?>
   ,
   "aggregateRating": {
