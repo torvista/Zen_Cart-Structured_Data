@@ -79,6 +79,8 @@ b. other social pages
 2. `Breadcrumbs`: on all pages
 3. `Product`: on product pages only
 
+priceValidUntil: set to the last day of the current year as that may be when prices get updated.
+
 #### Organisation or LocalBusiness?
 
 `LocalBusiness` - refers to a PHYSICAL store NOT an online only shop. Then you can add a subtype such as Store or something more specific from the spreadsheet listing here:
@@ -144,8 +146,18 @@ maximum size: approx. 1MB.
 
 "recommended" dimensions by users: 600x321 (1.867:1)
 
-
 ## Changelog
+2019 05 08 - torvista
+added schema: priceValidUntil
+	Used last day of the year.
+added schema: SKU
+	current sku, mpn, ProductID all use the same products_model.
+Misc
+Moved fields around to mirror Google Structured Data Tool example.
+Bugfix
+Cleaning of product description for schema was replacing double spaces with no space at all. Changed to single space.
+meta property="og:description" was always using Meta Tag description instead of category description if defined.
+
 2018 10 03 - torvista
 Minor readme corrections. Uploaded to Zen Cart Plugins as v1.0
 

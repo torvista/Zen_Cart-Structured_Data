@@ -1,6 +1,6 @@
 <?php
-/* FILE MUST BE LOADED IN HEAD SINCE IT USES meta tags
- * torvista: based on super_data, reviews added from Zen4All Github, then heavily modified
+/* THIS FILE MUST BE LOADED IN html <head> SINCE IT USES meta tags
+ * 2019 05 08 torvista
  *
  * @copyright Copyright 2003-2006 Zen Cart Development Team
  * @copyright Portions Copyright 2003 osCommerce
@@ -31,7 +31,7 @@ if (PLUGIN_SDATA_ENABLE == 'true') {
         $product_info = $db->Execute($sql);
         $product_id = $product_info->fields['products_id'];
         $product_name = $product_info->fields['products_name'];
-        $title = STORE_NAME . ' - ' . $product_info->fields['products_name'];
+        $title = htmlspecialchars(STORE_NAME . ' - ' . $product_info->fields['products_name']);
         $product_model = $product_info->fields['products_model'];
         $description = $product_info->fields['products_description'];//variable used in twitter for categories & products
         $tax_class_id = $product_info->fields['products_tax_class_id'];
@@ -75,7 +75,7 @@ if (PLUGIN_SDATA_ENABLE == 'true') {
         $category_name = zen_get_categories_name($category_id);
         $image_alt = $product_name;
         $facebook_type = 'product';
-    } elseif (isset($_GET['cPath'])) {//for any product-listing/category page
+    } elseif (isset($_GET['cPath'])) {//for any product-listing/category-listing page, but NOT a product page
         $cPath_array = explode('_', $_GET['cPath']);
         $category_id = end($cPath_array);
         reset($cPath_array);
@@ -86,12 +86,11 @@ if (PLUGIN_SDATA_ENABLE == 'true') {
         } else {
             $image = HTTP_SERVER . DIR_WS_CATALOG . DIR_WS_IMAGES . zen_get_categories_image($category_id);
         }
-        $description = zen_get_category_description($category_id, (int)$_SESSION['languages_id']);
+        $description = zen_get_category_description($category_id, (int)$_SESSION['languages_id']) != ''  ? zen_get_category_description($category_id, (int)$_SESSION['languages_id']) : META_TAG_DESCRIPTION;
         $product_category_name = $category_name;//used for twitter title, changes depending if page is product or category
         $image_alt = $category_name;
         $facebook_type = 'product.group';
         $title = META_TAG_TITLE;
-        $description = META_TAG_DESCRIPTION;
     } else {//some other page - not product or category
         $image_default = true;
         $breadcrumb_this_page = $breadcrumb->_trail[sizeof($breadcrumb->_trail) - 1]['title'];
@@ -105,6 +104,9 @@ if (PLUGIN_SDATA_ENABLE == 'true') {
     //torvista: my site only, using boilerplate text!
     if (function_exists('mv_get_boilerplate')) $description = mv_get_boilerplate($description, $descr_stringlist);
     //eof
+    //clean $description
+    $description = str_replace(array("\n", "\t", "\r"), "", htmlentities(strip_tags(trim($description))));
+    $description = str_replace('  ', ' ', $description);//replace double spaces with a single space
 
     //build sameAs list
     $sameAs_array = explode(", ", PLUGIN_SDATA_SAMEAS);
@@ -157,9 +159,36 @@ if (PLUGIN_SDATA_ENABLE == 'true') {
     } else {//not pairs
         }
 
-    //clean $description
-    $description = str_replace(array('  ', "\n", "\t", "\r"), "", htmlentities(strip_tags($description)));
-    ?>
+    //reviews
+    $reviewQuery = "SELECT r.reviews_id, r.customers_name, r.reviews_rating, r.date_added, r.status, rd.reviews_text
+                FROM " . TABLE_REVIEWS . " r
+                LEFT JOIN " . TABLE_REVIEWS_DESCRIPTION . " rd ON rd.reviews_id = r.reviews_id
+                WHERE products_id = " . (int)$_GET['products_id'] . "
+                AND status = 1
+                AND languages_id= " . $_SESSION['languages_id'] . "
+                ORDER BY reviews_rating DESC";//steve added status, languages id
+    $review = $db->Execute($reviewQuery);
+    while (!$review->EOF) {
+        $reviewArray[] = array(
+            'reviewId' => $review->fields['reviews_id'],
+            'customerName' => $review->fields['customers_name'],
+            'reviewRating' => $review->fields['reviews_rating'],
+            'dateAdded' => $review->fields['date_added'],
+            'reviewText' => $review->fields['reviews_text']
+        );
+        $review->MoveNext();
+    }
+    $ratingSum = 0;
+    $ratingValue = 0;
+    $reviewCount = 0;
+    if (isset($reviewArray) && is_array($reviewArray)) {
+        $reviewCount = sizeof($reviewArray);
+        foreach ($reviewArray as $row) {
+            $ratingSum += $row['reviewRating'];
+        }
+        $ratingValue = round($ratingSum / $reviewCount, 1);
+    }
+?>
 <?php if (PLUGIN_SDATA_SCHEMA_ENABLE == 'true') { ?>
 <script type="application/ld+json" title="schemaOrganisation">
 {
@@ -189,10 +218,9 @@ if (PLUGIN_SDATA_ENABLE == 'true') {
   "addressCountry" : "<?php echo PLUGIN_SDATA_COUNTRYNAME; ?>"
         }
 }
-
-        </script>
-        <?php if (is_object($breadcrumb)) { ?>
-            <script type="application/ld+json" title="schemaBreadcrumb">
+</script>
+<?php if (is_object($breadcrumb)) { ?>
+<script type="application/ld+json" title="schemaBreadcrumb">
 {
   "@context": "http://schema.org",
   "@type": "BreadcrumbList",
@@ -223,23 +251,26 @@ if (PLUGIN_SDATA_ENABLE == 'true') {
     <?php
     if ($current_page_base == 'product_info' && isset($_GET['products_id'])) {//product page only ?>
 <script type="application/ld+json" title="schemaProduct">
-{
-   "@context": "http://schema.org",
+{<?php //structured as per Google example for comparison:https://developers.google.com/search/docs/data-types/product ?>
+   "@context": "https://schema.org",
       "@type": "Product",
-      "brand": <?php echo json_encode($manufacturer_name); ?>,
-        "mpn": <?php echo json_encode($product_model); ?>,
-  "productID": <?php echo json_encode($product_model); //steve changed from product_id which has no relevance here ?>,
-        "url": "<?php echo $canonicalLink; ?>",
        "name": <?php echo json_encode($product_name); ?>,
-"description": <?php echo json_encode($description); ?>,
       "image": "<?php echo $image; ?>",
+"description": <?php echo json_encode($description); ?>,
+        "sku": <?php echo json_encode($product_model); //The Stock Keeping Unit (SKU), i.e. a merchant-specific identifier for a product or service, or the product to which the offer refers ?>,
+        "mpn": <?php echo json_encode($product_model); //The Manufacturer Part Number (MPN) of the product, or the product to which the offer refers. ?>,
+      "brand": <?php echo json_encode($manufacturer_name); ?>,
+  "productID": <?php echo json_encode($product_model); //The product identifier, such as ISBN. ?>,
+
      "offers": {
                 "@type" : "Offer",
-         "availability" : "<?php echo ($stock > 0 ? 'http://schema.org/InStock' : 'http://schema.org/PreOrder'); ?>",
-                "price" : "<?php echo $product_display_price_value; ?>",
+                   "url": "<?php echo $canonicalLink; ?>",
         "priceCurrency" : "<?php echo PLUGIN_SDATA_PRICE_CURRRENCY; ?>",
-               "seller" : <?php echo json_encode(STORE_NAME); ?>,
+                "price" : "<?php echo $product_display_price_value; ?>",
+      "priceValidUntil" : "<?php echo date("Y") . '-12-31'; //eg 2020-12-31 NOT 2020-31-12: The date after which the price is no longer available. ?>",
         "itemCondition" : "http://schema.org/<?php echo $itemCondition_array[PLUGIN_SDATA_FOG_PRODUCT_CONDITION]; ?>",
+         "availability" : "<?php echo ($stock > 0 ? 'http://schema.org/InStock' : 'http://schema.org/PreOrder'); ?>",
+               "seller" : <?php echo json_encode(STORE_NAME); //json_encode adds external quotes as the other entries"?>,
      "deliveryLeadTime" : "<?php echo ($stock > 0 ? PLUGIN_SDATA_DELIVERYLEADTIME : PLUGIN_SDATA_DELIVERYLEADTIME_OOS); ?>",
              "category" : <?php echo json_encode($category_name); ?>,
           "itemOffered" : <?php echo json_encode($product_name); ?>,
@@ -250,36 +281,8 @@ if (PLUGIN_SDATA_ENABLE == 'true') {
                            }
                 }
 
-<?php //reviews
-    $reviewQuery = "SELECT r.reviews_id, r.customers_name, r.reviews_rating, r.date_added, r.status, rd.reviews_text
-                FROM " . TABLE_REVIEWS . " r
-                LEFT JOIN " . TABLE_REVIEWS_DESCRIPTION . " rd ON rd.reviews_id = r.reviews_id
-                WHERE products_id = " . (int)$_GET['products_id'] . " 
-                AND status = 1
-                AND languages_id= " . $_SESSION['languages_id'] . " 
-                ORDER BY reviews_rating DESC";//steve added status, languages id
-    $review = $db->Execute($reviewQuery);
-    while (!$review->EOF) {
-        $reviewArray[] = array(
-            'reviewId' => $review->fields['reviews_id'],
-            'customerName' => $review->fields['customers_name'],
-            'reviewRating' => $review->fields['reviews_rating'],
-            'dateAdded' => $review->fields['date_added'],
-            'reviewText' => $review->fields['reviews_text']
-        );
-        $review->MoveNext();
-    }
-    $ratingSum = 0;
-    $ratingValue = 0;
-    $reviewCount = 0;
-    if ( isset($reviewArray) && is_array($reviewArray) ) {
-        $reviewCount = sizeof($reviewArray);
-        foreach ($reviewArray as $row) {
-            $ratingSum += $row['reviewRating'];
-        }
-        $ratingValue = round($ratingSum / $reviewCount, 1);
-    }
-    if ( $reviewCount > 0 ) { //do not bother if no reviews at all. Note note best/worstRating is for the max and min rating used in this review system. Default is 1 and 5 so no need to be declared ?>
+
+<?php if ( $reviewCount > 0 ) { //do not bother if no reviews at all. Note note best/worstRating is for the max and min rating used in this review system. Default is 1 and 5 so no need to be declared ?>
   ,
   "aggregateRating": {
     "@type": "AggregateRating",
@@ -328,7 +331,7 @@ if (PLUGIN_SDATA_ENABLE == 'true') {
 <?php $image = ($image_default ? $image_default_facebook : $image); ?>
 <meta property="og:image" content="<?php echo $image; ?>" />
 <meta property="og:image:url" content="<?php echo $image; ?>" />
-<?php 
+<?php
     if (is_readable(str_replace(HTTP_SERVER . DIR_WS_CATALOG, '', $image))) {
       $image_info = getimagesize(str_replace(HTTP_SERVER . DIR_WS_CATALOG, '', $image));
 ?>
