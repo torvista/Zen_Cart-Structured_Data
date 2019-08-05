@@ -1,5 +1,5 @@
 <?php
-/* THIS FILE MUST BE LOADED IN html <head> SINCE IT USES meta tags
+/* THIS FILE MUST BE LOADED IN html <head> SINCE IT USES meta tags. DO NOT RE-FORMAT THE CODE: it is structured so the html seen in Developer Tools Inspector looks logical.
  * 2019 05 08 torvista
  *
  * @copyright Copyright 2003-2006 Zen Cart Development Team
@@ -101,9 +101,6 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE == 'true') {
         $facebook_type = 'business.business';
     }
 
-    //torvista: my site only, using boilerplate text!
-    if (function_exists('mv_get_boilerplate')) $description = mv_get_boilerplate($description, $descr_stringlist);
-    //eof
     //clean $description
     $description = htmlentities(strip_tags(trim($description)));//remove tags
     $description = str_replace (array("\r\n", "\n", "\r"), '', $description);//remove LF, CR
@@ -160,33 +157,35 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE == 'true') {
     }
 
     //reviews
-    $reviewQuery = "SELECT r.reviews_id, r.customers_name, r.reviews_rating, r.date_added, r.status, rd.reviews_text
+    if ($current_page_base == 'product_info' && isset($_GET['products_id'])) {
+        $reviewQuery = "SELECT r.reviews_id, r.customers_name, r.reviews_rating, r.date_added, r.status, rd.reviews_text
                 FROM " . TABLE_REVIEWS . " r
                 LEFT JOIN " . TABLE_REVIEWS_DESCRIPTION . " rd ON rd.reviews_id = r.reviews_id
                 WHERE products_id = " . (int)$_GET['products_id'] . "
                 AND status = 1
                 AND languages_id= " . $_SESSION['languages_id'] . "
                 ORDER BY reviews_rating DESC";//steve added status, languages id
-    $review = $db->Execute($reviewQuery);
-    while (!$review->EOF) {
-        $reviewArray[] = array(
-            'reviewId' => $review->fields['reviews_id'],
-            'customerName' => $review->fields['customers_name'],
-            'reviewRating' => $review->fields['reviews_rating'],
-            'dateAdded' => $review->fields['date_added'],
-            'reviewText' => $review->fields['reviews_text']
-        );
-        $review->MoveNext();
-    }
-    $ratingSum = 0;
-    $ratingValue = 0;
-    $reviewCount = 0;
-    if (isset($reviewArray) && is_array($reviewArray)) {
-        $reviewCount = sizeof($reviewArray);
-        foreach ($reviewArray as $row) {
-            $ratingSum += $row['reviewRating'];
+        $review = $db->Execute($reviewQuery);
+        while (!$review->EOF) {
+            $reviewArray[] = array(
+                'reviewId' => $review->fields['reviews_id'],
+                'customerName' => $review->fields['customers_name'],
+                'reviewRating' => $review->fields['reviews_rating'],
+                'dateAdded' => $review->fields['date_added'],
+                'reviewText' => $review->fields['reviews_text']
+            );
+            $review->MoveNext();
         }
-        $ratingValue = round($ratingSum / $reviewCount, 1);
+        $ratingSum = 0;
+        $ratingValue = 0;
+        $reviewCount = 0;
+        if (isset($reviewArray) && is_array($reviewArray)) {
+            $reviewCount = sizeof($reviewArray);
+            foreach ($reviewArray as $row) {
+                $ratingSum += $row['reviewRating'];
+            }
+            $ratingValue = round($ratingSum / $reviewCount, 1);
+        }
     }
 ?>
 <?php if (PLUGIN_SDATA_SCHEMA_ENABLE == 'true') { ?>

@@ -147,6 +147,8 @@ maximum size: approx. 1MB.
 "recommended" dimensions by users: 600x321 (1.867:1)
 
 ## Changelog
+2019 06 18 - torvista
+for php notices: facebook reviews code to only run on a product page.
 2019 05 08 - torvista
 added schema: priceValidUntil
 	Used last day of the year.
