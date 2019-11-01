@@ -1,6 +1,6 @@
 <?php
 /* THIS FILE MUST BE LOADED IN html <head> SINCE IT USES meta tags. DO NOT RE-FORMAT THE CODE: it is structured so the html seen in Developer Tools Inspector looks logical.
- * 2019 05 08 torvista
+ * 2019 11 01 torvista
  *
  * @copyright Copyright 2003-2006 Zen Cart Development Team
  * @copyright Portions Copyright 2003 osCommerce
@@ -8,20 +8,27 @@
  */
 
 if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE == 'true') {
+    //defaults only used when the page url is invalid/from a slider, to prevent php notices
+    $description = '';
+    $title = '';
+    $image='';
+    $image_alt='';
+    $image_default = false;
+    $facebook_type = 'business.business';
 
     //product condition mapping for Schema
     $itemCondition_array = array('new' => 'NewCondition', 'used' => 'UsedCondition', 'refurbished' => 'RefurbishedCondition');
 
     //image
-    $image_default = false;
     $image_default_facebook = (
     PLUGIN_SDATA_FOG_DEFAULT_IMAGE != '' ? PLUGIN_SDATA_FOG_DEFAULT_IMAGE :
         (PLUGIN_SDATA_LOGO != '' ? PLUGIN_SDATA_LOGO : HTTP_SERVER . DIR_WS_CATALOG . DIR_WS_IMAGES . PRODUCTS_IMAGE_NO_IMAGE));
     $image_default_twitter = (
     PLUGIN_SDATA_TWITTER_DEFAULT_IMAGE != '' ? PLUGIN_SDATA_TWITTER_DEFAULT_IMAGE :
         (PLUGIN_SDATA_LOGO != '' ? PLUGIN_SDATA_LOGO : HTTP_SERVER . DIR_WS_CATALOG . DIR_WS_IMAGES . PRODUCTS_IMAGE_NO_IMAGE));
+    $is_product_page = ($current_page_base == 'product_info' && !empty($_GET['products_id'] && zen_products_lookup($_GET['products_id'], 'products_status') == '1'));
 
-    if ($current_page_base == 'product_info' && isset($_GET['products_id'])) {//product page only
+    if ($is_product_page) {//product page only
         //get product info
         $sql = "SELECT p.products_id, p.products_model, pd.products_name, pd.products_description, p.products_quantity, p.products_image, p.products_price, p.products_tax_class_id
            FROM   " . TABLE_PRODUCTS . " p, " . TABLE_PRODUCTS_DESCRIPTION . " pd
@@ -75,25 +82,27 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE == 'true') {
         $category_name = zen_get_categories_name($category_id);
         $image_alt = $product_name;
         $facebook_type = 'product';
-    } elseif (isset($_GET['cPath'])) {//for any product-listing/category-listing page, but NOT a product page
+    } elseif (isset($_GET['cPath'])) {//NOT a product page
         $cPath_array = explode('_', $_GET['cPath']);
         $category_id = end($cPath_array);
         reset($cPath_array);
         $category_name = zen_get_categories_name($category_id);
-        $category_image = zen_get_categories_image($category_id);
-        if ($category_image == '') {
-            $image_default = true;
-        } else {
-            $image = HTTP_SERVER . DIR_WS_CATALOG . DIR_WS_IMAGES . zen_get_categories_image($category_id);
+        if ($category_name != '') { //a valid category
+            $category_image = zen_get_categories_image($category_id);
+            if ($category_image == '') {
+                $image_default = true;
+            } else {
+                $image = HTTP_SERVER . DIR_WS_CATALOG . DIR_WS_IMAGES . zen_get_categories_image($category_id);
+            }
+            $description = zen_get_category_description($category_id, (int)$_SESSION['languages_id']) != '' ? zen_get_category_description($category_id, (int)$_SESSION['languages_id']) : META_TAG_DESCRIPTION;
+            $product_category_name = $category_name;//used for twitter title, changes depending if page is product or category
+            $image_alt = $category_name;
+            $facebook_type = 'product.group';
+            $title = META_TAG_TITLE;
         }
-        $description = zen_get_category_description($category_id, (int)$_SESSION['languages_id']) != ''  ? zen_get_category_description($category_id, (int)$_SESSION['languages_id']) : META_TAG_DESCRIPTION;
-        $product_category_name = $category_name;//used for twitter title, changes depending if page is product or category
-        $image_alt = $category_name;
-        $facebook_type = 'product.group';
-        $title = META_TAG_TITLE;
-    } else {//some other page - not product or category
+    } else {//some other page - not product or category, maybe a bad cPath https://github.com/zencart/zencart/issues/2903
         $image_default = true;
-        $breadcrumb_this_page = $breadcrumb->_trail[sizeof($breadcrumb->_trail) - 1]['title'];
+        $breadcrumb_this_page = isset($breadcrumb->_trail[sizeof($breadcrumb->_trail) - 1]['title']) ? $breadcrumb->_trail[sizeof($breadcrumb->_trail) - 1]['title'] : '';//steve for php notice when not found
         $image_alt = $breadcrumb_this_page;
         $title = META_TAG_TITLE;
         //$title = $breadcrumb_this_page;
@@ -101,6 +110,9 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE == 'true') {
         $facebook_type = 'business.business';
     }
 
+    //torvista: my site only, using boilerplate text!
+    if (function_exists('mv_get_boilerplate')) $description = mv_get_boilerplate($description, $descr_stringlist);
+    //eof
     //clean $description
     $description = htmlentities(strip_tags(trim($description)));//remove tags
     $description = str_replace (array("\r\n", "\n", "\r"), '', $description);//remove LF, CR
@@ -220,7 +232,7 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE == 'true') {
                  }
 }
 </script>
-<?php if (is_object($breadcrumb)) { ?>
+<?php if (isset($breadcrumb) && is_object($breadcrumb)) { ?>
 <script type="application/ld+json" title="schemaBreadcrumb">
 {
        "@context": "http://schema.org",
@@ -229,27 +241,27 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE == 'true') {
 <?php
                 foreach ($breadcrumb as $key => $value) {
                     for ($i = 0, $n = sizeof($value); $i < $n; $i++) {
+                        if (isset($value[$i]['title']) && zen_not_null($value[$i]['title'])) {//if non-existent url used, title is null: php notice)
                         ?>
-  {
+      {
       "@type": "ListItem",
-   "position": <?php echo $i + 1; ?>,
+   "position": <?php echo $i + 1; //does not need to be quoted ?>,
        "item": {
            "@id": "<?php echo $value[$i]['link']; ?>",
           "name": <?php echo json_encode($value[$i]['title']) . "\n"; ?>
                }
-<?php if ($i + 1 != $n) { ?>
-  },
-<?php } else { ?>
-  }
-<?php }
-                    }
-                }
-?>                   ]
+       }<?php if ($i + 1 != $n) { ?>,
+<?php }?>
+<?php } //end of zen_not_null
+   }//end of For
+ }//end of ListItem ?>
+
+                    ]
 }
 </script>
         <?php } //eof breadcrumb ?>
     <?php
-    if ($current_page_base == 'product_info' && isset($_GET['products_id'])) {//product page only ?>
+    if ($is_product_page) {//product page only ?>
 <script type="application/ld+json" title="schemaProduct">
 {<?php //structured as per Google example for comparison:https://developers.google.com/search/docs/data-types/product ?>
    "@context": "https://schema.org",
@@ -322,9 +334,9 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE == 'true') {
 <meta property="og:locale" content="<?php echo $locale ?>" />
 <?php if ( sizeof($locales_array) > 0 ){
     foreach($locales_array as $key=>$value){ ?>
-                <meta property="og:locale:alternate" content="<?php echo $value; ?>" />
-            <?php }
-        } ?>
+<meta property="og:locale:alternate" content="<?php echo $value; ?>" />
+     <?php }
+} ?>
 <?php $image = ($image_default ? $image_default_facebook : $image); ?>
 <meta property="og:image" content="<?php echo $image; ?>" />
 <meta property="og:image:url" content="<?php echo $image; ?>" />
