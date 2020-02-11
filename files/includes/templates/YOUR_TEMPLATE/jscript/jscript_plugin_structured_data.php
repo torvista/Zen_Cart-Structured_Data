@@ -1,6 +1,6 @@
 <?php
 /* THIS FILE MUST BE LOADED IN html <head> SINCE IT USES meta tags. DO NOT RE-FORMAT THE CODE: it is structured so the html seen in Developer Tools Inspector looks logical.
- * 2019 11 01 torvista
+ * 2020 02 11 torvista
  *
  * @copyright Copyright 2003-2006 Zen Cart Development Team
  * @copyright Portions Copyright 2003 osCommerce
@@ -201,7 +201,7 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE == 'true') {
     }
 ?>
 <?php if (PLUGIN_SDATA_SCHEMA_ENABLE == 'true') { ?>
-<script type="application/ld+json" title="schemaOrganisation">
+<script title="Structured Data: schemaOrganisation" type="application/ld+json">
 {
      "@context": "http://schema.org",
         "@type": "Organization",
@@ -233,7 +233,7 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE == 'true') {
 }
 </script>
 <?php if (isset($breadcrumb) && is_object($breadcrumb)) { ?>
-<script type="application/ld+json" title="schemaBreadcrumb">
+<script title="Structured Data: schemaBreadcrumb" type="application/ld+json">
 {
        "@context": "http://schema.org",
           "@type": "BreadcrumbList",
@@ -262,7 +262,7 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE == 'true') {
         <?php } //eof breadcrumb ?>
     <?php
     if ($is_product_page) {//product page only ?>
-<script type="application/ld+json" title="schemaProduct">
+<script title="Structured Data: schemaProduct" type="application/ld+json">
 {<?php //structured as per Google example for comparison:https://developers.google.com/search/docs/data-types/product ?>
    "@context": "https://schema.org",
       "@type": "Product",
@@ -330,7 +330,7 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE == 'true') {
     <?php } ?>
 <meta property="og:title" content="<?php echo $title; ?>" />
 <meta property="og:site_name" content="<?php echo STORE_NAME; ?>" />
-<meta property="og:url" content="<?php echo htmlentities($canonicalLink); ?>" />
+<meta property="og:url" content="<?php echo $canonicalLink; ?>" />
 <meta property="og:locale" content="<?php echo $locale ?>" />
 <?php if ( sizeof($locales_array) > 0 ){
     foreach($locales_array as $key=>$value){ ?>
@@ -387,7 +387,7 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE == 'true') {
 <meta property="product:mfr_part_no" content="<?php echo $product_model; ?>" />
 <meta property="product:price:amount" content="<?php echo $product_display_price_value; ?>" />
 <meta property="product:price:currency" content="<?php echo PLUGIN_SDATA_PRICE_CURRRENCY; ?>" />
-<meta property="product:product_link" content="<?php echo htmlentities($canonicalLink); ?>" />
+<meta property="product:product_link" content="<?php echo $canonicalLink; ?>" />
 <meta property="product:retailer" content="<?php echo PLUGIN_SDATA_FOG_APPID; ?>" />
 <meta property="product:retailer_category" content="<?php echo $category_name; ?>" />
 <meta property="product:retailer_part_no" content="<?php echo $product_model; ?>" />
