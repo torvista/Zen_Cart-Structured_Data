@@ -92,7 +92,7 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE === 'true') {
         $category_name = zen_get_categories_name($category_id);
         if ($category_name !== '') { //a valid category
             $category_image = zen_get_categories_image($category_id);
-            if ($category_image === '') {
+            if ($category_image === NULL) {//although returned value is '' for no image
                 $image_default = true;
             } else {
                 $image = HTTP_SERVER . DIR_WS_CATALOG . DIR_WS_IMAGES . zen_get_categories_image($category_id);
