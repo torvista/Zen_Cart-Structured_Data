@@ -92,7 +92,7 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE === 'true') {
         $category_name = zen_get_categories_name($category_id);
         if ($category_name !== '') { //a valid category
             $category_image = zen_get_categories_image($category_id);
-            if ($category_image === NULL) {//although returned value is '' for no image
+            if ($category_image === '' || $category_image === NULL) {
                 $image_default = true;
             } else {
                 $image = HTTP_SERVER . DIR_WS_CATALOG . DIR_WS_IMAGES . zen_get_categories_image($category_id);
@@ -205,7 +205,7 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE === 'true') {
             $ratingValue = round($ratingSum / $reviewCount, 1);
         }
     }
-    ?>
+?>
 <?php if (PLUGIN_SDATA_SCHEMA_ENABLE === 'true') { ?>
 <script title="Structured Data: schemaOrganisation" type="application/ld+json">
 {
@@ -309,13 +309,13 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE === 'true') {
     "@type" : "Review",
     "author" : {
       "@type" : "Person",
-      "name" : <?php echo json_encode(strtok($reviewArray[$i]['customerName']," ")); //steve to use only the forename, encoded, does NOT need enclosing quotation marks ?>
+      "name" : <?php echo json_encode(strtok($reviewArray[$i]['customerName']," ")); //to use only the forename, encoded, does NOT need enclosing quotation marks ?>
     },
-    "reviewBody" : <?php echo json_encode($reviewArray[$i]['reviewText']); //steve added json_encode to catch quotation marks and pesky accents etc., does NOT need enclosing quotation marks ?>,
+    "reviewBody" : <?php echo json_encode($reviewArray[$i]['reviewText']); //dded json_encode to catch quotation marks and pesky accents etc., does NOT need enclosing quotation marks ?>,
     "datePublished" : "<?php echo substr($reviewArray[$i]['dateAdded'], 0, 10); ?>",
     "reviewRating" : {
       "@type" : "Rating",
-      "ratingValue" : "<?php echo $reviewArray[$i]['reviewRating']; //steve bug: was fixed at $ratingValue ?>"
+      "ratingValue" : "<?php echo $reviewArray[$i]['reviewRating']; ?>"
       }
     }<?php if ($i+1 !== $n) { ?>,<?php } ?>
   <?php } ?>
