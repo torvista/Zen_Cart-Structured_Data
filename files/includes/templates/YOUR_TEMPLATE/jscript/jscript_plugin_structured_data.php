@@ -184,16 +184,15 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE === 'true') {
                 AND status = 1
                 AND languages_id= ' . $_SESSION['languages_id'] . '
                 ORDER BY reviews_rating DESC';
-        $review = $db->Execute($reviewQuery);
-        while (!$review->EOF) {
+        $reviews = $db->Execute($reviewQuery);
+        foreach ($reviews as $review) {
             $reviewArray[] = [
-                'reviewId' => $review->fields['reviews_id'],
-                'customerName' => $review->fields['customers_name'],
-                'reviewRating' => $review->fields['reviews_rating'],
-                'dateAdded' => $review->fields['date_added'],
-                'reviewText' => $review->fields['reviews_text']
+                'reviewId' => $review['reviews_id'],
+                'customerName' => $review['customers_name'],
+                'reviewRating' => $review['reviews_rating'],
+                'dateAdded' => $review['date_added'],
+                'reviewText' => $review['reviews_text']
             ];
-            $review->MoveNext();
         }
         $ratingSum = 0;
         $ratingValue = 0;
