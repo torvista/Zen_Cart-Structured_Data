@@ -1,7 +1,7 @@
 <?php
 /* THIS FILE MUST BE LOADED IN html <head> SINCE IT USES meta tags.
  * DO NOT RE-FORMAT THE CODE: it is structured so the html seen in Developer Tools Inspector looks logical.
- * 2020 11 02 torvista
+ * 2020 25 02 torvista
  *
  * @license http://www.zen-cart.com/license/2_0.txt GNU Public License V2.0
  */
@@ -14,9 +14,10 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE === 'true') {
     $image_alt = '';
     $image_default = false;
     $facebook_type = 'business.business';
+    $key= ''; //only to keep IDE happy
 
     //product condition mapping for Schema
-    $itemCondition_array = array('new' => 'NewCondition', 'used' => 'UsedCondition', 'refurbished' => 'RefurbishedCondition');
+    $itemCondition_array = ['new' => 'NewCondition', 'used' => 'UsedCondition', 'refurbished' => 'RefurbishedCondition'];
 
     //image
     if (PLUGIN_SDATA_FOG_DEFAULT_IMAGE !== '') {
@@ -121,7 +122,7 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE === 'true') {
 
     //clean $description
     $description = htmlentities(strip_tags(trim($description)));//remove tags
-    $description = str_replace(array("\r\n", "\n", "\r"), '', $description);//remove LF, CR
+    $description = str_replace(["\r\n", "\n", "\r"], '', $description);//remove LF, CR
     $description = preg_replace('/\s+/', ' ', $description);//remove multiple spaces
 
     //build sameAs list
@@ -155,8 +156,8 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE === 'true') {
     //build Facebook locales
     $locales_array = explode(',', PLUGIN_SDATA_FOG_LOCALES);
     if (count($locales_array) > 1 && (count($locales_array) % 2 === 0)) {//more than one value and is actually a pair
-        $locales_keys_array = array();
-        $locales_values_array = array();
+        $locales_keys_array = [];
+        $locales_values_array = [];
         $i = 0;
         while ($i < count($locales_array)) {
             $locales_keys_array [] = $locales_array[$i];
@@ -185,13 +186,13 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE === 'true') {
                 ORDER BY reviews_rating DESC';
         $review = $db->Execute($reviewQuery);
         while (!$review->EOF) {
-            $reviewArray[] = array(
+            $reviewArray[] = [
                 'reviewId' => $review->fields['reviews_id'],
                 'customerName' => $review->fields['customers_name'],
                 'reviewRating' => $review->fields['reviews_rating'],
                 'dateAdded' => $review->fields['date_added'],
                 'reviewText' => $review->fields['reviews_text']
-            );
+            ];
             $review->MoveNext();
         }
         $ratingSum = 0;
