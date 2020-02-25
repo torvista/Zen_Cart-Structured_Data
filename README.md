@@ -147,6 +147,9 @@ maximum size: approx. 1MB.
 "recommended" dimensions by users: 600x321 (1.867:1)
 
 ## Changelog
+2020 02 25 - torvista
+changed array declarations to short syntax
+changed while to a foreach
 2020 02 11 - torvista
 fixed double encoding ampersands.
 general revision for strict mode/EA inspection recommendations
