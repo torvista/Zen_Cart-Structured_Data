@@ -8,7 +8,7 @@
 
 if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE === 'true') {
     //new defines
-    define('PLUGIN_SDATA_REVIEW_USE_DEFAULT', 'true'); // if no product review, use a default value to stop Google warnings
+    define('PLUGIN_SDATA_REVIEW_USE_DEFAULT', 'false'); // if no product review, use a default value to stop Google warnings
     define('PLUGIN_SDATA_REVIEW_DEFAULT_VALUE', '3'); // avg. rating (when no product reviews exist)
     //
     //defaults (subsequently overwritten) defined to prevent php notices
