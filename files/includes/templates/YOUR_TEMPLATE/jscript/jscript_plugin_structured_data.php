@@ -181,7 +181,7 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE === 'true') {
     }
 
     //reviews
-    if ($current_page_base === 'product_info' && isset($_GET['products_id'])) {
+    if ($is_product_page) {
         $ratingSum = 0;
         $ratingValue = 0;
         $reviewCount = 0;
