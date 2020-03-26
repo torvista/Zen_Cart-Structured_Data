@@ -7,6 +7,10 @@
  */
 
 if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE === 'true') {
+    //new defines
+    define('PLUGIN_SDATA_REVIEW_USE_DEFAULT', 'true'); // if no product review, use a default value to stop Google warnings
+    define('PLUGIN_SDATA_REVIEW_DEFAULT_VALUE', '3'); // avg. rating (when no product reviews exist)
+    //
     //defaults (subsequently overwritten) defined to prevent php notices
     $description = '';
     $title = '';
@@ -38,7 +42,7 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE === 'true') {
     $is_product_page = ($current_page_base === 'product_info' && !empty($_GET['products_id'] && zen_products_lookup($_GET['products_id'], 'products_status') === '1'));
     if ($is_product_page) {//product page only
         //get product info
-        $sql = 'SELECT p.products_id, p.products_model, pd.products_name, pd.products_description, p.products_quantity, p.products_image, p.products_price, p.products_tax_class_id
+        $sql = 'SELECT p.products_id, p.products_model, pd.products_name, pd.products_description, p.products_quantity, p.products_image, p.products_price, p.products_date_added, p.products_tax_class_id
            FROM ' . TABLE_PRODUCTS . ' p, ' . TABLE_PRODUCTS_DESCRIPTION . ' pd
            WHERE p.products_id = ' . (int)$_GET['products_id'] . '
            AND pd.products_id = p.products_id
@@ -49,6 +53,7 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE === 'true') {
         $title = htmlspecialchars(STORE_NAME . ' - ' . $product_info->fields['products_name']);
         $product_model = $product_info->fields['products_model'];
         $description = $product_info->fields['products_description'];//variable used in twitter for categories & products
+        $product_date_added = $product_info->fields['products_date_added'];
         $tax_class_id = $product_info->fields['products_tax_class_id'];
         $manufacturer_name = zen_get_products_manufacturers_name((int)$_GET['products_id']);
         $product_image = $product_info->fields['products_image'];
@@ -115,7 +120,7 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE === 'true') {
     }
 
     //torvista: my site only, using boilerplate text!
-    if (function_exists('mv_get_boilerplate')) {
+    if (function_exists('mv_get_boilerplate') && !empty($descr_stringlist)) {
         $description = mv_get_boilerplate($description, $descr_stringlist);
     }
     //eof
@@ -177,6 +182,9 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE === 'true') {
 
     //reviews
     if ($current_page_base === 'product_info' && isset($_GET['products_id'])) {
+        $ratingSum = 0;
+        $ratingValue = 0;
+        $reviewCount = 0;
         $reviewQuery = 'SELECT r.reviews_id, r.customers_name, r.reviews_rating, r.date_added, r.status, rd.reviews_text
                 FROM ' . TABLE_REVIEWS . ' r
                 LEFT JOIN ' . TABLE_REVIEWS_DESCRIPTION . ' rd ON rd.reviews_id = r.reviews_id
@@ -185,24 +193,33 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE === 'true') {
                 AND languages_id= ' . $_SESSION['languages_id'] . '
                 ORDER BY reviews_rating DESC';
         $reviews = $db->Execute($reviewQuery);
-        foreach ($reviews as $review) {
-            $reviewArray[] = [
-                'reviewId' => $review['reviews_id'],
-                'customerName' => $review['customers_name'],
-                'reviewRating' => $review['reviews_rating'],
-                'dateAdded' => $review['date_added'],
-                'reviewText' => $review['reviews_text']
-            ];
-        }
-        $ratingSum = 0;
-        $ratingValue = 0;
-        $reviewCount = 0;
-        if (isset($reviewArray) && is_array($reviewArray)) {
-            $reviewCount = count($reviewArray);
-            foreach ($reviewArray as $row) {
-                $ratingSum += $row['reviewRating'];
+        if (!$reviews->EOF) {
+            $reviewsArray = [];
+            foreach ($reviews as $review) {
+                $reviewsArray[] = [
+                    'reviewId' => $review['reviews_id'],
+                    'customerName' => $review['customers_name'],
+                    'reviewRating' => $review['reviews_rating'],
+                    'dateAdded' => $review['date_added'],
+                    'reviewText' => $review['reviews_text']
+                ];
             }
-            $ratingValue = round($ratingSum / $reviewCount, 1);
+                $reviewCount = count($reviewsArray);
+                foreach ($reviewsArray as $row) {
+                    $ratingSum += $row['reviewRating'];
+                }
+                $ratingValue = round($ratingSum / $reviewCount, 1);
+        }
+        if ($reviewCount === 0 && PLUGIN_SDATA_REVIEW_USE_DEFAULT === 'true') {
+            $reviewsArray[] = [
+                'reviewId' => 0, // not used
+                'customerName' => 'anonymous',
+                'reviewRating' => (int)PLUGIN_SDATA_REVIEW_DEFAULT_VALUE,
+                'dateAdded' => $product_date_added,
+                'reviewText' => ''
+            ];
+            $ratingValue = (int)PLUGIN_SDATA_REVIEW_DEFAULT_VALUE;
+            $reviewCount = 1;
         }
     }
 ?>
@@ -304,18 +321,18 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE === 'true') {
     "reviewCount": "<?php echo $reviewCount; ?>"
   },
   "review" : [
-  <?php for ($i = 0, $n = count($reviewArray); $i<$n; $i ++) { ?>
+  <?php for ($i = 0, $n = count($reviewsArray); $i<$n; $i ++) { ?>
   {
     "@type" : "Review",
     "author" : {
       "@type" : "Person",
-      "name" : <?php echo json_encode(strtok($reviewArray[$i]['customerName']," ")); //to use only the forename, encoded, does NOT need enclosing quotation marks ?>
+      "name" : <?php echo json_encode(strtok($reviewsArray[$i]['customerName']," ")); //to use only the forename, encoded, does NOT need enclosing quotation marks ?>
     },
-    "reviewBody" : <?php echo json_encode($reviewArray[$i]['reviewText']); //dded json_encode to catch quotation marks and pesky accents etc., does NOT need enclosing quotation marks ?>,
-    "datePublished" : "<?php echo substr($reviewArray[$i]['dateAdded'], 0, 10); ?>",
+    "reviewBody" : <?php echo json_encode($reviewsArray[$i]['reviewText']); //added json_encode to catch quotation marks and pesky accents etc., does NOT need enclosing quotation marks ?>,
+    "datePublished" : "<?php echo substr($reviewsArray[$i]['dateAdded'], 0, 10); ?>",
     "reviewRating" : {
       "@type" : "Rating",
-      "ratingValue" : "<?php echo $reviewArray[$i]['reviewRating']; ?>"
+      "ratingValue" : "<?php echo $reviewsArray[$i]['reviewRating']; ?>"
       }
     }<?php if ($i+1 !== $n) { ?>,<?php } ?>
   <?php } ?>
