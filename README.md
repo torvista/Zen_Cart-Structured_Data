@@ -147,6 +147,11 @@ maximum size: approx. 1MB.
 "recommended" dimensions by users: 600x321 (1.867:1)
 
 ## Changelog
+2020 03 27 - torvista
+Added the option of creating an anonymous, blank review with an admin-defined star-rating for products with no review at all, in an attempt to stop hundreds of warnings:
+Missing field "aggregateRating"
+Missing field "review"
+Remains to be seen if results in further warnings.
 2020 02 25 - torvista
 changed array declarations to short syntax
 changed while to a foreach
