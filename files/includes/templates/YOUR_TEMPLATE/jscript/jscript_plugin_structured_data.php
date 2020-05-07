@@ -126,7 +126,7 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE === 'true') {
     //eof
 
     //clean $description
-    $description = htmlentities(strip_tags(trim($description)));//remove tags
+    $description = htmlentities(strip_tags(trim($description)), ENT_COMPAT, CHARSET);//remove tags
     $description = str_replace(["\r\n", "\n", "\r"], '', $description);//remove LF, CR
     $description = preg_replace('/\s+/', ' ', $description);//remove multiple spaces
 
@@ -364,7 +364,7 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE === 'true') {
 <meta property="og:title" content="<?php echo $title; ?>" />
 <meta property="og:site_name" content="<?php echo STORE_NAME; ?>" />
 <meta property="og:url" content="<?php echo $canonicalLink; ?>" />
-<?php if (!empty($local)) { echo '<meta property="og:locale" content="' . $locale . '" />';
+<?php if (!empty($locale)) { echo '<meta property="og:locale" content="' . $locale . '" />';
 if (count($locales_array) > 0) {
 foreach($locales_array as $key=>$value){ ?>
 <meta property="og:locale:alternate" content="<?php echo $value; ?>" />
@@ -433,8 +433,8 @@ foreach($locales_array as $key=>$value){ ?>
 <meta name="twitter:description" content="<?php echo $description; ?>" />
 <?php $image = ($image_default ? $image_default_twitter : $image); ?>
 <meta name="twitter:image" content="<?php echo $image; ?>" />
-<meta name="twitter:image:alt" content="<?php echo htmlentities($image_alt, ENT_QUOTES, 'UTF-8'); ?>" />
-<meta name="twitter:url" content="<?php echo htmlentities($canonicalLink); ?>" />
+<meta name="twitter:image:alt" content="<?php echo htmlentities($image_alt, ENT_QUOTES, CHARSET, false); ?>" />
+<meta name="twitter:url" content="<?php echo htmlentities($canonicalLink, ENT_COMPAT, CHARSET, false); ?>" />
 <meta name="twitter:domain" content="<?php echo HTTP_SERVER; ?>" />
 <!-- eof Twitter Card markup -->
 <?php } //end of Twitter enabled ?>
