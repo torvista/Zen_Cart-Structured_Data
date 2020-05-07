@@ -1,7 +1,7 @@
 <?php
 /* THIS FILE MUST BE LOADED IN html <head> SINCE IT USES meta tags.
- * DO NOT RE-FORMAT THE CODE: it is structured so the html seen in Developer Tools Inspector looks logical.
- * 2020 25 02 torvista
+ * DO NOT RE-FORMAT THE CODE: it is structured so the html seen in Developer Tools Inspector looks ok.
+ * torvista 7 May 2020
  *
  * @license http://www.zen-cart.com/license/2_0.txt GNU Public License V2.0
  */
@@ -160,24 +160,35 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE === 'true') {
 
     //build Facebook locales
     $locales_array = explode(',', PLUGIN_SDATA_FOG_LOCALES);
-    if (count($locales_array) > 1 && (count($locales_array) % 2 === 0)) {//more than one value and is actually a pair
+    /* Array example
+    (
+        [0] => 1
+        [1] => en_GB
+        [2] => 2
+        [3] => es_ES
+    )
+    */
+    if (count($locales_array) > 1 && (count($locales_array) % 2 === 0)) { // is more than one value and is actually a pair
         $locales_keys_array = [];
         $locales_values_array = [];
         $i = 0;
-        while ($i < count($locales_array)) {
-            $locales_keys_array [] = $locales_array[$i];
+        $locale_count = count($locales_array);
+        while ($i < $locale_count) {
+            $locales_keys_array [] = $locales_array[$i]; // returns: 1,2 etc.
             $i += 2;
         }
         $i = 1;
-        while ($i < count($locales_array)) {
-            $locales_values_array [] = $locales_array[$i];
+        while ($i < $locale_count) {
+            $locales_values_array [] = $locales_array[$i]; // returns: en_GB, es_ES etc
             $i += 2;
         }
         $locales_array = array_combine($locales_keys_array, $locales_values_array);
         if (array_key_exists($_SESSION['languages_id'], $locales_array)) {
-            $locale = $locales_array[$_SESSION['languages_id']];
+            $locale = $locales_array[(int)$_SESSION['languages_id']]; // returns: en_GB, es_ES etc
+            unset($locales_array[(int)$_SESSION['languages_id']]); // other elements are used as the alternate locales
+        } else {
+            $locale = '';
         }
-        unset($locales_array[$_SESSION['languages_id']]);
     }
 
     //reviews
@@ -353,12 +364,11 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE === 'true') {
 <meta property="og:title" content="<?php echo $title; ?>" />
 <meta property="og:site_name" content="<?php echo STORE_NAME; ?>" />
 <meta property="og:url" content="<?php echo $canonicalLink; ?>" />
-<meta property="og:locale" content="<?php echo $locale ?>" />
-<?php if ( count($locales_array) > 0 ){
+<?php if (!empty($local)) { echo '<meta property="og:locale" content="' . $locale . '" />';
+if (count($locales_array) > 0) {
 foreach($locales_array as $key=>$value){ ?>
 <meta property="og:locale:alternate" content="<?php echo $value; ?>" />
-<?php }
-} ?>
+<?php }}} ?>
 <?php $image = ($image_default ? $image_default_facebook : $image); ?>
 <meta property="og:image" content="<?php echo $image; ?>" />
 <meta property="og:image:url" content="<?php echo $image; ?>" />
