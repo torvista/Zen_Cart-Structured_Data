@@ -1,7 +1,7 @@
 <?php
 /* THIS FILE MUST BE LOADED IN html <head> SINCE IT USES meta tags.
  * DO NOT RE-FORMAT THE CODE: it is structured so the html seen in Developer Tools Inspector looks ok.
- * torvista 7 May 2020
+ * torvista 3 August 2020
  *
  * @license http://www.zen-cart.com/license/2_0.txt GNU Public License V2.0
  */
@@ -118,12 +118,6 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE === 'true') {
         $description = META_TAG_DESCRIPTION;
         $facebook_type = 'business.business';
     }
-
-    //torvista: my site only, using boilerplate text!
-    if (function_exists('mv_get_boilerplate') && !empty($descr_stringlist)) {
-        $description = mv_get_boilerplate($description, $descr_stringlist);
-    }
-    //eof
 
     //clean $description
     $description = htmlentities(strip_tags(trim($description)), ENT_COMPAT, CHARSET);//remove tags
@@ -411,17 +405,17 @@ foreach($locales_array as $key=>$value){ ?>
 <!-- eof Facebook structured data general-->
 <?php } else { ?>
 <!-- Facebook structured data for product-->
-<meta property="og:type" content="<?php echo PLUGIN_SDATA_FOG_TYPE_PRODUCT; ?>" />
+<meta property="og:type" content="<?php echo trim(PLUGIN_SDATA_FOG_TYPE_PRODUCT); ?>" />
 <meta property="product:availability" content="<?php if ($stock > 0) { ?>instock<?php } ?><?php if ($stock < 1) { ?>pending<?php } ?>" />
 <meta property="product:brand" content="<?php echo $manufacturer_name; ?>" />
-<meta property="product:category" content="<?php echo $category_name; ?>" />
+<meta property="product:category" content="<?php echo htmlentities($category_name); ?>" />
 <meta property="product:condition" content="<?php echo PLUGIN_SDATA_FOG_PRODUCT_CONDITION; ?>" />
 <meta property="product:mfr_part_no" content="<?php echo $product_model; ?>" />
 <meta property="product:price:amount" content="<?php echo $product_display_price_value; ?>" />
 <meta property="product:price:currency" content="<?php echo PLUGIN_SDATA_PRICE_CURRRENCY; ?>" />
 <meta property="product:product_link" content="<?php echo $canonicalLink; ?>" />
 <meta property="product:retailer" content="<?php echo PLUGIN_SDATA_FOG_APPID; ?>" />
-<meta property="product:retailer_category" content="<?php echo $category_name; ?>" />
+<meta property="product:retailer_category" content="<?php echo htmlentities($category_name); ?>" />
 <meta property="product:retailer_part_no" content="<?php echo $product_model; ?>" />
 <!-- eof Facebook structured data -->
 <?php } }//end facebook enabled  ?>
