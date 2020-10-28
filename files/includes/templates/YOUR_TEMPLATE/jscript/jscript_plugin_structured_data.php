@@ -51,8 +51,14 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE === 'true') {
         $product_id = $product_info->fields['products_id'];
         $product_name = $product_info->fields['products_name'];
         $title = htmlspecialchars(STORE_NAME . ' - ' . $product_info->fields['products_name']);
-        $product_model = $product_info->fields['products_model'];
         $description = $product_info->fields['products_description'];//variable used in twitter for categories & products
+        $product_sku = $product_info->fields['products_model']; //Merchant-specific product identifier/SKU
+        //***********
+        //Store/product-specific custom coding required to populate these fields accurately. Or set them = $product_sku for the time being.
+        $product_mpn = ''; //TODO manufacturers part number
+        $product_gtin = ''; //TODO a standardised code UPC / GTIN-12 / EAN / JAN / ISBN / ITF-14
+        $product_productID = ''; //TODO a non-standardised code
+        //************
         $product_date_added = $product_info->fields['products_date_added'];
         $tax_class_id = $product_info->fields['products_tax_class_id'];
         $manufacturer_name = zen_get_products_manufacturers_name((int)$_GET['products_id']);
@@ -296,10 +302,18 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE === 'true') {
        "name": <?php echo json_encode($product_name); ?>,
       "image": "<?php echo $image; ?>",
 "description": <?php echo json_encode($description); ?>,
-        "sku": <?php echo json_encode($product_model); //The Stock Keeping Unit (SKU), i.e. a merchant-specific identifier for a product or service, or the product to which the offer refers ?>,
-        "mpn": <?php echo json_encode($product_model); //The Manufacturer Part Number (MPN) of the product, or the product to which the offer refers. ?>,
+        "sku": <?php echo json_encode($product_sku); //The Stock Keeping Unit (SKU), i.e. a merchant-specific identifier for a product or service ?>,
+<?php
+if ($product_mpn !== '') {//The Manufacturer Part Number (MPN) of the product
+    echo '        "mpn": ' . json_encode($product_mpn) . ",\n";
+    }
+if ($product_gtin !== '') {//The Manufacturer-supplied standard international code
+    echo '       "gtin": ' . json_encode($product_gtin) . ",\n";
+}
+if ($product_productID !== '') {//a non-standard code
+    echo '  "productID": ' . json_encode($product_productID) . ",\n";
+} ?>
       "brand": <?php echo json_encode($manufacturer_name); ?>,
-  "productID": <?php echo json_encode($product_model); //The product identifier, such as ISBN. ?>,
      "offers": {
                 "@type" : "Offer",
                    "url": "<?php echo $canonicalLink; ?>",
@@ -410,13 +424,15 @@ foreach($locales_array as $key=>$value){ ?>
 <meta property="product:brand" content="<?php echo $manufacturer_name; ?>" />
 <meta property="product:category" content="<?php echo htmlentities($category_name); ?>" />
 <meta property="product:condition" content="<?php echo PLUGIN_SDATA_FOG_PRODUCT_CONDITION; ?>" />
-<meta property="product:mfr_part_no" content="<?php echo $product_model; ?>" />
+<?php if ($product_mpn !== '') {
+                echo '<meta property="product:mfr_part_no" content="' . $product_mpn . '" />' . "\n";
+            } ?>
 <meta property="product:price:amount" content="<?php echo $product_display_price_value; ?>" />
 <meta property="product:price:currency" content="<?php echo PLUGIN_SDATA_PRICE_CURRRENCY; ?>" />
 <meta property="product:product_link" content="<?php echo $canonicalLink; ?>" />
 <meta property="product:retailer" content="<?php echo PLUGIN_SDATA_FOG_APPID; ?>" />
 <meta property="product:retailer_category" content="<?php echo htmlentities($category_name); ?>" />
-<meta property="product:retailer_part_no" content="<?php echo $product_model; ?>" />
+<meta property="product:retailer_part_no" content="<?php echo $product_sku; ?>" />
 <!-- eof Facebook structured data -->
 <?php } }//end facebook enabled  ?>
 <?php if (PLUGIN_SDATA_TWITTER_CARD_ENABLE === 'true') { ?>

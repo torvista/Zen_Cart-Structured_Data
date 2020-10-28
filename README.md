@@ -137,7 +137,8 @@ The availability of the product is `instock`, `oos`, or `pending`. Hardcoded to 
 #### `Product` 
 - `availability`: set to `inStock` or `PreOrder`
 - `deliveryLeadTime`: set to `inStock` = 1 day, `Out of Stock/PreOrder` = 7 days
-				
+- `mpn`, `gtin`: not displayed by default. Strictly, they are not the retailers model/SKU code and need to be stored/retrieved by custom coding.
+ 
 ### Twitter
 
 minimum dimensions =: 280x150px or will not display 
@@ -147,6 +148,9 @@ maximum size: approx. 1MB.
 "recommended" dimensions by users: 600x321 (1.867:1)
 
 ## Changelog
+2020 10 28 - torvista
+separated sku, mpn, gtin entries
+ 
 2020 03 27 - torvista
 Added the option of creating an anonymous, blank review with an admin-defined star-rating for products with no review at all, in an attempt to stop hundreds of warnings:
 Missing field "aggregateRating"
