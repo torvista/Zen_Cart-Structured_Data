@@ -1,16 +1,23 @@
 <?php
 /* THIS FILE MUST BE LOADED IN html <head> SINCE IT USES meta tags.
- * DO NOT RE-FORMAT THE CODE: it is structured so the html seen in Developer Tools Inspector looks ok.
- * torvista 3 August 2020
+ * DO NOT RE-FORMAT THE CODE: it is structured so the html seen in Developer Tools Inspector (Chrome) looks ok.
+ * torvista
  *
  * @license http://www.zen-cart.com/license/2_0.txt GNU Public License V2.0
  */
 
 if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE === 'true') {
     //new defines
-    define('PLUGIN_SDATA_REVIEW_USE_DEFAULT', 'false'); // if no product review, use a default value to stop Google warnings
+    define('PLUGIN_SDATA_REVIEW_USE_DEFAULT', 'true'); // if no product review, use a default value to stop Google warnings
     define('PLUGIN_SDATA_REVIEW_DEFAULT_VALUE', '3'); // avg. rating (when no product reviews exist)
+    define('PLUGIN_SDATA_MAX_DESCRIPTION', 5000); // maximum characters allowed (Google)
+
+    if (defined('PLUGIN_SDATA_PRICE_CURRRENCY')) {//correct old typo
+        $db->Execute("UPDATE `configuration` SET `configuration_key`= 'PLUGIN_SDATA_PRICE_CURRENCY' WHERE `configuration_key`= 'PLUGIN_SDATA_PRICE_CURRRENCY'");
+    }
     //
+    $debug_sd = false;//as there are ongoing changes, and it is a pig to debug, there is a lot of output available with this switch
+
     //defaults (subsequently overwritten) defined to prevent php notices
     $description = '';
     $title = '';
@@ -18,7 +25,7 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE === 'true') {
     $image_alt = '';
     $image_default = false;
     $facebook_type = 'business.business';
-    $key= ''; //only to keep IDE happy
+    $key = ''; //only to keep IDE happy
 
     //product condition mapping for Schema
     $itemCondition_array = ['new' => 'NewCondition', 'used' => 'UsedCondition', 'refurbished' => 'RefurbishedCondition'];
@@ -38,30 +45,234 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE === 'true') {
     } else {
         $image_default_twitter = HTTP_SERVER . DIR_WS_CATALOG . DIR_WS_IMAGES . PRODUCTS_IMAGE_NO_IMAGE;
     }
+//only used for debugging
+    if (!function_exists('mv_printVar')) {
+        /**
+         * @param $a
+         */
+        function mv_printVar($a)
+        {
+            $backtrace = debug_backtrace()[0];
+            $fh = fopen($backtrace['file'], 'rb');
+            $line = 0;
+            while (++$line <= $backtrace['line']) {
+                $code = fgets($fh);
+            }
+            fclose($fh);
+            preg_match('/' . __FUNCTION__ . '\s*\((.*)\)\s*;/u', $code, $name);
+            echo '<pre>';
+            if (!empty($name[1])) {
+                echo '<strong>' . trim($name[1]) . ":</strong>\n";
+            }
+            //var_export($a);
+            print_r($a);
+            echo '</pre><br>';
+        }
+    }
+    if ($debug_sd) {
+        echo 'PLUGIN_SDATA_FOG_DEFAULT_IMAGE=' . PLUGIN_SDATA_FOG_DEFAULT_IMAGE . '<br>';
+        echo 'PLUGIN_SDATA_TWITTER_DEFAULT_IMAGE=' . PLUGIN_SDATA_TWITTER_DEFAULT_IMAGE . '<br>';
+        echo 'PLUGIN_SDATA_LOGO=' . PLUGIN_SDATA_LOGO . '<br>';
+        echo '$image_default_facebook=' . $image_default_facebook . '<br>';
+        echo '$image_default_twitter=' . $image_default_twitter . '<br>';
+    }
 
     $is_product_page = ($current_page_base === 'product_info' && !empty($_GET['products_id'] && zen_products_lookup($_GET['products_id'], 'products_status') === '1'));
     if ($is_product_page) {//product page only
+        if ($debug_sd) {
+            echo __LINE__ . ' is product page<br>';
+        }
         //get product info
-        $sql = 'SELECT p.products_id, p.products_model, pd.products_name, pd.products_description, p.products_quantity, p.products_image, p.products_price, p.products_date_added, p.products_tax_class_id
+        $sql = 'SELECT p.products_id, p.products_quantity, p.products_model, p.products_image, p.products_price, p.products_date_added, p.products_tax_class_id, p.products_priced_by_attribute, pd.products_name, pd.products_description
            FROM ' . TABLE_PRODUCTS . ' p, ' . TABLE_PRODUCTS_DESCRIPTION . ' pd
            WHERE p.products_id = ' . (int)$_GET['products_id'] . '
            AND pd.products_id = p.products_id
            AND pd.language_id = ' . (int)$_SESSION['languages_id'];
         $product_info = $db->Execute($sql);
-        $product_id = $product_info->fields['products_id'];
+
+        $product_id = (int)$product_info->fields['products_id'];
         $product_name = $product_info->fields['products_name'];
-        $title = htmlspecialchars(STORE_NAME . ' - ' . $product_info->fields['products_name']);
         $description = $product_info->fields['products_description'];//variable used in twitter for categories & products
-        $product_sku = $product_info->fields['products_model']; //Merchant-specific product identifier/SKU
-        //***********
-        //Store/product-specific custom coding required to populate these fields accurately. Or set them = $product_sku for the time being.
-        $product_mpn = ''; //TODO manufacturers part number
-        $product_gtin = ''; //TODO a standardised code UPC / GTIN-12 / EAN / JAN / ISBN / ITF-14
-        $product_productID = ''; //TODO a non-standardised code
-        //************
-        $product_date_added = $product_info->fields['products_date_added'];
+        $title = htmlspecialchars(STORE_NAME . ' - ' . $product_info->fields['products_name']);
         $tax_class_id = $product_info->fields['products_tax_class_id'];
+        $product_base_displayed_price = round(zen_get_products_actual_price($product_id) * (1 + zen_get_tax_rate($tax_class_id) / 100), 2);//shown price with tax, decimal point (not comma), two decimal places.
+        $product_date_added = $product_info->fields['products_date_added'];
         $manufacturer_name = zen_get_products_manufacturers_name((int)$_GET['products_id']);
+        $product_base_stock = $product_info->fields['products_quantity'];
+
+        /*
+         * sku, mpn, gtin
+         Store/product-specific custom coding required to populate these fields correctly. Set initial values sku/mpn/productID to $product_base_sku, to be overwritten later/or not...
+         $product_base_mpn //manufacturers part number
+         $product_base_gtin //a standardised code UPC / GTIN-12 / EAN / JAN / ISBN / ITF-14
+         $product_base_productID //an optional non-standardised code: a possible use may be the shop base/false sku when attributes stock has the real/correct sku?
+         */
+        $product_base_sku = $product_info->fields['products_model']; //sku is a Merchant-specific product identifier
+        $product_base_mpn = '';
+        $product_base_gtin = '';
+        $product_base_productID = $product_info->fields['products_model'];
+
+//bof ******************CUSTOM CODE for extra product fields for mpn and ean
+        /* additional fields for product codes and POSM
+        ALTER TABLE `products` ADD `products_mpn` VARCHAR(32) NOT NULL DEFAULT '' AFTER `products_oos_date`;
+        ALTER TABLE `products` ADD `products_ean` VARCHAR(13) NOT NULL DEFAULT '' AFTER `products_mpn`;
+
+        category in schema must be a text, not a google_product_category number https://support.google.com/google-ads/thread/57687299?hl=en
+        ALTER TABLE `products` ADD `google_product_category` VARCHAR(6) NOT NULL DEFAULT '' AFTER `products_ean`;
+        */
+        if ($sniffer->field_exists(TABLE_PRODUCTS, 'products_mpn') && $sniffer->field_exists(TABLE_PRODUCTS, 'products_ean')) {
+            $sql = 'SELECT products_mpn, products_ean FROM ' . TABLE_PRODUCTS . ' WHERE products_id = ' . $product_id;
+            $product_codes = $db->Execute($sql);
+            $product_base_mpn = $product_codes->fields['products_mpn'];
+            $product_base_gtin = $product_codes->fields['products_ean'];
+        }
+//eof ******************CUSTOM CODE
+//torvista: my site uses boilerplate texts************
+        //Product Descriptions
+        if (function_exists('mv_get_boilerplate') && !empty($descr_stringlist)) {
+            $description = mv_get_boilerplate($description, $descr_stringlist, $product_id);
+        }
+//****************************************************
+//sku/mpn/gtin, price, stock may all vary per attribute
+//Attributes handling info: https://www.schemaapp.com/newsletter/schema-org-variable-products-productmodels-offers/#
+        $product_attributes = false;
+        $attribute_stock_handler = '';
+        $attribute_lowPrice = 0;
+        $attribute_highPrice = 0;
+
+        if (zen_has_product_attributes($product_id)) {
+            $product_attributes = [];
+            $attribute_prices = [];
+
+// Get attribute info
+            $sql = "SELECT patrib.products_attributes_id, patrib.options_id, patrib.options_values_id, patrib.options_values_price, popt.products_options_name, poptv.products_options_values_name
+                    FROM " . TABLE_PRODUCTS_OPTIONS . " popt
+                    LEFT JOIN " . TABLE_PRODUCTS_ATTRIBUTES . " patrib ON (popt.products_options_id = patrib.options_id)
+                    LEFT JOIN " . TABLE_PRODUCTS_OPTIONS_VALUES . " poptv ON (poptv.products_options_values_id = patrib.options_values_id)
+                    WHERE patrib.products_id = " . $product_id . "
+                    AND popt.language_id = " . (int)$_SESSION['languages_id'] . "   
+                    AND poptv.language_id = " . (int)$_SESSION['languages_id'] . "   
+                    ORDER BY popt.products_options_name, poptv.products_options_values_name";
+            $results = $db->Execute($sql);
+
+            foreach ($results as $attribute) {
+                if (zen_get_attributes_valid($product_id, $attribute['options_id'], $attribute['options_values_id'])) {//skip "display only"
+                    $product_attributes[$attribute['products_attributes_id']]['option_name_id'] = $attribute['options_id'];
+                    $product_attributes[$attribute['products_attributes_id']]['option_name'] = $attribute['products_options_name'];
+                    $product_attributes[$attribute['products_attributes_id']]['option_value_id'] = $attribute['options_values_id'];
+                    $product_attributes[$attribute['products_attributes_id']]['option_value'] = $attribute['products_options_values_name'];
+                    $product_attributes[$attribute['products_attributes_id']]['price'] = zen_get_products_price_is_priced_by_attributes($product_id) ? $attribute['options_values_price'] : $product_base_displayed_price;
+                    $attribute_prices[] = $product_attributes[$attribute['products_attributes_id']]['price'];
+                }
+            }
+            $attribute_lowPrice = min($attribute_prices);
+            $attribute_highPrice = max($attribute_prices);
+
+            if ($debug_sd) {
+                echo __LINE__ . ' $attribute_lowPrice=' . $attribute_lowPrice . ' | $attribute_highPrice=' . $attribute_highPrice . '<br>count($product_attributes)=' . count($product_attributes);
+                mv_printVar($product_attributes);
+            }
+//$product_attributes array structure (key is products_attributes_id, ordered by the option value text) example
+            /*
+                [2682] => Array
+                    (
+                        [option_name_id] => 24
+                        [option_name] => SH cable
+                        [option_value_id] => 148
+                        [option_value] => SH-A01
+                        [price] => 26
+                    )
+            */
+
+            /*THIRD PARTY ATTRIBUTE-STOCK CONTROL PLUGINS************************
+             The existing array "$product_attributes" needs the extra elements to be added with this structure (although it may have more fields). Each shop must custom code (from where to retrieve) the values to load into mpn/gtin. In case I have used ean.
+                            [2682] => Array
+                                (
+                                    [price] => 26
+                                    [stock] => 99
+                                    [sku] => HT-1212
+                                    [mpn] => SH-A01
+                                    [gtin] => 5055780349776
+                                )
+                        */
+            switch (true) {
+
+                case (defined('POSM_ENABLE') && POSM_ENABLE === 'true'):
+                    //todo bof hack to break to default when dependant attributes/more than one attribute
+                    $option_ids = [];
+                    foreach ($product_attributes as $key => $product_attribute) {
+                        $option_ids[] = $product_attribute['option_name_id'];
+                    }
+                    $option_id_min = min($option_ids);
+                    $option_id_max = max($option_ids);
+                    if ($option_id_min !== $option_id_max) {//there are two or more option values!
+                        break;
+                    }
+                    //eof hack
+
+                    //using "Products Options Stock Manager": https://vinosdefrutastropicales.com/index.php?main_page=product_info&cPath=2_7&products_id=46
+                    if ($debug_sd) {
+                        echo __LINE__ . ' Attributes: using POSM<br>';
+                    }
+
+                    if (is_pos_product($product_id)) {//POSM manages stock of this product
+                        $attribute_stock_handler = 'posm';
+                        foreach ($product_attributes as $key => $product_attribute) {
+                            //copied from observer function getOptionsStockRecord as it's a Protected function
+                            $hash = generate_pos_option_hash($product_id, [$product_attribute['option_name_id'] => $product_attribute['option_value_id']]);
+
+                            $posm_record = $db->Execute("SELECT * FROM " . TABLE_PRODUCTS_OPTIONS_STOCK . " WHERE products_id = $product_id AND pos_hash = '$hash' LIMIT 1", false, false, 0, true);
+                            /* example output if extra fields have been added:
+                            ALTER TABLE `products_options_stock` ADD `pos_mpn` VARCHAR(32) NOT NULL DEFAULT '' AFTER `pos_model`;
+                            ALTER TABLE `products_options_stock` ADD `pos_ean` VARCHAR(13) NOT NULL DEFAULT '' AFTER `pos_mpn`;
+                            (
+                                [pos_id] => 2737
+                                [products_id] => 115
+                                [pos_name_id] => 2
+                                [products_quantity] => 1
+                                [pos_hash] => 456b69e6df96dd253fc746afd1c3d04d
+                                [pos_model] => HT-1156
+                                [pos_mpn] =>SH-A01
+                                [pos_ean] =>1234567891234
+                                [pos_date] => 0001-01-01
+                                [last_modified] => 2020-06-19 14:48:16
+                            )
+                             */
+                            $product_attributes[$key]['stock'] = $posm_record->fields['products_quantity'];
+                            $product_attributes[$key]['sku'] = $posm_record->fields['pos_model'];//as per individual shop
+
+                            //CUSTOM CODING REQUIRED***************************************
+                            if ($sniffer->field_exists(TABLE_PRODUCTS_OPTIONS_STOCK, 'pos_mpn') && $sniffer->field_exists(TABLE_PRODUCTS_OPTIONS_STOCK, 'pos_ean')) {
+                                //$product_attributes[$key]['mpn'] = $product_attributes[$key]['option_value'];//as per individual shop
+                                $product_attributes[$key]['mpn'] = $posm_record->fields['pos_mpn'];//as per individual shop
+                                $product_attributes[$key]['gtin'] = $posm_record->fields['pos_ean'];//as per individual shop
+                            }
+                            //eof CUSTOM CODING REQUIRED***********************************
+
+                        }
+                    }
+                    break;
+
+                case (defined('STOCK BY ATTRIBUTES')):
+                    //over to YOU
+
+                case (defined('NUMINIX PRODUCT VARIANTS INVENTORY MANAGER')):
+                    //over to YOU
+
+                default://Zen Cart default/no handling of attribute stock...so no sku/mpn/gtin possible per attribute
+                    $attribute_stock_handler = 'default';
+                    foreach ($product_attributes as $key => $product_attribute) {
+                        $product_attributes[$key]['stock'] = $product_base_stock;
+                        $product_attributes[$key]['sku'] = $product_base_sku;//as per individual shop
+                        $product_attributes[$key]['mpn'] = '';//as per individual shop
+                        $product_attributes[$key]['gtin'] = '';//as per individual shop
+                    }
+            }
+        }
+        if ($debug_sd) {
+            echo __LINE__;
+            mv_printVar($product_attributes);
+        }
         $product_image = $product_info->fields['products_image'];
         if ($product_image !== '') {
             if (!defined('IH_RESIZE') || IH_RESIZE !== 'yes') {//Image Handler not installed/not in use so get a larger image
@@ -72,38 +283,33 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE === 'true') {
                 } elseif (file_exists(DIR_WS_IMAGES . 'medium/' . $products_image_base . IMAGE_SUFFIX_MEDIUM . $products_image_extension)) {
                     $product_image = 'medium/' . $products_image_base . IMAGE_SUFFIX_MEDIUM . $products_image_extension;
                 }
-            }//Image Handler in use
+            }//Image Handler is in use
             $image = HTTP_SERVER . DIR_WS_CATALOG . DIR_WS_IMAGES . $product_image;
         } else {//no image defined in product info
             //note PLUGIN_SDATA_FOG_DEFAULT_PRODUCT_IMAGE is a FULL path with protocol
             $image = (PLUGIN_SDATA_FOG_DEFAULT_PRODUCT_IMAGE !== '' ? PLUGIN_SDATA_FOG_DEFAULT_PRODUCT_IMAGE : HTTP_SERVER . DIR_WS_CATALOG . DIR_WS_IMAGES . PRODUCTS_IMAGE_NO_IMAGE);//if no default image, use standard no-image file.
         }
 
-        //stock level
-        $stock = $product_info->fields['products_quantity'];
-        //is lat9 Products Options Stock Manager installed?
-        if (function_exists('is_pos_product') && is_pos_product($product_id)) {//POSM manages stock of this product
-            $posm_stock_tax_sql = 'SELECT pos.pos_id, pos.products_quantity FROM ' . TABLE_PRODUCTS . ' p LEFT JOIN ' . TABLE_PRODUCTS_OPTIONS_STOCK . ' pos ON p.products_id = pos.products_id WHERE p.products_id = ' . $product_id;
-            $posm_stock_tax_result = $db->Execute($posm_stock_tax_sql);
-            foreach ($posm_stock_tax_result as $row) {
-                $stock = +$row['products_quantity'];//sums POSM (attributes) stocks. Doesn't matter if $stock was set previously: if POSM-managed it would be zero anyway. Not critical!
-            }
-        }
-
-        //get the price with tax
-        $product_display_price_value = round(zen_get_products_actual_price($product_id) * (1 + zen_get_tax_rate($tax_class_id) / 100), 2);//show price with tax, decimal point (not comma), two decimal places
-
         $category_id = zen_get_products_category_id($product_id);
         $category_name = zen_get_categories_name($category_id);
         $image_alt = $product_name;
         $facebook_type = 'product';
     } elseif (isset($_GET['cPath'])) {//NOT a product page
+        if ($debug_sd) {
+            echo __LINE__ . ' is NOT product page<br>';
+        }
         $cPath_array = explode('_', $_GET['cPath']);
         $category_id = end($cPath_array);
         reset($cPath_array);
         $category_name = zen_get_categories_name($category_id);
         if ($category_name !== '') { //a valid category
             $category_image = zen_get_categories_image($category_id);
+
+            if ($debug_sd) {
+                echo __LINE__ . ' $category_image=' . $category_image . '<br>';
+                echo __LINE__ . ' gettype $category_image=' . gettype($category_image) . '<br>';
+            }
+
             if ($category_image === '' || $category_image === NULL) {
                 $image_default = true;
             } else {
@@ -116,6 +322,10 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE === 'true') {
             $title = META_TAG_TITLE;
         }
     } else {//some other page - not product or category, maybe a bad cPath https://github.com/zencart/zencart/issues/2903
+        if ($debug_sd) {
+            echo __LINE__ . ' is "Other" page<br>';
+        }
+
         $image_default = true;
         $breadcrumb_this_page = isset($breadcrumb->_trail[count($breadcrumb->_trail) - 1]['title']) ? $breadcrumb->_trail[count($breadcrumb->_trail) - 1]['title'] : '';
         $image_alt = $breadcrumb_this_page;
@@ -129,6 +339,7 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE === 'true') {
     $description = htmlentities(strip_tags(trim($description)), ENT_COMPAT, CHARSET);//remove tags
     $description = str_replace(["\r\n", "\n", "\r"], '', $description);//remove LF, CR
     $description = preg_replace('/\s+/', ' ', $description);//remove multiple spaces
+    $description = zen_trunc_string($description, PLUGIN_SDATA_MAX_DESCRIPTION);
 
     //build sameAs list
     $sameAs_array = explode(', ', PLUGIN_SDATA_SAMEAS);
@@ -191,7 +402,7 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE === 'true') {
         }
     }
 
-    //reviews
+    //build Reviews array
     if ($is_product_page) {
         $ratingSum = 0;
         $ratingValue = 0;
@@ -215,11 +426,11 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE === 'true') {
                     'reviewText' => $review['reviews_text']
                 ];
             }
-                $reviewCount = count($reviewsArray);
-                foreach ($reviewsArray as $row) {
-                    $ratingSum += $row['reviewRating'];
-                }
-                $ratingValue = round($ratingSum / $reviewCount, 1);
+            $reviewCount = count($reviewsArray);
+            foreach ($reviewsArray as $row) {
+                $ratingSum += $row['reviewRating'];
+            }
+            $ratingValue = round($ratingSum / $reviewCount, 1);
         }
         if ($reviewCount === 0 && PLUGIN_SDATA_REVIEW_USE_DEFAULT === 'true') {
             $reviewsArray[] = [
@@ -233,7 +444,7 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE === 'true') {
             $reviewCount = 1;
         }
     }
-?>
+    ?>
 <?php if (PLUGIN_SDATA_SCHEMA_ENABLE === 'true') { ?>
 <script title="Structured Data: schemaOrganisation" type="application/ld+json">
 {
@@ -302,36 +513,90 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE === 'true') {
        "name": <?php echo json_encode($product_name); ?>,
       "image": "<?php echo $image; ?>",
 "description": <?php echo json_encode($description); ?>,
-        "sku": <?php echo json_encode($product_sku); //The Stock Keeping Unit (SKU), i.e. a merchant-specific identifier for a product or service ?>,
+        "sku": <?php echo json_encode($product_base_sku); //The Stock Keeping Unit (SKU), i.e. a merchant-specific identifier for a product or service ?>,
 <?php
-if ($product_mpn !== '') {//The Manufacturer Part Number (MPN) of the product
-    echo '        "mpn": ' . json_encode($product_mpn) . ",\n";
+if ($product_base_mpn !== '') {//The Manufacturer Part Number (MPN) of the product
+    echo '        "mpn": ' . json_encode($product_base_mpn) . ",\n";
     }
-if ($product_gtin !== '') {//The Manufacturer-supplied standard international code
-    echo '       "gtin": ' . json_encode($product_gtin) . ",\n";
+if ($product_base_gtin !== '') {//The Manufacturer-supplied standard international code
+    echo '       "gtin": ' . json_encode($product_base_gtin) . ",\n";
 }
-if ($product_productID !== '') {//a non-standard code
-    echo '  "productID": ' . json_encode($product_productID) . ",\n";
+if ($product_base_productID !== '') {//a non-standard code
+    echo '  "productID": ' . json_encode($product_base_productID) . ",\n";
 } ?>
       "brand": <?php echo json_encode($manufacturer_name); ?>,
-     "offers": {
+  "category" : <?php echo json_encode($category_name); //impossible to find conclusive information on this, but it is NOT google_product_category number/it must be text ?>,
+<?php if ($product_attributes) {// there is some field duplication between attributes, default and simple product...but having the [ around the multiple offers when attributes-stock is handled complicates the code so leave separate for easier maintenance. Need to test on all three scenarios: simple, attributes-default, attributes-stock handled.
+        switch ($attribute_stock_handler) {
+            case ('posm'): ?>
+    "offers" : [
+    <?php $i = 0;foreach($product_attributes as $index=>$product_attribute) { $i++;?>
+            {"@type" : "Offer",
+<?php if (!empty($product_attribute['sku'])) {?>
+                   "sku" : "<?php echo $product_attribute['sku']; ?>",
+<?php } ?>
+<?php if (!empty($product_attribute['mpn'])) {?>
+                   "mpn" : "<?php echo $product_attribute['mpn']; ?>",
+<?php } ?>
+<?php if (!empty($product_attribute['gtin'])) {?>
+                  "gtin" : "<?php echo $product_attribute['gtin']; ?>",
+<?php } ?>
+                 "price" : "<?php echo $product_attribute['price']; ?>",
+         "priceCurrency" : "<?php echo PLUGIN_SDATA_PRICE_CURRENCY; ?>",
+          "availability" : "<?php echo $product_attribute['stock'] > 0 ? 'http://schema.org/InStock' : 'http://schema.org/PreOrder'; ?>",
+       "priceValidUntil" : "<?php echo date("Y") . '-12-31'; //eg 2020-12-31 NOT 2020-31-12: The date after which the price is no longer available. ?>",
+                    "url": "<?php echo $canonicalLink; ?>"}<?php if ($i < count($product_attributes)) {?>,
+    <?php } ?>
+<?php } ?>
+
+               ]
+<?php break;
+
+            default://'default' Zen Cart attribute prices only (no sku/mpn/gtin) ?>
+               "offers" : {
+                    "@type" : "Offer",
+<?php if ($attribute_lowPrice === $attribute_highPrice) { //or if price not set by attributes, this is already set to base price ?>
+                    "price" : "<?php echo $attribute_lowPrice; ?>",
+                <?php } else { ?>
+                    "@type" : "AggregateOffer",
+<?php } ?> "lowPrice" : "<?php echo $attribute_lowPrice; ?>",
+                "highPrice" : "<?php echo $attribute_highPrice; ?>",
+               "offerCount" : "<?php echo $product_base_stock; //required for AggregateOffer ?>",
+            "priceCurrency" : "<?php echo PLUGIN_SDATA_PRICE_CURRENCY; ?>",
+          "priceValidUntil" : "<?php echo date("Y") . '-12-31'; //eg 2020-12-31 NOT 2020-31-12: The date after which the price is no longer available. ?>",
+            "itemCondition" : "http://schema.org/<?php echo $itemCondition_array[PLUGIN_SDATA_FOG_PRODUCT_CONDITION]; ?>",
+             "availability" : "<?php echo ($product_base_stock > 0 ? 'http://schema.org/InStock' : 'http://schema.org/PreOrder'); ?>",
+                   "seller" : <?php echo json_encode(STORE_NAME); //json_encode adds external quotes as the other entries"?>,
+         "deliveryLeadTime" : "<?php echo ($product_base_stock > 0 ? PLUGIN_SDATA_DELIVERYLEADTIME : PLUGIN_SDATA_DELIVERYLEADTIME_OOS); ?>",
+              "itemOffered" : <?php echo json_encode($product_name); ?>,
+<?php if (PLUGIN_SDATA_ELIGIBLE_REGION !== '') { ?>
+           "eligibleRegion" : "<?php echo PLUGIN_SDATA_ELIGIBLE_REGION . '",' . "\n"; } ?>
+    "acceptedPaymentMethod" : {
+                       "@type" : "PaymentMethod",
+                        "name" : [<?php echo $PaymentMethods; ?>]
+                              }
+                          }
+<?php }//close switch
+} else { //simple product ?>
+            "offers" :     {
                 "@type" : "Offer",
+                "price" : "<?php echo $product_base_displayed_price; ?>",
                    "url": "<?php echo $canonicalLink; ?>",
-        "priceCurrency" : "<?php echo PLUGIN_SDATA_PRICE_CURRRENCY; ?>",
-                "price" : "<?php echo $product_display_price_value; ?>",
+        "priceCurrency" : "<?php echo PLUGIN_SDATA_PRICE_CURRENCY; ?>",
       "priceValidUntil" : "<?php echo date("Y") . '-12-31'; //eg 2020-12-31 NOT 2020-31-12: The date after which the price is no longer available. ?>",
         "itemCondition" : "http://schema.org/<?php echo $itemCondition_array[PLUGIN_SDATA_FOG_PRODUCT_CONDITION]; ?>",
-         "availability" : "<?php echo ($stock > 0 ? 'http://schema.org/InStock' : 'http://schema.org/PreOrder'); ?>",
+         "availability" : "<?php echo ($product_base_stock > 0 ? 'http://schema.org/InStock' : 'http://schema.org/PreOrder'); ?>",
                "seller" : <?php echo json_encode(STORE_NAME); //json_encode adds external quotes as the other entries"?>,
-     "deliveryLeadTime" : "<?php echo ($stock > 0 ? PLUGIN_SDATA_DELIVERYLEADTIME : PLUGIN_SDATA_DELIVERYLEADTIME_OOS); ?>",
-             "category" : <?php echo json_encode($category_name); ?>,
+     "deliveryLeadTime" : "<?php echo ($product_base_stock > 0 ? PLUGIN_SDATA_DELIVERYLEADTIME : PLUGIN_SDATA_DELIVERYLEADTIME_OOS); ?>",
           "itemOffered" : <?php echo json_encode($product_name); ?>,
-<?php if (PLUGIN_SDATA_ELIGIBLE_REGION !== '') { ?>       "eligibleRegion" : "<?php echo PLUGIN_SDATA_ELIGIBLE_REGION . '",' . "\n"; } ?>
+<?php if (PLUGIN_SDATA_ELIGIBLE_REGION !== '') { ?>
+ "eligibleRegion" : "<?php echo PLUGIN_SDATA_ELIGIBLE_REGION . '",' . "\n"; } ?>
 "acceptedPaymentMethod" : {
                   "@type" : "PaymentMethod",
                    "name" : [<?php echo $PaymentMethods; ?>]
                           }
                }
+<?php } ?>
 <?php if ( $reviewCount > 0 ) { //do not bother if no reviews at all. Note note best/worstRating is for the max and min rating used in this review system. Default is 1 and 5 so no need to be declared ?>
   ,
   "aggregateRating": {
@@ -378,6 +643,7 @@ foreach($locales_array as $key=>$value){ ?>
 <meta property="og:locale:alternate" content="<?php echo $value; ?>" />
 <?php }}} ?>
 <?php $image = ($image_default ? $image_default_facebook : $image); ?>
+<?php if ($debug_sd) {echo __LINE__ . ' $image_default=' . $image_default . '<br>';} ?>
 <meta property="og:image" content="<?php echo $image; ?>" />
 <meta property="og:image:url" content="<?php echo $image; ?>" />
 <?php
@@ -420,19 +686,19 @@ foreach($locales_array as $key=>$value){ ?>
 <?php } else { ?>
 <!-- Facebook structured data for product-->
 <meta property="og:type" content="<?php echo trim(PLUGIN_SDATA_FOG_TYPE_PRODUCT); ?>" />
-<meta property="product:availability" content="<?php if ($stock > 0) { ?>instock<?php } ?><?php if ($stock < 1) { ?>pending<?php } ?>" />
+<meta property="product:availability" content="<?php if ($product_base_stock > 0) { ?>instock<?php } ?><?php if ($product_base_stock < 1) { ?>pending<?php } ?>" />
 <meta property="product:brand" content="<?php echo $manufacturer_name; ?>" />
 <meta property="product:category" content="<?php echo htmlentities($category_name); ?>" />
 <meta property="product:condition" content="<?php echo PLUGIN_SDATA_FOG_PRODUCT_CONDITION; ?>" />
-<?php if ($product_mpn !== '') {
-                echo '<meta property="product:mfr_part_no" content="' . $product_mpn . '" />' . "\n";
+<?php if ($product_base_mpn !== '') {
+                echo '<meta property="product:mfr_part_no" content="' . $product_base_mpn . '" />' . "\n";
             } ?>
-<meta property="product:price:amount" content="<?php echo $product_display_price_value; ?>" />
-<meta property="product:price:currency" content="<?php echo PLUGIN_SDATA_PRICE_CURRRENCY; ?>" />
+<meta property="product:price:amount" content="<?php echo $product_base_displayed_price; ?>" />
+<meta property="product:price:currency" content="<?php echo PLUGIN_SDATA_PRICE_CURRENCY; ?>" />
 <meta property="product:product_link" content="<?php echo $canonicalLink; ?>" />
 <meta property="product:retailer" content="<?php echo PLUGIN_SDATA_FOG_APPID; ?>" />
 <meta property="product:retailer_category" content="<?php echo htmlentities($category_name); ?>" />
-<meta property="product:retailer_part_no" content="<?php echo $product_sku; ?>" />
+<meta property="product:retailer_part_no" content="<?php echo $product_base_sku; ?>" />
 <!-- eof Facebook structured data -->
 <?php } }//end facebook enabled  ?>
 <?php if (PLUGIN_SDATA_TWITTER_CARD_ENABLE === 'true') { ?>

@@ -1,6 +1,6 @@
 <?php
 /*
- * plugin_structured_data_data.php
+ * plugin_structured_data.php
  * 
  */
-define('BOX_CONFIGURATION_STRUCTURED_DATA', 'Structured Data Configuration');
+define('BOX_CONFIGURATION_STRUCTURED_DATA', 'Structured Data');

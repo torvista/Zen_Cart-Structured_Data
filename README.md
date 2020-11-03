@@ -1,4 +1,6 @@
-# Structured-Data-for-Zen-Cart
+# Structured Data for Zen Cart
+Tested on Zen Cart 157a.
+
 Plugin that adds Schema (in JSON-LD format), Facebook and Twitter structured markup to all pages.
 Schema markup is added in three blocks: organisation, breadcrumbs and product (including reviews).
 
@@ -15,51 +17,85 @@ When you are satisfied, ensure your production files and database are backed up 
 
 Super Data: If you wish to uninstall the old Super Data plugin, please note that the uninstall sql included with that plugin is incorrect. A corrected version is included with these files.
 
-1. Use the installation sql to install constant definitions and register the new admin configuration page into the database.
+1. BACKUP
 
-In my testing it was possible to run the sql code in the ZC->Admin->SQL Patch tool on a ZC155e vanilla installation.
-But, it's known to be pretty strict (https://www.zen-cart.com/showthread.php?216551-ERROR-Cannot-insert-configuration_key-quot-quot-because-it-already-exists-empty-db-key) so if this gives you an error, you can restore the database (from the backup you did immediately before trying this...), and try again using phpmyadmin instead. 
+2. Use the installation sql to install constant definitions and register the new admin configuration page into the database.
+In my testing it was possible to run the sql code in the ZC->Admin->SQL Patch tool on a ZC156 vanilla installation. But, it's known to be pretty strict (https://www.zen-cart.com/showthread.php?216551-ERROR-Cannot-insert-configuration_key-quot-quot-because-it-already-exists-empty-db-key) so if this gives you an error, you can restore the database (from the backup you did immediately before trying this...), and try again using phpmyadmin instead. 
 
-2. Copy the admin file to enable the admin page to display.
-
+3. Copy the admin file to enable the admin page to display.
 CHECK THE ADMIN PAGE WORKS BEFORE GOING ANY FURTHER.
+    The plugin is disabled on installation, you need to add values to the constants and enable it in the configuration page before it will show up in the catalog \<head>.
 
-The plugin in disabled by default so you need to enable it in the configuration page and add values to the constants before it will show up in the catalog.
+    Optional
 
-Optional
-There are 38 constants and it's very tedious to update them one by one (especially if repeatedly testing the sql install and thereby starting from scratch each time).
-I have included a spreadsheet where you can enter all the constant values into a worksheet to generate sql UPDATE queries. Hence you can copy and paste the queries to enter all the values into the database in one go (via the ZC admin SQL patch tool or phpmyadmin).
-
+    There are 38 constants and it's very tedious to update them one by one (especially if repeatedly testing the sql install and thereby starting from scratch each time). I have included a spreadsheet where you can enter all the constant values into a worksheet to generate sql UPDATE queries. Hence you can copy and paste the queries to enter all the values into the database in one go (via the ZC admin SQL patch tool or phpmyadmin).
 4. Copy catalog file to: `includes/templates/YOUR_TEMPLATE/jscript`
 
- The inclusion of this file in this /jscript folder should make the structured data blocks be included on ALL pages automagically.
+    The inclusion of this file in this /jscript folder should make the structured data blocks be included on ALL pages automagically.
 
 5. Although the markup will display without any further template modifications, strictly you should make this additional modification to the html_header.php, assuming you have a HTML5 template.
 
- from:
+    from:
 ```php
 <!DOCTYPE html>
 <html <?php echo HTML_PARAMS; ?>>
 ```
+
 to:
+
 ```php
 <!DOCTYPE html>
 <html <?php echo HTML_PARAMS; ?> prefix="og: http://ogp.me/ns# fb: http://ogp.me/ns/fb# product: http://ogp.me/ns/product#">
 ```
 
- This adds the namespaces for the properties og:, fb:, product: which are used later in the structured data block.
+This adds the namespaces for the properties og:, fb:, product: which are used later in the structured data block.
 
-6. Check the output on all your pages for empty parameters or properties that don't reflect what they should.
+### SKU/MPN/GTIN
+sku: is populated by products_model. This is a code used by your shop.
+
+mpn: needs to be the manufacturers part number. It is unlikely that you are using that as your shop sku, so you will need to do the necessary work to load the corresponding part numbers into your database and retrieve them for this field. I added a products_mpn field to the products table:
+
+ALTER TABLE `products` ADD `products_mpn` VARCHAR(32) NOT NULL DEFAULT '';
+
+gtin: international identification number that depends on the products you sell: UPC / GTIN-12 / EAN / JAN / ISBN / ITF-14. similar to mpn, you'll need to deal with this.
+I used ean and added a products_ean field to the products table:
+
+ALTER TABLE `products` ADD `products_ean` VARCHAR(13) NOT NULL DEFAULT '';  
+
+In the code, these necessary sections for modification are marked CUSTOM CODING.
+By default they are left unpopulated so Google will remind you they are missing.
+
+### Attributes
+Vanilla Zen Cart does not have provision for sku nor stock control for attributes, only prices.
+So the 'default' handling of attributes will only provide an aggregateOffer in "offers": separating out each attribute would only generate complaints as no sku/mpn/gtin can be provided.
+
+####Third-party attribute-stock plugins
+Products Options Stock Manager (POSM)
+
+I use this plugin, so have added the code necessary to deal with one attribute (dependent attributes are pending).
+However, it still requires extra fields adding per attribute:
+
+ALTER TABLE `products_options_stock` ADD `pos_mpn` VARCHAR(32) NOT NULL DEFAULT '' AFTER `pos_model`;
+
+ALTER TABLE `products_options_stock` ADD `pos_ean` VARCHAR(13) NOT NULL DEFAULT '' AFTER `pos_mpn`;
+
+You may choose to use something other than ean.
+
+The code is written and commented to allow the easy addition of other plugins that handle attribute-stock such as Stock by Attributes....but you will have to do that and push the changes to GitHub for inclusion.
+
+----------------
+
+Check the output on all your pages for empty parameters or properties that don't reflect what they should.
 
 Every site is different, so it is impossible to make this particular plugin 100% plug and play, you DO need to check the markup output carefully to ensure it reflects your business and be prepared to modify accordingly or report any omissions if you think they are relevant generally.
 
  Use the various debuggers to check the various blocks:
  
- - Google Structured Data
+ - Google Rich Results Test
  - Facebook Opengraph Debugger
  - Twitter Card Validator
 
-Please try it out and report any issues.
+If things are not what they should be, please review the code to try and resolve it, and then report the  issue/fix on GitHub.
 
 ## USAGE
 Things behind some of the code that you may wish to modify/be aware of.
@@ -70,20 +106,20 @@ There are three code blocks:
 
 1. Organisation: on all pages.
 
- The `sameAs` property should point to: 
+    The `sameAs` property should point to: 
  	
-a. the "best" page for contact information on this particular website: this is currently hard-coded as the contact_us page. The property is thus not generated on the contact_us page.
+    a. the "best" page for contact information on this particular website: this is currently hard-coded as the contact_us page. The property is thus not generated on the contact_us page.
 
-b. other social pages
+    b. other social pages
 
 2. `Breadcrumbs`: on all pages
 3. `Product`: on product pages only
 
-priceValidUntil: set to the last day of the current year as that may be when prices get updated.
+priceValidUntil: is set to the last day of the current year as that may be when prices get updated.
 
 #### Organisation or LocalBusiness?
 
-`LocalBusiness` - refers to a PHYSICAL store NOT an online only shop. Then you can add a subtype such as Store or something more specific from the spreadsheet listing here:
+`LocalBusiness` - refers to a PHYSICAL store NOT an online-only shop. Then you can add a subtype such as Store or something more specific from the spreadsheet listing here:
 https://docs.google.com/spreadsheets/d/1Ed6RmI01rx4UdW40ciWgz2oS_Kx37_-sPi7sba_jC3w/edit?pli=1#gid=0
 
 An online-only business should use `Organisation`, (or the more specific `Corporation`, if it applies). This allows you to use the `makesOffer`/`offeredBy` property.
@@ -148,14 +184,19 @@ maximum size: approx. 1MB.
 "recommended" dimensions by users: 600x321 (1.867:1)
 
 ## Changelog
+2020 11 02 - torvista
+added support for attributes (default and Product Options Stock plugin)
+corrected typo PLUGIN_SDATA_PRICE_CURRRENCY to PLUGIN_SDATA_PRICE_CURRENCY
+
 2020 10 28 - torvista
 separated sku, mpn, gtin entries
- 
+
 2020 03 27 - torvista
 Added the option of creating an anonymous, blank review with an admin-defined star-rating for products with no review at all, in an attempt to stop hundreds of warnings:
 Missing field "aggregateRating"
 Missing field "review"
 Remains to be seen if results in further warnings.
+
 2020 02 25 - torvista
 changed array declarations to short syntax
 changed while to a foreach
