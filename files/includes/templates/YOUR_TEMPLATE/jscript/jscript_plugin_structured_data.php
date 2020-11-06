@@ -486,8 +486,7 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE === 'true') {
 <?php
                 foreach ($breadcrumb as $key => $value) {
                     for ($i = 0, $n = count($value); $i < $n; $i++) {
-                        if (isset($value[$i]['title']) && zen_not_null($value[$i]['title'])) {//if non-existent url used, title is null: php notice)
-                        ?>
+                        if (isset($value[$i]['title']) && zen_not_null($value[$i]['title'])) {//if non-existent url used, title is null: php notice) ?>
       {
       "@type": "ListItem",
    "position": <?php echo $i + 1; //does not need to be quoted ?>,
@@ -495,11 +494,10 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE === 'true') {
            "@id": "<?php echo $value[$i]['link']; ?>",
           "name": <?php echo json_encode($value[$i]['title']) . "\n"; ?>
                }
-       }<?php if ($i + 1 !== $n) { ?>,
-<?php }?>
-<?php } //end of zen_not_null
-   }//end of For
- }//end of ListItem ?>
+       }<?php if ($i + 1 !== $n) { echo ",\n"; }?>
+<?php } //close isset
+   }//close for
+ }//close foreach ?>
 
                     ]
 }
