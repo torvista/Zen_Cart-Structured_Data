@@ -1,24 +1,31 @@
 <?php
-/* THIS FILE MUST BE LOADED IN html <head> SINCE IT USES meta tags.
- * DO NOT RE-FORMAT THE CODE: it is structured so the html seen in Developer Tools Inspector (Chrome) looks ok.
- * torvista
- *
+/* This file MUST be loaded by html <head> since it uses meta tags.
+ * DO NOT LET YOUR IDE RE-FORMAT THE CODE STRUCTURE: it is structured so the html seen in Developer Tools Inspector (Chrome) is readable and the parentheses line up.
+  *
  * @license http://www.zen-cart.com/license/2_0.txt GNU Public License V2.0
  */
-
+/** phpStorm directives to ease code inspection
+ ** @var queryFactory $db
+ ** @var sniffer $sniffer
+ ** @var $canonicalLink
+ ** @var $current_page_base
+ ** @var $product_id
+ */
 if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE === 'true') {
-    //new defines
+    //new defines to add to installer one day
     define('PLUGIN_SDATA_REVIEW_USE_DEFAULT', 'true'); // if no product review, use a default value to stop Google warnings
     define('PLUGIN_SDATA_REVIEW_DEFAULT_VALUE', '3'); // avg. rating (when no product reviews exist)
     define('PLUGIN_SDATA_MAX_DESCRIPTION', 5000); // maximum characters allowed (Google)
+    define('PLUGIN_SDATA_GOOGLE_PRODUCT_CATEGORY', ''); // fallback category if a product does not have a specific category defined http://www.google.com/basepages/producttype/taxonomy-with-ids.en-US.xls
+//eg '5613'	= Vehicles & Parts, Vehicle Parts & Accessories
 
-    if (defined('PLUGIN_SDATA_PRICE_CURRRENCY')) {//correct old typo
+    if (defined('PLUGIN_SDATA_PRICE_CURRRENCY')) {//sic: correct old typo
         $db->Execute("UPDATE `configuration` SET `configuration_key`= 'PLUGIN_SDATA_PRICE_CURRENCY' WHERE `configuration_key`= 'PLUGIN_SDATA_PRICE_CURRRENCY'");
     }
     //
-    $debug_sd = false;//as there are ongoing changes, and it is a pig to debug, there is a lot of output available with this switch
+    $debug_sd = false; // changes from the gods are imposed regularly, so I've left a lot of ugly debug output available.
 
-    //defaults (subsequently overwritten) defined to prevent php notices
+    //defaults (subsequently overwritten), defined to prevent php notices
     $description = '';
     $title = '';
     $image = '';
@@ -45,6 +52,7 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE === 'true') {
     } else {
         $image_default_twitter = HTTP_SERVER . DIR_WS_CATALOG . DIR_WS_IMAGES . PRODUCTS_IMAGE_NO_IMAGE;
     }
+
 //only used for debugging
     if (!function_exists('mv_printVar')) {
         /**
@@ -55,6 +63,7 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE === 'true') {
             $backtrace = debug_backtrace()[0];
             $fh = fopen($backtrace['file'], 'rb');
             $line = 0;
+            $code = '';
             while (++$line <= $backtrace['line']) {
                 $code = fgets($fh);
             }
@@ -62,7 +71,7 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE === 'true') {
             preg_match('/' . __FUNCTION__ . '\s*\((.*)\)\s*;/u', $code, $name);
             echo '<pre>';
             if (!empty($name[1])) {
-                echo '<strong>' . trim($name[1]) . ":</strong>\n";
+                echo '<strong>' . trim($name[1]) . '</strong> ('.gettype($a)."):\n";
             }
             //var_export($a);
             print_r($a);
@@ -83,6 +92,7 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE === 'true') {
             echo __LINE__ . ' is product page<br>';
         }
         //get product info
+
         $sql = 'SELECT p.products_id, p.products_quantity, p.products_model, p.products_image, p.products_price, p.products_date_added, p.products_tax_class_id, p.products_priced_by_attribute, pd.products_name, pd.products_description
            FROM ' . TABLE_PRODUCTS . ' p, ' . TABLE_PRODUCTS_DESCRIPTION . ' pd
            WHERE p.products_id = ' . (int)$_GET['products_id'] . '
@@ -100,36 +110,52 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE === 'true') {
         $manufacturer_name = zen_get_products_manufacturers_name((int)$_GET['products_id']);
         $product_base_stock = $product_info->fields['products_quantity'];
 
+        //sku: the Merchant-specific product identifier (not necessarily the same as the manufacturer mpn / gtin)
+        $product_base_sku = $product_info->fields['products_model'];
+
         /*
-         * sku, mpn, gtin
-         Store/product-specific custom coding required to populate these fields correctly. Set initial values sku/mpn/productID to $product_base_sku, to be overwritten later/or not...
+        The following fields are not part of Zen Cart product data and so will require manually adding to your database as per product type.
+         These initial values mpn/productID to $product_base_sku, to be overwritten later/or not...
          $product_base_mpn //manufacturers part number
-         $product_base_gtin //a standardised code UPC / GTIN-12 / EAN / JAN / ISBN / ITF-14
+         $product_base_gtin //a standardised international code UPC / GTIN-12 / EAN / JAN / ISBN / ITF-14
          $product_base_productID //an optional non-standardised code: a possible use may be the shop base/false sku when attributes stock has the real/correct sku?
+         $product_base_google_product_category //google product category http://www.google.com/basepages/producttype/taxonomy-with-ids.en-US.xls
          */
-        $product_base_sku = $product_info->fields['products_model']; //sku is a Merchant-specific product identifier
         $product_base_mpn = '';
         $product_base_gtin = '';
         $product_base_productID = $product_info->fields['products_model'];
+        $product_base_gpc = PLUGIN_SDATA_GOOGLE_PRODUCT_CATEGORY;
 
-//bof ******************CUSTOM CODE for extra product fields for mpn and ean
-        /* additional fields for product codes and POSM
-        ALTER TABLE `products` ADD `products_mpn` VARCHAR(32) NOT NULL DEFAULT '' AFTER `products_oos_date`;
+//bof ******************CUSTOM CODE for extra product fields for mpn, ean and google product category***********************/
+//here you will need to edit things as per the names and contents of your extra database columns
+        /* examples of sql for adding extra fields for product codes: edit as necessary for your site
+        ALTER TABLE `products` ADD `products_mpn` VARCHAR(32) NOT NULL DEFAULT;
         ALTER TABLE `products` ADD `products_ean` VARCHAR(13) NOT NULL DEFAULT '' AFTER `products_mpn`;
-
-        category in schema must be a text, not a google_product_category number https://support.google.com/google-ads/thread/57687299?hl=en
-        ALTER TABLE `products` ADD `google_product_category` VARCHAR(6) NOT NULL DEFAULT '' AFTER `products_ean`;
+        ALTER TABLE `products` ADD `products_google_product_category` VARCHAR(6) NOT NULL DEFAULT '' AFTER `products_ean`;
+        category in SCHEMA must be text, not a google_product_category number https://support.google.com/google-ads/thread/57687299?hl=en
         */
-        if ($sniffer->field_exists(TABLE_PRODUCTS, 'products_mpn') && $sniffer->field_exists(TABLE_PRODUCTS, 'products_ean')) {
-            $sql = 'SELECT products_mpn, products_ean FROM ' . TABLE_PRODUCTS . ' WHERE products_id = ' . $product_id;
-            $product_codes = $db->Execute($sql);
-            $product_base_mpn = $product_codes->fields['products_mpn'];
-            $product_base_gtin = $product_codes->fields['products_ean'];
+        $extra_fields = [];
+        if ($sniffer->field_exists(TABLE_PRODUCTS, 'products_mpn')) {
+            $extra_fields[] = 'products_mpn';
         }
-//eof ******************CUSTOM CODE
-//torvista: my site uses boilerplate texts************
-        //Product Descriptions
-        if (function_exists('mv_get_boilerplate') && !empty($descr_stringlist)) {
+        if ($sniffer->field_exists(TABLE_PRODUCTS, 'products_ean')) {
+            $extra_fields[] = 'products_ean';
+        }
+        if ($sniffer->field_exists(TABLE_PRODUCTS, 'products_google_product_category')) {
+            $extra_fields[] = 'products_google_product_category';
+        }
+        if (count($extra_fields) > 0) {
+            $extra_fields = implode(', ', $extra_fields);
+            $sql = 'SELECT ' . $extra_fields . ' FROM ' . TABLE_PRODUCTS . ' WHERE products_id = ' . $product_id;
+            $product_codes = $db->Execute($sql);
+            $product_base_mpn = !empty($product_codes->fields['products_mpn']) ? $product_codes->fields['products_mpn'] : '' ;//manufacturer part number
+            $product_base_gtin = !empty($product_codes->fields['products_ean']) ? $product_codes->fields['products_ean'] : '';//manufacturer assigned global code
+            $product_base_gpc = !empty($product_codes->fields['products_google_product_category']) ? $product_codes->fields['products_google_product_category'] : PLUGIN_SDATA_GOOGLE_PRODUCT_CATEGORY ;//google merchant taxonomy
+        }
+//bof ******************CUSTOM CODE for extra product fields for mpn, ean and google product category***********************/
+
+//torvista: my site uses boilerplate texts for product descriptions ************
+        if (function_exists('mv_get_boilerplate') && !empty($descr_stringlist)) {//TODO
             $description = mv_get_boilerplate($description, $descr_stringlist, $product_id);
         }
 //****************************************************
@@ -150,8 +176,8 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE === 'true') {
                     LEFT JOIN " . TABLE_PRODUCTS_ATTRIBUTES . " patrib ON (popt.products_options_id = patrib.options_id)
                     LEFT JOIN " . TABLE_PRODUCTS_OPTIONS_VALUES . " poptv ON (poptv.products_options_values_id = patrib.options_values_id)
                     WHERE patrib.products_id = " . $product_id . "
-                    AND popt.language_id = " . (int)$_SESSION['languages_id'] . "   
-                    AND poptv.language_id = " . (int)$_SESSION['languages_id'] . "   
+                    AND popt.language_id = " . (int)$_SESSION['languages_id'] . "
+                    AND poptv.language_id = " . (int)$_SESSION['languages_id'] . "
                     ORDER BY popt.products_options_name, poptv.products_options_values_name";
             $results = $db->Execute($sql);
 
@@ -184,8 +210,9 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE === 'true') {
                     )
             */
 
-            /*THIRD PARTY ATTRIBUTE-STOCK CONTROL PLUGINS************************
-             The existing array "$product_attributes" needs the extra elements to be added with this structure (although it may have more fields). Each shop must custom code (from where to retrieve) the values to load into mpn/gtin. In case I have used ean.
+/*THIRD PARTY ATTRIBUTE-STOCK CONTROL PLUGINS************************
+The existing array "$product_attributes" needs the extra elements to be added with this structure (although it may have more fields).
+Each shop must add code from where to retrieve)the values to load into mpn/gtin. In case I have used ean.
                             [2682] => Array
                                 (
                                     [price] => 26
@@ -198,14 +225,14 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE === 'true') {
             switch (true) {
 
                 case (defined('POSM_ENABLE') && POSM_ENABLE === 'true'):
-                    //todo bof hack to break to default when dependant attributes/more than one attribute
+                    //todo bof hack to break to default, when dependant attributes/more than one attribute
                     $option_ids = [];
                     foreach ($product_attributes as $key => $product_attribute) {
                         $option_ids[] = $product_attribute['option_name_id'];
                     }
                     $option_id_min = min($option_ids);
                     $option_id_max = max($option_ids);
-                    if ($option_id_min !== $option_id_max) {//there are two or more option values!
+                    if ($option_id_min !== $option_id_max) {//there are two or more option values....run away!
                         break;
                     }
                     //eof hack
@@ -291,7 +318,8 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE === 'true') {
         }
 
         $category_id = zen_get_products_category_id($product_id);
-        $category_name = zen_get_categories_name($category_id);
+        $category_name = zen_get_category_name($category_id, (int)$_SESSION['languages_id']); // ZC158 does not need language parameter
+
         $image_alt = $product_name;
         $facebook_type = 'product';
     } elseif (isset($_GET['cPath'])) {//NOT a product page
@@ -301,8 +329,8 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE === 'true') {
         $cPath_array = explode('_', $_GET['cPath']);
         $category_id = end($cPath_array);
         reset($cPath_array);
-        $category_name = zen_get_categories_name($category_id);
-        if ($category_name !== '') { //a valid category
+            $category_name = zen_get_category_name($category_id, (int)$_SESSION['languages_id']); // ZC158 does not need language parameter8
+            if ($category_name !== '') { //a valid category
             $category_image = zen_get_categories_image($category_id);
 
             if ($debug_sd) {
@@ -327,7 +355,7 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE === 'true') {
         }
 
         $image_default = true;
-        $breadcrumb_this_page = isset($breadcrumb->_trail[count($breadcrumb->_trail) - 1]['title']) ? $breadcrumb->_trail[count($breadcrumb->_trail) - 1]['title'] : '';
+        $breadcrumb_this_page = $breadcrumb->_trail[count($breadcrumb->_trail) - 1]['title'] ?? '';
         $image_alt = $breadcrumb_this_page;
         $title = META_TAG_TITLE;
         //$title = $breadcrumb_this_page;
@@ -521,6 +549,9 @@ if ($product_base_gtin !== '') {//The Manufacturer-supplied standard internation
 }
 if ($product_base_productID !== '') {//a non-standard code
     echo '  "productID": ' . json_encode($product_base_productID) . ",\n";
+}
+if ($product_base_gpc !== '') {//google product category
+    echo '  "googleProductCategory": "' . (int)$product_base_gpc . '"' . ",\n";
 } ?>
       "brand": <?php echo json_encode($manufacturer_name); ?>,
   "category" : <?php echo json_encode($category_name); //impossible to find conclusive information on this, but it is NOT google_product_category number/it must be text ?>,
@@ -568,7 +599,8 @@ if ($product_base_productID !== '') {//a non-standard code
          "deliveryLeadTime" : "<?php echo ($product_base_stock > 0 ? PLUGIN_SDATA_DELIVERYLEADTIME : PLUGIN_SDATA_DELIVERYLEADTIME_OOS); ?>",
               "itemOffered" : <?php echo json_encode($product_name); ?>,
 <?php if (PLUGIN_SDATA_ELIGIBLE_REGION !== '') { ?>
-           "eligibleRegion" : "<?php echo PLUGIN_SDATA_ELIGIBLE_REGION . '",' . "\n"; } ?>
+           "eligibleRegion" : "<?php echo PLUGIN_SDATA_ELIGIBLE_REGION ;?>",<?php echo "\n";
+} ?>
     "acceptedPaymentMethod" : {
                        "@type" : "PaymentMethod",
                         "name" : [<?php echo $PaymentMethods; ?>]

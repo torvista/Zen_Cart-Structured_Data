@@ -1,5 +1,5 @@
 # Structured Data for Zen Cart
-Tested on Zen Cart 157a.
+Tested on Zen Cart 157.
 
 Plugin that adds Schema (in JSON-LD format), Facebook and Twitter structured markup to all pages.
 Schema markup is added in three blocks: organisation, breadcrumbs and product (including reviews).
@@ -12,7 +12,7 @@ https://www.zen-cart.com/showthread.php?221868-Structured-Data-Markup-for-Schema
 
 ## INSTALLATION
 
-As ALWAYS, expect that ANY new code will self-destruct your shop so test ALL new code on your development server FIRST.
+As ALWAYS, expect that ANY new code will self-destruct your shop and eat your pets, so test ALL new code on your development server FIRST.
 When you are satisfied, ensure your production files and database are backed up prior to installing in the production site. 
 
 Super Data: If you wish to uninstall the old Super Data plugin, please note that the uninstall sql included with that plugin is incorrect. A corrected version is included with these files.
@@ -20,7 +20,7 @@ Super Data: If you wish to uninstall the old Super Data plugin, please note that
 1. BACKUP
 
 2. Use the installation sql to install constant definitions and register the new admin configuration page into the database.
-In my testing it was possible to run the sql code in the ZC->Admin->SQL Patch tool on a ZC156 vanilla installation. But, it's known to be pretty strict (https://www.zen-cart.com/showthread.php?216551-ERROR-Cannot-insert-configuration_key-quot-quot-because-it-already-exists-empty-db-key) so if this gives you an error, you can restore the database (from the backup you did immediately before trying this...), and try again using phpmyadmin instead. 
+In my testing it was possible to run the sql code in the ZC->Admin->SQL Patch tool on a vanilla installation. But, it's known to be pretty strict (https://www.zen-cart.com/showthread.php?216551-ERROR-Cannot-insert-configuration_key-quot-quot-because-it-already-exists-empty-db-key) so if this gives you an error, you can restore the database (from the backup you did immediately before trying this...), and try again using phpmyadmin instead. 
 
 3. Copy the admin file to enable the admin page to display.
 CHECK THE ADMIN PAGE WORKS BEFORE GOING ANY FURTHER.
@@ -28,10 +28,13 @@ CHECK THE ADMIN PAGE WORKS BEFORE GOING ANY FURTHER.
 
     Optional
 
-    There are 38 constants and it's very tedious to update them one by one (especially if repeatedly testing the sql install and thereby starting from scratch each time). I have included a spreadsheet where you can enter all the constant values into a worksheet to generate sql UPDATE queries. Hence you can copy and paste the queries to enter all the values into the database in one go (via the ZC admin SQL patch tool or phpmyadmin).
+    There are 38 constants and it's very tedious to update them one by one (especially if repeatedly testing the sql install and thereby starting from scratch each time).
+	I have included a spreadsheet where you can enter all the constant values into a worksheet to generate sql UPDATE queries.
+	Hence you can copy and paste the queries to enter all the values into the database in one go (via the ZC admin SQL patch tool or phpmyadmin).
+	
 4. Copy catalog file to: `includes/templates/YOUR_TEMPLATE/jscript`
 
-    The inclusion of this file in this /jscript folder should make the structured data blocks be included on ALL pages automagically.
+    The existence of this file in the /jscript folder will include the structured data blocks ALL pages automagically.
 
 5. Although the markup will display without any further template modifications, strictly you should make this additional modification to the html_header.php, assuming you have a HTML5 template.
 
@@ -53,17 +56,31 @@ This adds the namespaces for the properties og:, fb:, product: which are used la
 ### SKU/MPN/GTIN
 sku: is populated by products_model. This is a code used by your shop.
 
-mpn: needs to be the manufacturers part number. It is unlikely that you are using that as your shop sku, so you will need to do the necessary work to load the corresponding part numbers into your database and retrieve them for this field. I added a products_mpn field to the products table:
+mpn: needs to be the manufacturers part number. It is unlikely that you are using that as your shop sku, so you will need to add this column to your products table and populate it.
 
 ALTER TABLE `products` ADD `products_mpn` VARCHAR(32) NOT NULL DEFAULT '';
 
-gtin: international identification number that depends on the products you sell: UPC / GTIN-12 / EAN / JAN / ISBN / ITF-14. similar to mpn, you'll need to deal with this.
+gtin: international identification number that depends on the products you sell: UPC / GTIN-12 / EAN / JAN / ISBN / ITF-14. 
+You'll need to deal with this similarly to mpn.
+
 I used ean and added a products_ean field to the products table:
 
 ALTER TABLE `products` ADD `products_ean` VARCHAR(13) NOT NULL DEFAULT '';  
 
-In the code, these necessary sections for modification are marked CUSTOM CODING.
-By default they are left unpopulated so Google will remind you they are missing.
+In the code, you will need to modify the code to use the column name you: the necessary sections for modification are marked CUSTOM CODING.
+
+By default they are left unpopulated so Google Rich Results will remind you they are missing.
+
+### Google Product Category
+Taxonomy here; https://support.google.com/merchants/answer/6324436?hl=en
+If all your products belong to the same cateory, there is no need to add another column to the products table: in the script, set PLUGIN_SDATA_GOOGLE_PRODUCT_CATEGORY to your category.
+
+Left blank to generate warnings.
+
+If your products require individual categories, you will need to add a new column in the product table for you to fill in.
+ALTER TABLE `products` ADD `products_google_product_category` VARCHAR(6) NOT NULL DEFAULT '';
+
+Products without any specific category defined, will use the value in PLUGIN_SDATA_GOOGLE_PRODUCT_CATEGORY.
 
 ### Attributes
 Vanilla Zen Cart does not have provision for sku nor stock control for attributes, only prices.
@@ -72,7 +89,7 @@ So the 'default' handling of attributes will only provide an aggregateOffer in "
 ####Third-party attribute-stock plugins
 Products Options Stock Manager (POSM)
 
-I use this plugin, so have added the code necessary to deal with one attribute (dependent attributes are pending).
+I use this plugin, so have added the code necessary to deal with one attribute (dependent attributes are pending/too hard).
 However, it still requires extra fields adding per attribute:
 
 ALTER TABLE `products_options_stock` ADD `pos_mpn` VARCHAR(32) NOT NULL DEFAULT '' AFTER `pos_model`;
@@ -95,7 +112,7 @@ Every site is different, so it is impossible to make this particular plugin 100%
  - Facebook Opengraph Debugger
  - Twitter Card Validator
 
-If things are not what they should be, please review the code to try and resolve it, and then report the  issue/fix on GitHub.
+If things are not what they should be, please review the code to try and resolve it, and then report the issue/fix on GitHub.
 
 ## USAGE
 Things behind some of the code that you may wish to modify/be aware of.
@@ -184,6 +201,10 @@ maximum size: approx. 1MB.
 "recommended" dimensions by users: 600x321 (1.867:1)
 
 ## Changelog
+2021 03 31 - torvista
+added support for google product category
+added test values to spreadsheet
+
 2020 11 02 - torvista
 added support for attributes (default and Product Options Stock plugin)
 corrected typo PLUGIN_SDATA_PRICE_CURRRENCY to PLUGIN_SDATA_PRICE_CURRENCY
