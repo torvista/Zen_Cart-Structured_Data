@@ -18,6 +18,7 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE === 'true') {
     define('PLUGIN_SDATA_MAX_DESCRIPTION', 5000); // maximum characters allowed (Google)
     define('PLUGIN_SDATA_GOOGLE_PRODUCT_CATEGORY', ''); // fallback category if a product does not have a specific category defined http://www.google.com/basepages/producttype/taxonomy-with-ids.en-US.xls
 //eg '5613'	= Vehicles & Parts, Vehicle Parts & Accessories
+    define('PLUGIN_SDATA_DEFAULT_WEIGHT', '0.3'); // fallback weight if product weight in database is not set
 
     if (defined('PLUGIN_SDATA_PRICE_CURRRENCY')) {//sic: correct old typo
         $db->Execute("UPDATE `configuration` SET `configuration_key`= 'PLUGIN_SDATA_PRICE_CURRENCY' WHERE `configuration_key`= 'PLUGIN_SDATA_PRICE_CURRRENCY'");
@@ -93,7 +94,7 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE === 'true') {
         }
         //get product info
 
-        $sql = 'SELECT p.products_id, p.products_quantity, p.products_model, p.products_image, p.products_price, p.products_date_added, p.products_tax_class_id, p.products_priced_by_attribute, pd.products_name, pd.products_description
+        $sql = 'SELECT p.products_id, p.products_quantity, p.products_model, p.products_image, p.products_price, p.products_date_added, p.products_weight, p.products_tax_class_id, p.products_priced_by_attribute, pd.products_name, pd.products_description
            FROM ' . TABLE_PRODUCTS . ' p, ' . TABLE_PRODUCTS_DESCRIPTION . ' pd
            WHERE p.products_id = ' . (int)$_GET['products_id'] . '
            AND pd.products_id = p.products_id
@@ -104,6 +105,7 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE === 'true') {
         $product_name = $product_info->fields['products_name'];
         $description = $product_info->fields['products_description'];//variable used in twitter for categories & products
         $title = htmlspecialchars(STORE_NAME . ' - ' . $product_info->fields['products_name']);
+        $weight = (float)($product_info->fields['products_weight'] === '0' ? PLUGIN_SDATA_DEFAULT_WEIGHT : $product_info->fields['products_weight']);
         $tax_class_id = $product_info->fields['products_tax_class_id'];
         $product_base_displayed_price = round(zen_get_products_actual_price($product_id) * (1 + zen_get_tax_rate($tax_class_id) / 100), 2);//shown price with tax, decimal point (not comma), two decimal places.
         $product_date_added = $product_info->fields['products_date_added'];
@@ -172,7 +174,7 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE === 'true') {
             $attribute_prices = [];
 
 // Get attribute info
-            $sql = "SELECT patrib.products_attributes_id, patrib.options_id, patrib.options_values_id, patrib.options_values_price, popt.products_options_name, poptv.products_options_values_name
+            $sql = "SELECT patrib.products_attributes_id, patrib.options_id, patrib.options_values_id, patrib.options_values_price, patrib.products_attributes_weight, patrib.products_attributes_weight_prefix, popt.products_options_name, poptv.products_options_values_name
                     FROM " . TABLE_PRODUCTS_OPTIONS . " popt
                     LEFT JOIN " . TABLE_PRODUCTS_ATTRIBUTES . " patrib ON (popt.products_options_id = patrib.options_id)
                     LEFT JOIN " . TABLE_PRODUCTS_OPTIONS_VALUES . " poptv ON (poptv.products_options_values_id = patrib.options_values_id)
@@ -190,6 +192,11 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE === 'true') {
                     $product_attributes[$attribute['products_attributes_id']]['option_value'] = $attribute['products_options_values_name'];
                     $product_attributes[$attribute['products_attributes_id']]['price'] = zen_get_products_price_is_priced_by_attributes($product_id) ? $attribute['options_values_price'] : $product_base_displayed_price;
                     $attribute_prices[] = $product_attributes[$attribute['products_attributes_id']]['price'];
+                    if ($attribute['products_attributes_weight'] === '0') {
+                        $product_attributes[$attribute['products_attributes_id']]['weight'] = 0;
+                    } else {
+                        $product_attributes[$attribute['products_attributes_id']]['weight'] = (float)(($attribute['products_attributes_weight_prefix'] === '-' ? '-' : '') . $attribute['products_attributes_weight']);
+                    }
                 }
             }
             $attribute_lowPrice = min($attribute_prices);
@@ -541,6 +548,7 @@ Each shop must add code from where to retrieve)the values to load into mpn/gtin.
       "image": "<?php echo $image; ?>",
 "description": <?php echo json_encode($description); ?>,
         "sku": <?php echo json_encode($product_base_sku); //The Stock Keeping Unit (SKU), i.e. a merchant-specific identifier for a product or service ?>,
+        "weight": <?php echo json_encode($weight . TEXT_PRODUCT_WEIGHT_UNIT); ?>,
 <?php
 if ($product_base_mpn !== '') {//The Manufacturer Part Number (MPN) of the product
     echo '        "mpn": ' . json_encode($product_base_mpn) . ",\n";
@@ -572,6 +580,7 @@ if ($product_base_gpc !== '') {//google product category
                   "gtin" : "<?php echo $product_attribute['gtin']; ?>",
 <?php } ?>
                  "price" : "<?php echo $product_attribute['price']; ?>",
+                 "weight" : "<?php echo ($weight + $product_attribute['weight'] > 0 ? $weight + $product_attribute['weight'] : $weight) . TEXT_PRODUCT_WEIGHT_UNIT; //if a subtracted attribute weight is less than zero, use base weight ?>",
          "priceCurrency" : "<?php echo PLUGIN_SDATA_PRICE_CURRENCY; ?>",
           "availability" : "<?php echo $product_attribute['stock'] > 0 ? 'http://schema.org/InStock' : 'http://schema.org/PreOrder'; ?>",
        "priceValidUntil" : "<?php echo date("Y") . '-12-31'; //eg 2020-12-31 NOT 2020-31-12: The date after which the price is no longer available. ?>",

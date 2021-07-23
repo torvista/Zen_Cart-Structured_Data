@@ -71,6 +71,10 @@ In the code, you will need to modify the code to use the column name you: the ne
 
 By default they are left unpopulated so Google Rich Results will remind you they are missing.
 
+### WEIGHT
+In the script there is a default weight constant which will be used if a product has no weight defined/wieght is zero. Edit this to your needs.
+    define('PLUGIN_SDATA_DEFAULT_WEIGHT', '0.3'); // fallback weight if product weight in database is not set
+
 ### Google Product Category
 Taxonomy here; https://support.google.com/merchants/answer/6324436?hl=en
 If all your products belong to the same cateory, there is no need to add another column to the products table: in the script, set PLUGIN_SDATA_GOOGLE_PRODUCT_CATEGORY to your category.
