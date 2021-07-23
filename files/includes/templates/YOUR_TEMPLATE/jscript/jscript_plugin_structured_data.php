@@ -155,8 +155,9 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE === 'true') {
 //bof ******************CUSTOM CODE for extra product fields for mpn, ean and google product category***********************/
 
 //torvista: my site uses boilerplate texts for product descriptions ************
-        if (function_exists('mv_get_boilerplate') && !empty($descr_stringlist)) {//TODO
-            $description = mv_get_boilerplate($description, $descr_stringlist, $product_id);
+//Product Descriptions
+        if (function_exists('mv_get_boilerplate')) {
+            $description = mv_get_boilerplate($description, $product_id);
         }
 //****************************************************
 //sku/mpn/gtin, price, stock may all vary per attribute
