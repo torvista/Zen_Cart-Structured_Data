@@ -548,7 +548,7 @@ Each shop must add code from where to retrieve)the values to load into mpn/gtin.
       "image": "<?php echo $image; ?>",
 "description": <?php echo json_encode($description); ?>,
         "sku": <?php echo json_encode($product_base_sku); //The Stock Keeping Unit (SKU), i.e. a merchant-specific identifier for a product or service ?>,
-        "weight": <?php echo json_encode($weight . TEXT_PRODUCT_WEIGHT_UNIT); ?>,
+     "weight": <?php echo json_encode($weight . TEXT_PRODUCT_WEIGHT_UNIT); ?>,
 <?php
 if ($product_base_mpn !== '') {//The Manufacturer Part Number (MPN) of the product
     echo '        "mpn": ' . json_encode($product_base_mpn) . ",\n";
