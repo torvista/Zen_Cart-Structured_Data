@@ -5,7 +5,7 @@ Plugin that adds Schema (in JSON-LD format), Facebook and Twitter structured mar
 Schema markup is added in three blocks: organisation, breadcrumbs and product (including reviews).
 
 This plugin was originally based on the Super Data code with reviews and breadcrumbs added from Zen 4All Github but my modifications got out of hand and I redid it completely.
-I made considerable changes for some bugs, multilanguage site with multibyte characters and removed added fields as demanded by the various validators.
+I made considerable changes for some bugs, multilanguage site with multibyte characters and removed/added fields as demanded by the various validators.
 
 Plugin Forum Thread:
 https://www.zen-cart.com/showthread.php?221868-Structured-Data-Markup-for-Schema-Facebook-Open-Graph-Twitter
@@ -69,15 +69,15 @@ ALTER TABLE `products` ADD `products_ean` VARCHAR(13) NOT NULL DEFAULT '';
 
 In the code, you will need to modify the code to use the column name you: the necessary sections for modification are marked CUSTOM CODING.
 
-By default they are left unpopulated so Google Rich Results will remind you they are missing.
+By default they are left unpopulated so Google Rich Results Tool will remind you they are missing.
 
 ### WEIGHT
 In the script there is a default weight constant which will be used if a product has no weight defined/wieght is zero. Edit this to your needs.
     define('PLUGIN_SDATA_DEFAULT_WEIGHT', '0.3'); // fallback weight if product weight in database is not set
 
 ### Google Product Category
-Taxonomy here; https://support.google.com/merchants/answer/6324436?hl=en
-If all your products belong to the same cateory, there is no need to add another column to the products table: in the script, set PLUGIN_SDATA_GOOGLE_PRODUCT_CATEGORY to your category.
+Taxonomy here: https://support.google.com/merchants/answer/6324436?hl=en
+If all your products belong to the same category, there is no need to add another column to the products table: in the script, set PLUGIN_SDATA_GOOGLE_PRODUCT_CATEGORY to your category.
 
 Left blank to generate warnings.
 
