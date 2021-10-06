@@ -69,7 +69,11 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE === 'true') {
                 $code = fgets($fh);
             }
             fclose($fh);
-            preg_match('/' . __FUNCTION__ . '\s*\((.*)\)\s*;/u', $code, $name);
+            if ($code !== false){
+                preg_match('/' . __FUNCTION__ . '\s*\((.*)\)\s*;/u', $code, $name);
+            } else {
+                $name = '';
+            }
             echo '<pre>';
             if (!empty($name[1])) {
                 echo '<strong>' . trim($name[1]) . '</strong> ('.gettype($a)."):\n";
