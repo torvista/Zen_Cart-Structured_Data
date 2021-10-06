@@ -566,7 +566,10 @@ if ($product_base_productID !== '') {//a non-standard code
 if ($product_base_gpc !== '') {//google product category
     echo '  "googleProductCategory": "' . (int)$product_base_gpc . '"' . ",\n";
 } ?>
-      "brand": <?php echo json_encode($manufacturer_name); ?>,
+      "brand": {
+              "@type" : "Brand",
+               "name" : <?php echo json_encode($manufacturer_name) . "\n"; ?>
+                },
   "category" : <?php echo json_encode($category_name); //impossible to find conclusive information on this, but it is NOT google_product_category number/it must be text ?>,
 <?php if ($product_attributes) {// there is some field duplication between attributes, default and simple product...but having the [ around the multiple offers when attributes-stock is handled complicates the code so leave separate for easier maintenance. Need to test on all three scenarios: simple, attributes-default, attributes-stock handled.
         switch ($attribute_stock_handler) {
