@@ -601,6 +601,7 @@ if ($product_base_gpc !== '') {//google product category
             default://'default' Zen Cart attribute prices only (no sku/mpn/gtin) ?>
                "offers" : {
                     "@type" : "Offer",
+                       "url": "<?php echo $canonicalLink; ?>",
 <?php if ($attribute_lowPrice === $attribute_highPrice) { //or if price not set by attributes, this is already set to base price ?>
                     "price" : "<?php echo $attribute_lowPrice; ?>",
                 <?php } else { ?>
