@@ -2,7 +2,7 @@
 /* This file MUST be loaded by html <head> since it uses meta tags.
  * DO NOT LET YOUR IDE RE-FORMAT THE CODE STRUCTURE: it is structured so the html seen in Developer Tools Inspector (Chrome) is readable and the parentheses line up.
   *
- * @license http://www.zen-cart.com/license/2_0.txt GNU Public License V2.0
+ * @license https://www.zen-cart.com/license/2_0.txt GNU Public License V2.0
  */
 /** phpStorm directives to ease code inspection
  ** @var queryFactory $db
@@ -16,7 +16,7 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE === 'true') {
     define('PLUGIN_SDATA_REVIEW_USE_DEFAULT', 'true'); // if no product review, use a default value to stop Google warnings
     define('PLUGIN_SDATA_REVIEW_DEFAULT_VALUE', '3'); // avg. rating (when no product reviews exist)
     define('PLUGIN_SDATA_MAX_DESCRIPTION', 5000); // maximum characters allowed (Google)
-    define('PLUGIN_SDATA_GOOGLE_PRODUCT_CATEGORY', ''); // fallback category if a product does not have a specific category defined http://www.google.com/basepages/producttype/taxonomy-with-ids.en-US.xls
+    define('PLUGIN_SDATA_GOOGLE_PRODUCT_CATEGORY', ''); // fallback category if a product does not have a specific category defined https://www.google.com/basepages/producttype/taxonomy-with-ids.en-US.xls
 //eg '5613'	= Vehicles & Parts, Vehicle Parts & Accessories
     define('PLUGIN_SDATA_DEFAULT_WEIGHT', '0.3'); // fallback weight if product weight in database is not set
 
@@ -125,7 +125,7 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE === 'true') {
          $product_base_mpn //manufacturers part number
          $product_base_gtin //a standardised international code UPC / GTIN-12 / EAN / JAN / ISBN / ITF-14
          $product_base_productID //an optional non-standardised code: a possible use may be the shop base/false sku when attributes stock has the real/correct sku?
-         $product_base_google_product_category //google product category http://www.google.com/basepages/producttype/taxonomy-with-ids.en-US.xls
+         $product_base_google_product_category //google product category https://www.google.com/basepages/producttype/taxonomy-with-ids.en-US.xls
          */
         $product_base_mpn = '';
         $product_base_gtin = '';
@@ -404,7 +404,7 @@ Each shop must add code from where to retrieve)the values to load into mpn/gtin.
     //build acceptedPaymentMethod list
     $PaymentMethod_array = explode(', ', PLUGIN_SDATA_ACCEPTED_PAYMENT_METHODS);
     foreach ($PaymentMethod_array as &$payment_method) {
-        $payment_method = '"http://purl.org/goodrelations/v1#' . $payment_method . '"';
+        $payment_method = '"https://purl.org/goodrelations/v1#' . $payment_method . '"';
     }
     unset($payment_method);
     $PaymentMethods = implode(",\n", $PaymentMethod_array);
@@ -488,7 +488,7 @@ Each shop must add code from where to retrieve)the values to load into mpn/gtin.
 <?php if (PLUGIN_SDATA_SCHEMA_ENABLE === 'true') { ?>
 <script title="Structured Data: schemaOrganisation" type="application/ld+json">
 {
-     "@context": "http://schema.org",
+     "@context": "https://schema.org",
         "@type": "Organization",
           "url": "<?php echo HTTP_SERVER; //root website ?>",
          "logo": "<?php echo PLUGIN_SDATA_LOGO; ?>",
@@ -520,7 +520,7 @@ Each shop must add code from where to retrieve)the values to load into mpn/gtin.
 <?php if (isset($breadcrumb) && is_object($breadcrumb)) { ?>
 <script title="Structured Data: schemaBreadcrumb" type="application/ld+json">
 {
-       "@context": "http://schema.org",
+       "@context": "https://schema.org",
           "@type": "BreadcrumbList",
 "itemListElement": [
 <?php
@@ -589,7 +589,7 @@ if ($product_base_gpc !== '') {//google product category
                  "price" : "<?php echo $product_attribute['price']; ?>",
                  "weight" : "<?php echo ($weight + $product_attribute['weight'] > 0 ? $weight + $product_attribute['weight'] : $weight) . TEXT_PRODUCT_WEIGHT_UNIT; //if a subtracted attribute weight is less than zero, use base weight ?>",
          "priceCurrency" : "<?php echo PLUGIN_SDATA_PRICE_CURRENCY; ?>",
-          "availability" : "<?php echo $product_attribute['stock'] > 0 ? 'http://schema.org/InStock' : 'http://schema.org/PreOrder'; ?>",
+          "availability" : "<?php echo $product_attribute['stock'] > 0 ? 'https://schema.org/InStock' : 'https://schema.org/PreOrder'; ?>",
        "priceValidUntil" : "<?php echo date("Y") . '-12-31'; //eg 2020-12-31 NOT 2020-31-12: The date after which the price is no longer available. ?>",
                     "url": "<?php echo $canonicalLink; ?>"}<?php if ($i < count($product_attributes)) {?>,
     <?php } ?>
@@ -610,8 +610,8 @@ if ($product_base_gpc !== '') {//google product category
                "offerCount" : "<?php echo $product_base_stock; //required for AggregateOffer ?>",
             "priceCurrency" : "<?php echo PLUGIN_SDATA_PRICE_CURRENCY; ?>",
           "priceValidUntil" : "<?php echo date("Y") . '-12-31'; //eg 2020-12-31 NOT 2020-31-12: The date after which the price is no longer available. ?>",
-            "itemCondition" : "http://schema.org/<?php echo $itemCondition_array[PLUGIN_SDATA_FOG_PRODUCT_CONDITION]; ?>",
-             "availability" : "<?php echo ($product_base_stock > 0 ? 'http://schema.org/InStock' : 'http://schema.org/PreOrder'); ?>",
+            "itemCondition" : "https://schema.org/<?php echo $itemCondition_array[PLUGIN_SDATA_FOG_PRODUCT_CONDITION]; ?>",
+             "availability" : "<?php echo ($product_base_stock > 0 ? 'https://schema.org/InStock' : 'https://schema.org/PreOrder'); ?>",
                    "seller" : <?php echo json_encode(STORE_NAME); //json_encode adds external quotes as the other entries"?>,
          "deliveryLeadTime" : "<?php echo ($product_base_stock > 0 ? PLUGIN_SDATA_DELIVERYLEADTIME : PLUGIN_SDATA_DELIVERYLEADTIME_OOS); ?>",
               "itemOffered" : <?php echo json_encode($product_name); ?>,
@@ -631,8 +631,8 @@ if ($product_base_gpc !== '') {//google product category
                    "url": "<?php echo $canonicalLink; ?>",
         "priceCurrency" : "<?php echo PLUGIN_SDATA_PRICE_CURRENCY; ?>",
       "priceValidUntil" : "<?php echo date("Y") . '-12-31'; //eg 2020-12-31 NOT 2020-31-12: The date after which the price is no longer available. ?>",
-        "itemCondition" : "http://schema.org/<?php echo $itemCondition_array[PLUGIN_SDATA_FOG_PRODUCT_CONDITION]; ?>",
-         "availability" : "<?php echo ($product_base_stock > 0 ? 'http://schema.org/InStock' : 'http://schema.org/PreOrder'); ?>",
+        "itemCondition" : "https://schema.org/<?php echo $itemCondition_array[PLUGIN_SDATA_FOG_PRODUCT_CONDITION]; ?>",
+         "availability" : "<?php echo ($product_base_stock > 0 ? 'https://schema.org/InStock' : 'https://schema.org/PreOrder'); ?>",
                "seller" : <?php echo json_encode(STORE_NAME); //json_encode adds external quotes as the other entries"?>,
      "deliveryLeadTime" : "<?php echo ($product_base_stock > 0 ? PLUGIN_SDATA_DELIVERYLEADTIME : PLUGIN_SDATA_DELIVERYLEADTIME_OOS); ?>",
           "itemOffered" : <?php echo json_encode($product_name); ?>,
