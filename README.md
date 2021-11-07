@@ -61,7 +61,6 @@ This section describes adding custom fields to your product table.
 https://github.com/torvista/Zen_Cart-Extra_Product_Fields
 
 
-
 **_sku:_** is populated by products_model. This is a code used by your shop.
 
 **_mpn:_** needs to be the manufacturers part number. It is unlikely that you are using that as your shop sku, so you will need to add this column to your products table and populate it.
