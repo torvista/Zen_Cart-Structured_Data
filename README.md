@@ -54,13 +54,21 @@ to:
 This adds the namespaces for the properties og:, fb:, product: which are used later in the structured data block.
 
 ### SKU/MPN/GTIN
-sku: is populated by products_model. This is a code used by your shop.
+This section describes adding custom fields to your product table.
 
-mpn: needs to be the manufacturers part number. It is unlikely that you are using that as your shop sku, so you will need to add this column to your products table and populate it.
+**_There is a companion Plugin available to both install custom fields and add the corresponding fields in the admin Product Edit page:_**
+
+https://github.com/torvista/Zen_Cart-Extra_Product_Fields
+
+
+
+**_sku:_** is populated by products_model. This is a code used by your shop.
+
+**_mpn:_** needs to be the manufacturers part number. It is unlikely that you are using that as your shop sku, so you will need to add this column to your products table and populate it.
 
 ALTER TABLE `products` ADD `products_mpn` VARCHAR(32) NOT NULL DEFAULT '';
 
-gtin: international identification number that depends on the products you sell: UPC / GTIN-12 / EAN / JAN / ISBN / ITF-14. 
+**_gtin:_** international identification number that depends on the products you sell: UPC / GTIN-12 / EAN / JAN / ISBN / ITF-14. 
 You'll need to deal with this similarly to mpn.
 
 I used ean and added a products_ean field to the products table:
@@ -90,8 +98,8 @@ Products without any specific category defined, will use the value in PLUGIN_SDA
 Vanilla Zen Cart does not have provision for sku nor stock control for attributes, only prices.
 So the 'default' handling of attributes will only provide an aggregateOffer in "offers": separating out each attribute would only generate complaints as no sku/mpn/gtin can be provided.
 
-####Third-party attribute-stock plugins
-Products Options Stock Manager (POSM)
+### Third-party attribute-stock plugins
+#### Products Options Stock Manager (POSM)
 
 I use this plugin, so have added the code necessary to deal with one attribute (dependent attributes are pending/too hard).
 However, it still requires extra fields adding per attribute:
