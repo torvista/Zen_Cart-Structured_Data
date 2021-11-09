@@ -61,9 +61,9 @@ This section describes adding custom fields to your product table.
 https://github.com/torvista/Zen_Cart-Extra_Product_Fields
 
 
-**_sku:_** is populated by products_model. This is a code used by your shop.
+**_sku:_** is populated by products_model. This is the code used by your shop, which is probably unique to your shop.
 
-**_mpn:_** needs to be the manufacturers part number. It is unlikely that you are using that as your shop sku, so you will need to add this column to your products table and populate it.
+**_mpn:_** is the original manufacturers part number. It is unlikely that you are using that as your shop sku, so you will need to add this column to your products table and populate it.
 
 ALTER TABLE `products` ADD `products_mpn` VARCHAR(32) NOT NULL DEFAULT '';
 
@@ -74,7 +74,7 @@ I used ean and added a products_ean field to the products table:
 
 ALTER TABLE `products` ADD `products_ean` VARCHAR(13) NOT NULL DEFAULT '';  
 
-In the code, you will need to modify the code to use the column name you: the necessary sections for modification are marked CUSTOM CODING.
+In the code, you will need to modify the code to use the column names you have created: the necessary sections for modification are marked CUSTOM CODING.
 
 By default they are left unpopulated so Google Rich Results Tool will remind you they are missing.
 
@@ -88,7 +88,8 @@ If all your products belong to the same category, there is no need to add anothe
 
 Left blank to generate warnings.
 
-If your products require individual categories, you will need to add a new column in the product table for you to fill in.
+If your products fall into different categories, you will need to add a new column in the product table to store a category per product.
+
 ALTER TABLE `products` ADD `products_google_product_category` VARCHAR(6) NOT NULL DEFAULT '';
 
 Products without any specific category defined, will use the value in PLUGIN_SDATA_GOOGLE_PRODUCT_CATEGORY.
@@ -101,6 +102,7 @@ So the 'default' handling of attributes will only provide an aggregateOffer in "
 #### Products Options Stock Manager (POSM)
 
 I use this plugin, so have added the code necessary to deal with one attribute (dependent attributes are pending/too hard).
+
 However, it still requires extra fields adding per attribute:
 
 ALTER TABLE `products_options_stock` ADD `pos_mpn` VARCHAR(32) NOT NULL DEFAULT '' AFTER `pos_model`;
