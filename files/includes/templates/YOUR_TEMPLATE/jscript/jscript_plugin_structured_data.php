@@ -574,6 +574,7 @@ if ($product_base_gpc !== '') {//google product category
 <?php if ($product_attributes) {// there is some field duplication between attributes, default and simple product...but having the [ around the multiple offers when attributes-stock is handled complicates the code so leave separate for easier maintenance. Need to test on all three scenarios: simple, attributes-default, attributes-stock handled.
         switch ($attribute_stock_handler) {
             case ('posm'): ?>
+"__comment" : "attribute stock handling: posm",
     "offers" : [
     <?php $i = 0;foreach($product_attributes as $index=>$product_attribute) { $i++;?>
             {"@type" : "Offer",
@@ -599,10 +600,11 @@ if ($product_base_gpc !== '') {//google product category
 <?php break;
 
             default://'default' Zen Cart attribute prices only (no sku/mpn/gtin) ?>
+            "__comment" : "attribute stock handling: default",
                "offers" : {
-                    "@type" : "Offer",
                        "url": "<?php echo $canonicalLink; ?>",
 <?php if ($attribute_lowPrice === $attribute_highPrice) { //or if price not set by attributes, this is already set to base price ?>
+                    "@type" : "Offer",
                     "price" : "<?php echo $attribute_lowPrice; ?>",
                 <?php } else { ?>
                     "@type" : "AggregateOffer",
