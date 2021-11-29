@@ -582,7 +582,7 @@ if ($product_base_gpc !== '') {//google product category
             case ('posm'): ?>
 "__comment" : "attribute stock handling: posm",
     "offers" : [
-    <?php $i = 0;foreach($product_attributes as $index=>$product_attribute) { $i++;?>
+    <?php $i = 0;$attributes_count=count($product_attributes);foreach($product_attributes as $index=>$product_attribute) { $i++;?>
             {"@type" : "Offer",
 <?php if (!empty($product_attribute['sku'])) {?>
                    "sku" : "<?php echo $product_attribute['sku']; ?>",
@@ -598,10 +598,8 @@ if ($product_base_gpc !== '') {//google product category
          "priceCurrency" : "<?php echo PLUGIN_SDATA_PRICE_CURRENCY; ?>",
           "availability" : "<?php echo $product_attribute['stock'] > 0 ? 'https://schema.org/InStock' : 'https://schema.org/PreOrder'; ?>",
        "priceValidUntil" : "<?php echo date("Y") . '-12-31'; //eg 2020-12-31 NOT 2020-31-12: The date after which the price is no longer available. ?>",
-                    "url": "<?php echo $url; ?>"}<?php if ($i < count($product_attributes)) {?>,
-    <?php } ?>
+                    "url": "<?php echo $url; ?>"}<?php if ($i < $attributes_count) { echo ",\n    "; } else {echo "\n";}?>
 <?php } ?>
-
                ]
 <?php break;
 
