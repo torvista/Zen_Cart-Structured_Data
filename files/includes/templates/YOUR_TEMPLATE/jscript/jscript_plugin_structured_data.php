@@ -4,10 +4,11 @@
   *
  * @license https://www.zen-cart.com/license/2_0.txt GNU Public License V2.0
  */
-/** phpStorm directives to ease code inspection
+/** directives for phpStorm code inspector
  ** @var queryFactory $db
  ** @var sniffer $sniffer
  ** @var $canonicalLink
+ ** @var $current_page
  ** @var $current_page_base
  ** @var $product_id
  */
@@ -23,8 +24,8 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE === 'true') {
     if (defined('PLUGIN_SDATA_PRICE_CURRRENCY')) {//sic: correct old typo
         $db->Execute("UPDATE `configuration` SET `configuration_key`= 'PLUGIN_SDATA_PRICE_CURRENCY' WHERE `configuration_key`= 'PLUGIN_SDATA_PRICE_CURRRENCY'");
     }
-    //
-    $debug_sd = false; // changes from the gods are imposed regularly, so I've left a lot of ugly debug output available.
+
+    $debug_sd = false; // set to true (boolean) to display debugging info. Changes from the gods are imposed regularly, so I've left a lot of ugly debug output available.
 
     //defaults (subsequently overwritten), defined to prevent php notices
     $description = '';
