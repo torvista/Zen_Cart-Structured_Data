@@ -535,7 +535,7 @@ Each shop must add code from where to retrieve)the values to load into mpn/gtin.
                         if (isset($value[$i]['title']) && zen_not_null($value[$i]['title'])) {//if non-existent url used, title is null: php notice) ?>
       {
       "@type": "ListItem",
-   "position": <?php echo $i + 1; //does not need to be quoted ?>,
+   "position": "<?php echo $i + 1; //does not need to be quoted, but IDE complains ?>",
        "item": {
            "@id": "<?php echo $value[$i]['link']; ?>",
           "name": <?php echo json_encode($value[$i]['title']) . "\n"; ?>
@@ -600,7 +600,7 @@ if ($product_base_gpc !== '') {//google product category
        "priceValidUntil" : "<?php echo date("Y") . '-12-31'; //eg 2020-12-31 NOT 2020-31-12: The date after which the price is no longer available. ?>",
                     "url": "<?php echo $url; ?>"}<?php if ($i < $attributes_count) { echo ",\n    "; } else {echo "\n";}?>
 <?php } ?>
-               ]
+         ],
 <?php break;
 
             default://'default' Zen Cart attribute prices only (no sku/mpn/gtin) ?>
@@ -629,7 +629,7 @@ if ($product_base_gpc !== '') {//google product category
                        "@type" : "PaymentMethod",
                         "name" : [<?php echo $PaymentMethods; ?>]
                               }
-                          }
+                          },
 <?php }//close switch
 } else { //simple product (no attributes) ?>
             "offers" :     {
@@ -644,15 +644,15 @@ if ($product_base_gpc !== '') {//google product category
      "deliveryLeadTime" : "<?php echo ($product_base_stock > 0 ? PLUGIN_SDATA_DELIVERYLEADTIME : PLUGIN_SDATA_DELIVERYLEADTIME_OOS); ?>",
           "itemOffered" : <?php echo json_encode($product_name); ?>,
 <?php if (PLUGIN_SDATA_ELIGIBLE_REGION !== '') { ?>
- "eligibleRegion" : "<?php echo PLUGIN_SDATA_ELIGIBLE_REGION . '",' . "\n"; } ?>
+  "eligibleRegion" : "<?php echo PLUGIN_SDATA_ELIGIBLE_REGION; ?>",
+  <?php } ?>
 "acceptedPaymentMethod" : {
                   "@type" : "PaymentMethod",
                    "name" : [<?php echo $PaymentMethods; ?>]
                           }
-               }
+               },
 <?php } ?>
 <?php if ( $reviewCount > 0 ) { //do not bother if no reviews at all. Note note best/worstRating is for the max and min rating used in this review system. Default is 1 and 5 so no need to be declared ?>
-  ,
   "aggregateRating": {
     "@type": "AggregateRating",
     "ratingValue": "<?php echo $ratingValue; //average rating based on all reviews ?>",
@@ -672,7 +672,7 @@ if ($product_base_gpc !== '') {//google product category
       "@type" : "Rating",
       "ratingValue" : "<?php echo $reviewsArray[$i]['reviewRating']; ?>"
       }
-    }<?php if ($i+1 !== $n) { ?>,<?php } ?>
+    }<?php if ($i+1 !== $n) { echo ','; } ?>
   <?php } ?>
   ]
 <?php } //if no reviews, aggregateRating makes no sense ?>
