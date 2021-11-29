@@ -162,7 +162,7 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE === 'true') {
             $product_codes = $db->Execute($sql);
             $product_base_mpn = !empty($product_codes->fields['products_mpn']) ? $product_codes->fields['products_mpn'] : '' ;//manufacturer part number
             $product_base_gtin = !empty($product_codes->fields['products_ean']) ? $product_codes->fields['products_ean'] : '';//manufacturer assigned global code
-            $product_base_gpc = !empty($product_codes->fields['products_google_product_category']) ? $product_codes->fields['products_google_product_category'] : PLUGIN_SDATA_GOOGLE_PRODUCT_CATEGORY ;//google merchant taxonomy
+            $product_base_gpc = (int)(!empty($product_codes->fields['products_google_product_category']) ? $product_codes->fields['products_google_product_category'] : PLUGIN_SDATA_GOOGLE_PRODUCT_CATEGORY) ;//google merchant taxonomy
         }
 //bof ******************CUSTOM CODE for extra product fields for mpn, ean and google product category***********************/
 
@@ -570,7 +570,7 @@ if ($product_base_productID !== '') {//a non-standard code
     echo '  "productID": ' . json_encode($product_base_productID) . ",\n";
 }
 if ($product_base_gpc !== '') {//google product category
-    echo '  "googleProductCategory": "' . (int)$product_base_gpc . '"' . ",\n";
+    echo '  "googleProductCategory": "' . $product_base_gpc . '"' . ",\n";
 } ?>
       "brand": {
               "@type" : "Brand",
