@@ -20,6 +20,7 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE === 'true') {
     define('PLUGIN_SDATA_GOOGLE_PRODUCT_CATEGORY', ''); // fallback category if a product does not have a specific category defined https://www.google.com/basepages/producttype/taxonomy-with-ids.en-US.xls
 //eg '5613'	= Vehicles & Parts, Vehicle Parts & Accessories
     define('PLUGIN_SDATA_DEFAULT_WEIGHT', '0.3'); // fallback weight if product weight in database is not set
+    //not used define ('PLUGIN_SDATA_NATIVE_URL', true); // if a url rewriter is in use, the native url is replaced by a more "friendly" one (eg. www.shop.com/products/widget1). If this option is set to true, the native url (www.shop.com/index.php?main_page=product_info&cPath=1_4&products_id=1) is always used.
 
     if (defined('PLUGIN_SDATA_PRICE_CURRRENCY')) {//sic: correct old typo
         $db->Execute("UPDATE `configuration` SET `configuration_key`= 'PLUGIN_SDATA_PRICE_CURRENCY' WHERE `configuration_key`= 'PLUGIN_SDATA_PRICE_CURRRENCY'");
@@ -35,7 +36,11 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE === 'true') {
     $image_default = false;
     $facebook_type = 'business.business';
     $key = ''; //only to keep IDE happy
-
+    $url = $canonicalLink; //may be native or friendly if rewriter in use
+    /*cludged solution, don't like it so not implemented/incomplete. Should catch parameters passed to notify_sefu_intercept which url rewriter should be using
+    if(PLUGIN_SDATA_NATIVE_URL === true) { //always use the native url
+        $url = trim(HTTP_SERVER . DIR_WS_CATALOG . ($current_page === 'index' ? '' : 'index.php?main_page=' . $current_page . '&' . $_SERVER['QUERY_STRING']), '&');
+    }*/
     //product condition mapping for Schema
     $itemCondition_array = ['new' => 'NewCondition', 'used' => 'UsedCondition', 'refurbished' => 'RefurbishedCondition'];
 
@@ -593,7 +598,7 @@ if ($product_base_gpc !== '') {//google product category
          "priceCurrency" : "<?php echo PLUGIN_SDATA_PRICE_CURRENCY; ?>",
           "availability" : "<?php echo $product_attribute['stock'] > 0 ? 'https://schema.org/InStock' : 'https://schema.org/PreOrder'; ?>",
        "priceValidUntil" : "<?php echo date("Y") . '-12-31'; //eg 2020-12-31 NOT 2020-31-12: The date after which the price is no longer available. ?>",
-                    "url": "<?php echo $canonicalLink; ?>"}<?php if ($i < count($product_attributes)) {?>,
+                    "url": "<?php echo $url; ?>"}<?php if ($i < count($product_attributes)) {?>,
     <?php } ?>
 <?php } ?>
 
@@ -603,7 +608,7 @@ if ($product_base_gpc !== '') {//google product category
             default://'default' Zen Cart attribute prices only (no sku/mpn/gtin) ?>
             "__comment" : "attribute stock handling: default",
                "offers" : {
-                       "url": "<?php echo $canonicalLink; ?>",
+                       "url": "<?php echo $url; ?>",
 <?php if ($attribute_lowPrice === $attribute_highPrice) { //or if price not set by attributes, this is already set to base price ?>
                     "@type" : "Offer",
                     "price" : "<?php echo $attribute_lowPrice; ?>",
@@ -632,7 +637,7 @@ if ($product_base_gpc !== '') {//google product category
             "offers" :     {
                 "@type" : "Offer",
                 "price" : "<?php echo $product_base_displayed_price; ?>",
-                   "url": "<?php echo $canonicalLink; ?>",
+                   "url": "<?php echo $url; ?>",
         "priceCurrency" : "<?php echo PLUGIN_SDATA_PRICE_CURRENCY; ?>",
       "priceValidUntil" : "<?php echo date("Y") . '-12-31'; //eg 2020-12-31 NOT 2020-31-12: The date after which the price is no longer available. ?>",
         "itemCondition" : "https://schema.org/<?php echo $itemCondition_array[PLUGIN_SDATA_FOG_PRODUCT_CONDITION]; ?>",
@@ -687,7 +692,7 @@ if ($product_base_gpc !== '') {//google product category
 <?php } ?>
 <meta property="og:title" content="<?php echo $title; ?>" />
 <meta property="og:site_name" content="<?php echo STORE_NAME; ?>" />
-<meta property="og:url" content="<?php echo $canonicalLink; ?>" />
+<meta property="og:url" content="<?php echo $url; ?>" />
 <?php if (!empty($locale)) { echo '<meta property="og:locale" content="' . $locale . '" />';
 if (count($locales_array) > 0) {
 foreach($locales_array as $key=>$value){ ?>
@@ -746,7 +751,7 @@ foreach($locales_array as $key=>$value){ ?>
             } ?>
 <meta property="product:price:amount" content="<?php echo $product_base_displayed_price; ?>" />
 <meta property="product:price:currency" content="<?php echo PLUGIN_SDATA_PRICE_CURRENCY; ?>" />
-<meta property="product:product_link" content="<?php echo $canonicalLink; ?>" />
+<meta property="product:product_link" content="<?php echo $url; ?>" />
 <meta property="product:retailer" content="<?php echo PLUGIN_SDATA_FOG_APPID; ?>" />
 <meta property="product:retailer_category" content="<?php echo htmlentities($category_name); ?>" />
 <meta property="product:retailer_part_no" content="<?php echo $product_base_sku; ?>" />
@@ -761,7 +766,7 @@ foreach($locales_array as $key=>$value){ ?>
 <?php $image = ($image_default ? $image_default_twitter : $image); ?>
 <meta name="twitter:image" content="<?php echo $image; ?>" />
 <meta name="twitter:image:alt" content="<?php echo htmlentities($image_alt, ENT_QUOTES, CHARSET, false); ?>" />
-<meta name="twitter:url" content="<?php echo htmlentities($canonicalLink, ENT_COMPAT, CHARSET, false); ?>" />
+<meta name="twitter:url" content="<?php echo htmlentities($url, ENT_COMPAT, CHARSET, false); ?>" />
 <meta name="twitter:domain" content="<?php echo HTTP_SERVER; ?>" />
 <!-- eof Twitter Card markup -->
 <?php } //end of Twitter enabled ?>
