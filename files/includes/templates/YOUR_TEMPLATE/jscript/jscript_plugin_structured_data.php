@@ -577,7 +577,7 @@ if ($product_base_gpc !== '') {//google product category
                "name" : <?php echo json_encode($manufacturer_name) . "\n"; ?>
                 },
   "category" : <?php echo json_encode($category_name); //impossible to find conclusive information on this, but it is NOT google_product_category number/it must be text ?>,
-<?php if ($product_attributes) {// there is some field duplication between attributes, default and simple product...but having the [ around the multiple offers when attributes-stock is handled complicates the code so leave separate for easier maintenance. Need to test on all three scenarios: simple, attributes-default, attributes-stock handled.
+<?php if ($product_attributes) {// there is some field duplication between attributes, default and simple product...but having the [ around the multiple offers when attributes-stock is handled complicates the code so leave separate for easier maintenance. Need to test on all three scenarios: simple (no attributes) / attributes - Zen Cart default / attributes - stock handled by 3rd-party plugin
         switch ($attribute_stock_handler) {
             case ('posm'): ?>
 "__comment" : "attribute stock handling: posm",
@@ -594,7 +594,7 @@ if ($product_base_gpc !== '') {//google product category
                   "gtin" : "<?php echo $product_attribute['gtin']; ?>",
 <?php } ?>
                  "price" : "<?php echo $product_attribute['price']; ?>",
-                 "weight" : "<?php echo ($weight + $product_attribute['weight'] > 0 ? $weight + $product_attribute['weight'] : $weight) . TEXT_PRODUCT_WEIGHT_UNIT; //if a subtracted attribute weight is less than zero, use base weight ?>",
+                "weight" : "<?php echo ($weight + $product_attribute['weight'] > 0 ? $weight + $product_attribute['weight'] : $weight) . TEXT_PRODUCT_WEIGHT_UNIT; //if a subtracted attribute weight is less than zero, use base weight ?>",
          "priceCurrency" : "<?php echo PLUGIN_SDATA_PRICE_CURRENCY; ?>",
           "availability" : "<?php echo $product_attribute['stock'] > 0 ? 'https://schema.org/InStock' : 'https://schema.org/PreOrder'; ?>",
        "priceValidUntil" : "<?php echo date("Y") . '-12-31'; //eg 2020-12-31 NOT 2020-31-12: The date after which the price is no longer available. ?>",
@@ -633,7 +633,7 @@ if ($product_base_gpc !== '') {//google product category
                               }
                           }
 <?php }//close switch
-} else { //simple product ?>
+} else { //simple product (no attributes) ?>
             "offers" :     {
                 "@type" : "Offer",
                 "price" : "<?php echo $product_base_displayed_price; ?>",
