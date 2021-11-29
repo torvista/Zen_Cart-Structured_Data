@@ -410,7 +410,7 @@ Each shop must add code from where to retrieve)the values to load into mpn/gtin.
     //build acceptedPaymentMethod list
     $PaymentMethod_array = explode(', ', PLUGIN_SDATA_ACCEPTED_PAYMENT_METHODS);
     foreach ($PaymentMethod_array as &$payment_method) {
-        $payment_method = '"https://purl.org/goodrelations/v1#' . $payment_method . '"';
+        $payment_method = '"https://purl.org/goodrelations/v1#' . trim($payment_method) . '"';
     }
     unset($payment_method);
     $PaymentMethods = implode(",\n", $PaymentMethod_array);
