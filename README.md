@@ -20,7 +20,7 @@ Super Data: If you wish to uninstall the old Super Data plugin, please note that
 1. BACKUP
 
 2. Use the installation sql to install constant definitions and register the new admin configuration page into the database.
-In my testing it was possible to run the sql code in the ZC->Admin->SQL Patch tool on a vanilla installation. But, it's known to be pretty strict (https://www.zen-cart.com/showthread.php?216551-ERROR-Cannot-insert-configuration_key-quot-quot-because-it-already-exists-empty-db-key) so if this gives you an error, you can restore the database (from the backup you did immediately before trying this...), and try again using phpmyadmin instead. 
+In my testing it was possible to run the sql code in the ZC->Admin->SQL Patch tool on a vanilla installation. But it's known to be pretty strict (https://www.zen-cart.com/showthread.php?216551-ERROR-Cannot-insert-configuration_key-quot-quot-because-it-already-exists-empty-db-key) so if this gives you an error, you can restore the database (from the backup you did immediately before trying this...), and try again using phpmyadmin instead. 
 
 3. Copy the admin file to enable the admin page to display.
 CHECK THE ADMIN PAGE WORKS BEFORE GOING ANY FURTHER.
@@ -53,6 +53,26 @@ to:
 
 This adds the namespaces for the properties og:, fb:, product: which are used later in the structured data block.
 
+### Weight
+In the script there is a default weight constant which will be used if a product has no weight defined/weight is zero.
+Edit this to your needs.
+    define('PLUGIN_SDATA_DEFAULT_WEIGHT', '0.3'); // fallback weight if product weight in database is not set
+
+### Reviews
+Google Rich Results Tool gives warnings about no reviews on a product: 100's of products = 100's of warnings, obscuring any real problems. Tedious.
+
+These two constants are used to prevent that/provide a  review rating in the absence of a real one.
+
+In the script there are two constants
+
+    define('PLUGIN_SDATA_REVIEW_USE_DEFAULT', 'true'); // if no product review, use a default value to stop Google warnings
+    define('PLUGIN_SDATA_REVIEW_DEFAULT_VALUE', '3'); // avg. rating (when no product reviews exist)
+
+If you don't want to be naughty and not offer reviews when there are none, set 
+
+    define('PLUGIN_SDATA_REVIEW_USE_DEFAULT', 'false'); // if no product review, use a default value to stop Google warnings
+    define('PLUGIN_SDATA_REVIEW_DEFAULT_VALUE', '3'); // avg. rating (when no product reviews exist)
+	
 ### SKU/MPN/GTIN
 This section describes adding custom fields to your product table.
 
@@ -60,10 +80,9 @@ This section describes adding custom fields to your product table.
 
 https://github.com/torvista/Zen_Cart-Extra_Product_Fields
 
+**_sku:_** is populated by products_model. This is the code used by **_your_** shop, which is probably unique to **_your_** shop.
 
-**_sku:_** is populated by products_model. This is the code used by your shop, which is probably unique to your shop.
-
-**_mpn:_** is the original manufacturers part number. It is unlikely that you are using that as your shop sku, so you will need to add this column to your products table and populate it.
+**_mpn:_** is the original **_manufacturers part number_**. It is unlikely that you are using that as your shop sku, so you will need to add this column to your products table and populate it.
 
 ALTER TABLE `products` ADD `products_mpn` VARCHAR(32) NOT NULL DEFAULT '';
 
@@ -76,27 +95,26 @@ ALTER TABLE `products` ADD `products_ean` VARCHAR(13) NOT NULL DEFAULT '';
 
 In the code, you will need to modify the code to use the column names you have created: the necessary sections for modification are marked CUSTOM CODING.
 
-By default they are left unpopulated so Google Rich Results Tool will remind you they are missing.
-
-### WEIGHT
-In the script there is a default weight constant which will be used if a product has no weight defined/wieght is zero. Edit this to your needs.
-    define('PLUGIN_SDATA_DEFAULT_WEIGHT', '0.3'); // fallback weight if product weight in database is not set
+By default, they are left unpopulated so Google Rich Results Tool will remind you they are missing.
 
 ### Google Product Category
-Taxonomy here: https://support.google.com/merchants/answer/6324436?hl=en
-If all your products belong to the same category, there is no need to add another column to the products table: in the script, set PLUGIN_SDATA_GOOGLE_PRODUCT_CATEGORY to your category.
+Google has defined its own set of numbers to categorise products.
 
-Left blank to generate warnings.
+Taxonomy here: https://support.google.com/merchants/answer/6324436?hl=en
+
+If all your products belong to the same category, there is no need to add another column to the products table: in the script, set PLUGIN_SDATA_GOOGLE_PRODUCT_CATEGORY to your category number.
+
+By default, it is left blank to generate warnings for you to deal with.
 
 If your products fall into different categories, you will need to add a new column in the product table to store a category per product.
 
 ALTER TABLE `products` ADD `products_google_product_category` VARCHAR(6) NOT NULL DEFAULT '';
 
-Products without any specific category defined, will use the value in PLUGIN_SDATA_GOOGLE_PRODUCT_CATEGORY.
+Products without any specific category defined will use the value in PLUGIN_SDATA_GOOGLE_PRODUCT_CATEGORY.
 
 ### Attributes
-Vanilla Zen Cart does not have provision for sku nor stock control for attributes, only prices.
-So the 'default' handling of attributes will only provide an aggregateOffer in "offers": separating out each attribute would only generate complaints as no sku/mpn/gtin can be provided.
+Vanilla Zen Cart does not have provision for attribute sku nor stock control, only prices.
+So, the 'default' handling of attributes will only provide an aggregateOffer in "offers": separating out each attribute would only generate more Google Rich Results warnings as no sku/mpn/gtin can be provided.
 
 ### Third-party attribute-stock plugins
 #### Products Options Stock Manager (POSM)
@@ -117,7 +135,7 @@ The code is written and commented to allow the easy addition of other plugins th
 
 Check the output on all your pages for empty parameters or properties that don't reflect what they should.
 
-Every site is different, so it is impossible to make this particular plugin 100% plug and play, you DO need to check the markup output carefully to ensure it reflects your business and be prepared to modify accordingly or report any omissions if you think they are relevant generally.
+Every site is different, so it is impossible to make this plugin 100% plug and play, you DO need to check the markup output carefully to ensure it reflects your business and be prepared to modify accordingly or report any omissions if you think they are relevant generally.
 
  Use the various debuggers to check the various blocks:
  
@@ -271,7 +289,7 @@ revised Super Data, breadcrumb code and added/revised Review code for products f
 https://github.com/Zen4All-nl/Zen-Cart-Structured-Data-using-Json
 
 Many changes made so decided to offer this as a separate plugin.
-bugs: added closing spaces to some properties, added missing quotation marks around product: acceptedPaymentMethod, incorrect category name on product, reviews all used same rating,  review bestRating/worstRating incorrectly used, reviews did not take account of a multi-language shop nor multibyte characters in names and descriptions. sameAS item assumed all constants populated (not true) so produced an invalid listing with spaces and quotation marks.
+bugs: added closing spaces to some properties, added missing quotation marks around product: acceptedPaymentMethod, incorrect category name on product, reviews all used same rating, review bestRating/worstRating incorrectly used, reviews did not take account of a multi-language shop nor multibyte characters in names and descriptions. sameAS item assumed all constants populated (not true) so produced an invalid listing with spaces and quotation marks.
 Facebook:
 condition->product.condition and others added/modified. App secret removed: not used anywhere.
         <meta property="og:email" content="<?php echo FACEBOOK_OPEN_GRAPH_EMAIL; ?>" /> Deprecated
