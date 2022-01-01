@@ -17,7 +17,7 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE === 'true') {
     define('PLUGIN_SDATA_REVIEW_USE_DEFAULT', 'true'); // if no product review, use a default value to stop Google warnings
     define('PLUGIN_SDATA_REVIEW_DEFAULT_VALUE', '3'); // avg. rating (when no product reviews exist)
     define('PLUGIN_SDATA_MAX_DESCRIPTION', 5000); // maximum characters allowed (Google)
-    define('PLUGIN_SDATA_GOOGLE_PRODUCT_CATEGORY', ''); // fallback category if a product does not have a specific category defined https://www.google.com/basepages/producttype/taxonomy-with-ids.en-US.xls
+    define('PLUGIN_SDATA_GOOGLE_PRODUCT_CATEGORY', ''); // fallback/default Google category ID (up to 6 digits). Used if a product does not have a specific category defined https://www.google.com/basepages/producttype/taxonomy-with-ids.en-US.xls
 //eg '5613'	= Vehicles & Parts, Vehicle Parts & Accessories
     define('PLUGIN_SDATA_DEFAULT_WEIGHT', '0.3'); // fallback weight if product weight in database is not set
     //not used define ('PLUGIN_SDATA_NATIVE_URL', true); // if a url rewriter is in use, the native url is replaced by a more "friendly" one (eg. www.shop.com/products/widget1). If this option is set to true, the native url (www.shop.com/index.php?main_page=product_info&cPath=1_4&products_id=1) is always used.
@@ -175,7 +175,7 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE === 'true') {
 //sku/mpn/gtin, price, stock may all vary per attribute
 //Attributes handling info: https://www.schemaapp.com/newsletter/schema-org-variable-products-productmodels-offers/#
         $product_attributes = false;
-        $attribute_stock_handler = '';
+        $attribute_stock_handler = 'not_defined';
         $attribute_lowPrice = 0;
         $attribute_highPrice = 0;
 
@@ -250,7 +250,8 @@ Each shop must add code from where to retrieve)the values to load into mpn/gtin.
                     }
                     $option_id_min = min($option_ids);
                     $option_id_max = max($option_ids);
-                    if ($option_id_min !== $option_id_max) {//there are two or more option values....run away!
+                    if ($option_id_min !== $option_id_max) {//there are two or more option names....run away!
+                        $attribute_stock_handler = 'posm_multiple'; //todo
                         break;
                     }
                     //eof hack
@@ -305,7 +306,7 @@ Each shop must add code from where to retrieve)the values to load into mpn/gtin.
                     //over to YOU
 
                 default://Zen Cart default/no handling of attribute stock...so no sku/mpn/gtin possible per attribute
-                    $attribute_stock_handler = 'default';
+                    $attribute_stock_handler = 'zc_default';
                     foreach ($product_attributes as $key => $product_attribute) {
                         $product_attributes[$key]['stock'] = $product_base_stock;
                         $product_attributes[$key]['sku'] = $product_base_sku;//as per individual shop
@@ -580,7 +581,7 @@ if ($product_base_gpc !== '') {//google product category
 <?php if ($product_attributes) {// there is some field duplication between attributes, default and simple product...but having the [ around the multiple offers when attributes-stock is handled complicates the code so leave separate for easier maintenance. Need to test on all three scenarios: simple (no attributes) / attributes - Zen Cart default / attributes - stock handled by 3rd-party plugin
         switch ($attribute_stock_handler) {
             case ('posm'): ?>
-"__comment" : "attribute stock handling: posm",
+"__comment" : "attribute stock handling:<?php echo $attribute_stock_handler; ?>",
     "offers" : [
     <?php $i = 0;$attributes_count=count($product_attributes);foreach($product_attributes as $index=>$product_attribute) { $i++;?>
             {"@type" : "Offer",
@@ -604,7 +605,7 @@ if ($product_base_gpc !== '') {//google product category
 <?php break;
 
             default://'default' Zen Cart attribute prices only (no sku/mpn/gtin) ?>
-            "__comment" : "attribute stock handling: default",
+            "__comment" : "attribute stock handling default:<?php echo $attribute_stock_handler; ?>",
                "offers" : {
                        "url": "<?php echo $url; ?>",
 <?php if ($attribute_lowPrice === $attribute_highPrice) { //or if price not set by attributes, this is already set to base price ?>
@@ -612,7 +613,8 @@ if ($product_base_gpc !== '') {//google product category
                     "price" : "<?php echo $attribute_lowPrice; ?>",
                 <?php } else { ?>
                     "@type" : "AggregateOffer",
-<?php } ?> "lowPrice" : "<?php echo $attribute_lowPrice; ?>",
+<?php } ?>
+                 "lowPrice" : "<?php echo $attribute_lowPrice; ?>",
                 "highPrice" : "<?php echo $attribute_highPrice; ?>",
                "offerCount" : "<?php echo $product_base_stock; //required for AggregateOffer ?>",
             "priceCurrency" : "<?php echo PLUGIN_SDATA_PRICE_CURRENCY; ?>",
