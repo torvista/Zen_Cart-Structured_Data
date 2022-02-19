@@ -178,6 +178,7 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE === 'true') {
         $attribute_stock_handler = 'not_defined';
         $attribute_lowPrice = 0;
         $attribute_highPrice = 0;
+        $offerCount = 1; //but what the hell is it? Sum of all variants in stock or just the number of variants? Should not be zero.
 
         if (zen_has_product_attributes($product_id)) {
             $product_attributes = [];
@@ -263,6 +264,7 @@ Each shop must add code from where to retrieve)the values to load into mpn/gtin.
 
                     if (is_pos_product($product_id)) {//POSM manages stock of this product
                         $attribute_stock_handler = 'posm';
+                        $total_attributes_stock = 0;
                         foreach ($product_attributes as $key => $product_attribute) {
                             //copied from observer function getOptionsStockRecord as it's a Protected function
                             $hash = generate_pos_option_hash($product_id, [$product_attribute['option_name_id'] => $product_attribute['option_value_id']]);
@@ -286,6 +288,7 @@ Each shop must add code from where to retrieve)the values to load into mpn/gtin.
                              */
                             $product_attributes[$key]['stock'] = $posm_record->fields['products_quantity'];
                             $product_attributes[$key]['sku'] = $posm_record->fields['pos_model'];//as per individual shop
+                            $total_attributes_stock += $posm_record->fields['products_quantity'];
 
                             //CUSTOM CODING REQUIRED***************************************
                             if ($sniffer->field_exists(TABLE_PRODUCTS_OPTIONS_STOCK, 'pos_mpn') && $sniffer->field_exists(TABLE_PRODUCTS_OPTIONS_STOCK, 'pos_ean')) {
@@ -296,6 +299,7 @@ Each shop must add code from where to retrieve)the values to load into mpn/gtin.
                             //eof CUSTOM CODING REQUIRED***********************************
 
                         }
+                        $offerCount = (max($product_base_stock + $total_attributes_stock, 1)); //maybe, hard to find a definition
                     }
                     break;
 
@@ -313,6 +317,7 @@ Each shop must add code from where to retrieve)the values to load into mpn/gtin.
                         $product_attributes[$key]['mpn'] = '';//as per individual shop
                         $product_attributes[$key]['gtin'] = '';//as per individual shop
                     }
+                $offerCount = (max($product_base_stock, 1));
             }
         }
         if ($debug_sd) {
@@ -616,7 +621,7 @@ if ($product_base_gpc !== '') {//google product category
 <?php } ?>
                  "lowPrice" : "<?php echo $attribute_lowPrice; ?>",
                 "highPrice" : "<?php echo $attribute_highPrice; ?>",
-               "offerCount" : "<?php echo $product_base_stock; //required for AggregateOffer ?>",
+               "offerCount" : "<?php echo $offerCount; //required for AggregateOffer. Not zero ?>",
             "priceCurrency" : "<?php echo PLUGIN_SDATA_PRICE_CURRENCY; ?>",
           "priceValidUntil" : "<?php echo date("Y") . '-12-31'; //eg 2020-12-31 NOT 2020-31-12: The date after which the price is no longer available. ?>",
             "itemCondition" : "https://schema.org/<?php echo $itemCondition_array[PLUGIN_SDATA_FOG_PRODUCT_CONDITION]; ?>",
