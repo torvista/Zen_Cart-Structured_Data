@@ -266,6 +266,12 @@ Each shop must add code from where to retrieve)the values to load into mpn/gtin.
                         $attribute_stock_handler = 'posm';
                         $total_attributes_stock = 0;
                         foreach ($product_attributes as $key => $product_attribute) {
+                            //some defaults in case there is no POSM entry despite an attribute existing
+                            $product_attributes[$key]['stock'] = 0;
+                            $product_attributes[$key]['sku'] = $product_base_productID;
+                            $product_attributes[$key]['mpn'] = $product_base_mpn;
+                            $product_attributes[$key]['gtin'] = $product_base_gtin;
+
                             //copied from observer function getOptionsStockRecord as it's a Protected function
                             $hash = generate_pos_option_hash($product_id, [$product_attribute['option_name_id'] => $product_attribute['option_value_id']]);
 
@@ -286,18 +292,19 @@ Each shop must add code from where to retrieve)the values to load into mpn/gtin.
                                 [last_modified] => 2020-06-19 14:48:16
                             )
                              */
-                            $product_attributes[$key]['stock'] = $posm_record->fields['products_quantity'];
-                            $product_attributes[$key]['sku'] = $posm_record->fields['pos_model'];//as per individual shop
-                            $total_attributes_stock += $posm_record->fields['products_quantity'];
+                            if (!$posm_record->EOF) {
+                                $product_attributes[$key]['stock'] = $posm_record->fields['products_quantity'];
+                                $product_attributes[$key]['sku'] = $posm_record->fields['pos_model'];//as per individual shop
+                                $total_attributes_stock += $posm_record->fields['products_quantity'];
 
-                            //CUSTOM CODING REQUIRED***************************************
-                            if ($sniffer->field_exists(TABLE_PRODUCTS_OPTIONS_STOCK, 'pos_mpn') && $sniffer->field_exists(TABLE_PRODUCTS_OPTIONS_STOCK, 'pos_ean')) {
-                                //$product_attributes[$key]['mpn'] = $product_attributes[$key]['option_value'];//as per individual shop
-                                $product_attributes[$key]['mpn'] = $posm_record->fields['pos_mpn'];//as per individual shop
-                                $product_attributes[$key]['gtin'] = $posm_record->fields['pos_ean'];//as per individual shop
+                                //CUSTOM CODING REQUIRED***************************************
+                                if ($sniffer->field_exists(TABLE_PRODUCTS_OPTIONS_STOCK, 'pos_mpn') && $sniffer->field_exists(TABLE_PRODUCTS_OPTIONS_STOCK, 'pos_ean')) {
+                                    //$product_attributes[$key]['mpn'] = $product_attributes[$key]['option_value'];//as per individual shop
+                                    $product_attributes[$key]['mpn'] = $posm_record->fields['pos_mpn'];//as per individual shop
+                                    $product_attributes[$key]['gtin'] = $posm_record->fields['pos_ean'];//as per individual shop
+                                }
+                                //eof CUSTOM CODING REQUIRED***********************************
                             }
-                            //eof CUSTOM CODING REQUIRED***********************************
-
                         }
                         $offerCount = (max($product_base_stock + $total_attributes_stock, 1)); //maybe, hard to find a definition
                     }
