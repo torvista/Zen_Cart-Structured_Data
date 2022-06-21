@@ -48,7 +48,7 @@ to:
 
 ```php
 <!DOCTYPE html>
-<html <?php echo HTML_PARAMS; ?> prefix="og: http://ogp.me/ns# fb: http://ogp.me/ns/fb# product: http://ogp.me/ns/product#">
+<html <?php echo HTML_PARAMS; ?> prefix="og: https://ogp.me/ns# fb: https://ogp.me/ns/fb# product: https://ogp.me/ns/product#">
 ```
 
 This adds the namespaces for the properties og:, fb:, product: which are used later in the structured data block.
