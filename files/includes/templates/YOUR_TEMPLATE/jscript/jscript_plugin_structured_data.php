@@ -720,8 +720,14 @@ foreach($locales_array as $key=>$value){ ?>
 <meta property="og:image:url" content="<?php echo $image; ?>" />
 <?php
     if (is_readable(str_replace(HTTP_SERVER . DIR_WS_CATALOG, '', $image))) {
-      $image_info = getimagesize(str_replace(HTTP_SERVER . DIR_WS_CATALOG, '', $image));
-?>
+      $image_info = @getimagesize(str_replace(HTTP_SERVER . DIR_WS_CATALOG, '', $image));
+//log the problem for correction
+if ($image_info === false) {
+    error_log(__FILE__ . ":getimagesize($image) returned FALSE: image is corrupt");
+    $image = DIR_WS_IMAGES . PRODUCTS_IMAGE_NO_IMAGE;
+    $image_info = getimagesize(str_replace(HTTP_SERVER . DIR_WS_CATALOG, '', $image)); ?>
+<!-- ERROR: image is corrupt: see debug logs -->
+<?php } ?>
 <meta property="og:image:type" content="<?php echo $image_info['mime']; ?>" />
 <meta property="og:image:width" content="<?php echo $image_info[0]; ?>" />
 <meta property="og:image:height" content="<?php echo $image_info[1]; ?>" />
