@@ -394,12 +394,16 @@ Each shop must add code from where to retrieve)the values to load into mpn/gtin.
         $facebook_type = 'business.business';
     }
 
-    //clean $description
-    $description = htmlentities(strip_tags(trim($description)), ENT_COMPAT, CHARSET);//remove tags
-    $description = str_replace(["\r\n", "\n", "\r"], '', $description);//remove LF, CR
-    $description = preg_replace('/\s+/', ' ', $description);//remove multiple spaces
-    $description = zen_trunc_string($description, PLUGIN_SDATA_MAX_DESCRIPTION);
-
+    //$description could be null from META_TAG_DESCRIPTION
+    if (empty($description)) {
+        $description = '';   
+    } else {
+        //clean $description
+        $description = htmlentities(strip_tags(trim($description)), ENT_COMPAT, CHARSET);//remove tags
+        $description = str_replace(["\r\n", "\n", "\r"], '', $description);//remove LF, CR
+        $description = preg_replace('/\s+/', ' ', $description);//remove multiple spaces
+        $description = zen_trunc_string($description, PLUGIN_SDATA_MAX_DESCRIPTION);
+    }
     //build sameAs list
     $sameAs_array = explode(', ', PLUGIN_SDATA_SAMEAS);
     array_push($sameAs_array, PLUGIN_SDATA_FOG_PAGE, PLUGIN_SDATA_TWITTER_PAGE, PLUGIN_SDATA_GOOGLE_PUBLISHER);
