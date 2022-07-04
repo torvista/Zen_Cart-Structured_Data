@@ -488,11 +488,12 @@ Each shop must add code from where to retrieve)the values to load into mpn/gtin.
                     'dateAdded' => $review['date_added'],
                     'reviewText' => $review['reviews_text']
                 ];
+                $ratingSum += $review['reviews_rating']; // mc12345678 2022-07-04: If going to omit this review now or in the future, then need to consider this value.
             }
             $reviewCount = count($reviewsArray);
-            foreach ($reviewsArray as $row) {
+/*            foreach ($reviewsArray as $row) { // This is an increase of O of the runtime.
                 $ratingSum += $row['reviewRating'];
-            }
+            }*/
             $ratingValue = round($ratingSum / $reviewCount, 1);
         }
         if ($reviewCount === 0 && PLUGIN_SDATA_REVIEW_USE_DEFAULT === 'true') {
