@@ -420,8 +420,8 @@ Each shop must add code from where to retrieve)the values to load into mpn/gtin.
         foreach ($sameAs_array as &$profile_page) {
             $profile_page = '"' . $profile_page . '"';
         }
+        unset($profile_page);
     }
-    unset($profile_page);
     $sameAs = implode(",\n", $sameAs_array);
 
     //build acceptedPaymentMethod list
