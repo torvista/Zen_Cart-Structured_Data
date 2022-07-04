@@ -75,10 +75,9 @@ if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE === 'true') {
                 $code = fgets($fh);
             }
             fclose($fh);
+            $name = '';
             if ($code !== false){
                 preg_match('/' . __FUNCTION__ . '\s*\((.*)\)\s*;/u', $code, $name);
-            } else {
-                $name = '';
             }
             echo '<pre>';
             if (!empty($name[1])) {
@@ -457,11 +456,10 @@ Each shop must add code from where to retrieve)the values to load into mpn/gtin.
             $i += 2;
         }
         $locales_array = array_combine($locales_keys_array, $locales_values_array);
+        $locale = '';
         if (array_key_exists($_SESSION['languages_id'], $locales_array)) {
             $locale = $locales_array[(int)$_SESSION['languages_id']]; // returns: en_GB, es_ES etc
             unset($locales_array[(int)$_SESSION['languages_id']]); // other elements are used as the alternate locales
-        } else {
-            $locale = '';
         }
     }
 
