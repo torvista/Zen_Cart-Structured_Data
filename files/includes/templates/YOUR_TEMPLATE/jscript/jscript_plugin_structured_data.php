@@ -12,7 +12,10 @@
  ** @var $current_page_base
  ** @var $product_id
  */
-if (defined('PLUGIN_SDATA_ENABLE') && PLUGIN_SDATA_ENABLE === 'true') {
+if (!defined('PLUGIN_SDATA_ENABLE') || PLUGIN_SDATA_ENABLE !== 'true') {
+  return;
+}
+
     //new defines to add to installer one day
     define('PLUGIN_SDATA_REVIEW_USE_DEFAULT', 'true'); // if no product review, use a default value to stop Google warnings
     define('PLUGIN_SDATA_REVIEW_DEFAULT_VALUE', '3'); // avg. rating (when no product reviews exist)
@@ -797,4 +800,3 @@ if (PLUGIN_SDATA_GOOGLE_PUBLISHER !== '') { ?>
 <!-- Google+-->
 <link href="<?php echo PLUGIN_SDATA_GOOGLE_PUBLISHER; ?>" rel="publisher" />
 <!-- eof Google+--><?php } //eof Google+ ?>
-<?php } ?>
