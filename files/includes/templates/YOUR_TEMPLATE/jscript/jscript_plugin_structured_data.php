@@ -438,6 +438,7 @@ Each shop must add code from where to retrieve)the values to load into mpn/gtin.
 
     //build Facebook locales
     $locales_array = explode(',', PLUGIN_SDATA_FOG_LOCALES);
+    $locales_array = array_map('trim', $locales_array);
     /* Array example
     (
         [0] => 1
