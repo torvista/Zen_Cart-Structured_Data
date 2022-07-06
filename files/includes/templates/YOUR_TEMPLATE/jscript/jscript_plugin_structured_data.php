@@ -191,10 +191,9 @@ if (!defined('PLUGIN_SDATA_ENABLE') || PLUGIN_SDATA_ENABLE !== 'true') {
             $sql = "SELECT patrib.products_attributes_id, patrib.options_id, patrib.options_values_id, patrib.options_values_price, patrib.products_attributes_weight, patrib.products_attributes_weight_prefix, popt.products_options_name, poptv.products_options_values_name
                     FROM " . TABLE_PRODUCTS_OPTIONS . " popt
                     LEFT JOIN " . TABLE_PRODUCTS_ATTRIBUTES . " patrib ON (popt.products_options_id = patrib.options_id)
-                    LEFT JOIN " . TABLE_PRODUCTS_OPTIONS_VALUES . " poptv ON (poptv.products_options_values_id = patrib.options_values_id)
+                    LEFT JOIN " . TABLE_PRODUCTS_OPTIONS_VALUES . " poptv ON (poptv.products_options_values_id = patrib.options_values_id AND poptv.language_id = popt.language_id)
                     WHERE patrib.products_id = " . $product_id . "
                     AND popt.language_id = " . (int)$_SESSION['languages_id'] . "
-                    AND poptv.language_id = " . (int)$_SESSION['languages_id'] . "
                     ORDER BY popt.products_options_name, poptv.products_options_values_name";
             $results = $db->Execute($sql);
 
