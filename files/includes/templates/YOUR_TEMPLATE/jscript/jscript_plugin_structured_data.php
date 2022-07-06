@@ -99,7 +99,8 @@ if (!defined('PLUGIN_SDATA_ENABLE') || PLUGIN_SDATA_ENABLE !== 'true') {
         echo '$image_default_twitter=' . $image_default_twitter . '<br>';
     }
 
-    $is_product_page = ($current_page_base === 'product_info' && !empty($_GET['products_id'] && zen_products_lookup($_GET['products_id'], 'products_status') === '1'));
+    // mc12345678, this appeared to only cover one product type, not all of them. Corrected 2022-07-04
+    $is_product_page = (substr($current_page_base, -5) === '_info' && !empty($_GET['products_id'] && zen_products_lookup($_GET['products_id'], 'products_status') === '1') && zen_get_info_page($_GET['products_id']) === $current_page_base);
     if ($is_product_page) {//product page only
         if ($debug_sd) {
             echo __LINE__ . ' is product page<br>';
