@@ -389,7 +389,7 @@ Each shop must add code from where to retrieve)the values to load into mpn/gtin.
         }
 
         $image_default = true;
-        $breadcrumb_this_page = isset($breadcrumb->_trail[count($breadcrumb->_trail) - 1]['title']) ? $breadcrumb->_trail[count($breadcrumb->_trail) - 1]['title'] : '';
+        $breadcrumb_this_page = $breadcrumb->_trail[count($breadcrumb->_trail) - 1]['title'] ?? '';
         $image_alt = $breadcrumb_this_page;
         $title = META_TAG_TITLE;
         //$title = $breadcrumb_this_page;
