@@ -100,7 +100,7 @@ if ($debug_sd) {
 }
 
 // mc12345678, this appeared to only cover one product type, not all of them. Corrected 2022-07-04
-$is_product_page = (substr($current_page_base, -5) === '_info' && !empty($_GET['products_id'] && zen_products_lookup($_GET['products_id'], 'products_status') === '1')
+$is_product_page = (substr($current_page_base, -5) === '_info' && (!empty($_GET['products_id']) && zen_products_lookup($_GET['products_id'], 'products_status') === '1')
     && zen_get_info_page($_GET['products_id']) === $current_page_base);
 if ($is_product_page) {//product page only
     if ($debug_sd) {
