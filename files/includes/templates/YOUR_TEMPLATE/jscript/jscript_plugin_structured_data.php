@@ -453,11 +453,11 @@ $locales_array = array_map('trim', $locales_array);
     [3] => es_ES
 )
 */
-if (count($locales_array) > 1 && (count($locales_array) % 2 === 0)) { // is more than one value and is actually a pair
+$locale_count = count($locales_array);
+if ($locale_count > 1 && ($locale_count % 2 === 0)) { // is more than one value and is actually a pair
     $locales_keys_array = [];
     $locales_values_array = [];
     $i = 0;
-    $locale_count = count($locales_array);
     while ($i < $locale_count) {
         $locales_keys_array [] = $locales_array[$i]; // returns: 1,2 etc.
         $i += 2;
