@@ -560,7 +560,19 @@ if ($is_product_page) {
 <?php
                 foreach ($breadcrumb as $key => $value) {
                     for ($i = 0, $n = count($value); $i < $n; $i++) {
-                        if (isset($value[$i]['title']) && zen_not_null($value[$i]['title'])) {//if non-existent url used, title is null: php notice) ?>
+                        // If there is no title, then don't include in the breadcrumb list.
+                        if (!(isset($value[$i]['title']) && zen_not_null($value[$i]['title']))) {//if non-existent url used, title is null: php notice) 
+                            continue;
+                        }
+
+                        // If at least one breadcrumb has been added, then the next should be separated by a comma.
+                        if (!empty($min_one)) {
+                            echo ",\n";
+                        } else {
+                            // This is now the first breadcrumb, any future should be separated from the previous.
+                            $min_one = true;
+                        }
+                        ?>
       {
       "@type": "ListItem",
    "position": "<?php echo $i + 1; //does not need to be quoted, but IDE complains ?>",
@@ -568,8 +580,8 @@ if ($is_product_page) {
            "@id": "<?php echo $value[$i]['link']; ?>",
           "name": <?php echo json_encode($value[$i]['title']) . "\n"; ?>
                }
-       }<?php if ($i + 1 !== $n) { echo ",\n"; }?>
-<?php } //close isset
+       }
+<?php //} //close isset
    }//close for
  }//close foreach ?>
 
