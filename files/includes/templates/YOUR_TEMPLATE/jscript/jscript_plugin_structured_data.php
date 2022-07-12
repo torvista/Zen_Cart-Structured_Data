@@ -209,9 +209,8 @@ if ($is_product_page) {//product page only
                 $product_attributes[$attribute['products_attributes_id']]['price'] = zen_get_products_price_is_priced_by_attributes($product_id) ? $attribute['options_values_price']
                     : $product_base_displayed_price;
                 $attribute_prices[] = $product_attributes[$attribute['products_attributes_id']]['price'];
-                if ($attribute['products_attributes_weight'] === '0') {
-                    $product_attributes[$attribute['products_attributes_id']]['weight'] = 0;
-                } else {
+                $product_attributes[$attribute['products_attributes_id']]['weight'] = 0;
+                if ($attribute['products_attributes_weight'] !== '0') {
                     $product_attributes[$attribute['products_attributes_id']]['weight'] = (float)(($attribute['products_attributes_weight_prefix'] === '-' ? '-' : '')
                         . $attribute['products_attributes_weight']);
                 }
