@@ -201,7 +201,9 @@ if ($is_product_page) {//product page only
         $results = $db->Execute($sql);
 
         foreach ($results as $attribute) {
-            if (zen_get_attributes_valid($product_id, $attribute['options_id'], $attribute['options_values_id'])) {//skip "display only"
+            if (!zen_get_attributes_valid($product_id, $attribute['options_id'], $attribute['options_values_id'])) {//skip "display only"
+                continue;
+            }
                 $product_attributes[$attribute['products_attributes_id']]['option_name_id'] = $attribute['options_id'];
                 $product_attributes[$attribute['products_attributes_id']]['option_name'] = $attribute['products_options_name'];
                 $product_attributes[$attribute['products_attributes_id']]['option_value_id'] = $attribute['options_values_id'];
@@ -215,7 +217,7 @@ if ($is_product_page) {//product page only
                     $product_attributes[$attribute['products_attributes_id']]['weight'] = (float)(($attribute['products_attributes_weight_prefix'] === '-' ? '-' : '')
                         . $attribute['products_attributes_weight']);
                 }
-            }
+//            }
         }
         $attribute_lowPrice = min($attribute_prices);
         $attribute_highPrice = max($attribute_prices);
