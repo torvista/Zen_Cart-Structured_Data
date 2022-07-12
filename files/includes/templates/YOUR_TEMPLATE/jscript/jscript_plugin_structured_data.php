@@ -670,7 +670,7 @@ if ($product_base_gpc !== '') {//google product category
                        "@type" : "PaymentMethod",
                         "name" : [<?php echo $PaymentMethods; ?>]
                               }
-                          },
+                          }
 <?php }//close switch
 } else { //simple product (no attributes) ?>
             "offers" :     {
@@ -691,9 +691,10 @@ if ($product_base_gpc !== '') {//google product category
                   "@type" : "PaymentMethod",
                    "name" : [<?php echo $PaymentMethods; ?>]
                           }
-               },
+               }
 <?php } ?>
 <?php if ( $reviewCount > 0 ) { //do not bother if no reviews at all. Note note best/worstRating is for the max and min rating used in this review system. Default is 1 and 5 so no need to be declared ?>
+,
   "aggregateRating": {
     "@type": "AggregateRating",
     "ratingValue": "<?php echo $ratingValue; //average rating based on all reviews ?>",
