@@ -118,7 +118,7 @@ if ($is_product_page) {//product page only
     $product_id = (int)$product_info->fields['products_id'];
     $product_name = $product_info->fields['products_name'];
     $description = $product_info->fields['products_description'];//variable used in twitter for categories & products
-    $title = htmlspecialchars(STORE_NAME . ' - ' . $product_info->fields['products_name']);
+    $title = htmlspecialchars(STORE_NAME . ' - ' . $product_info->fields['products_name'], ENT_QUOTES);
     $weight = (float)($product_info->fields['products_weight'] === '0' ? PLUGIN_SDATA_DEFAULT_WEIGHT : $product_info->fields['products_weight']);
     $tax_class_id = $product_info->fields['products_tax_class_id'];
     $product_base_displayed_price = round(zen_get_products_actual_price($product_id) * (1 + zen_get_tax_rate($tax_class_id) / 100),
