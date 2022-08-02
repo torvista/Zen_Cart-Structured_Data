@@ -1,7 +1,7 @@
 <?php
-/* This file MUST be loaded by html <head> since it uses meta tags.
- * DO NOT LET YOUR IDE RE-FORMAT THE CODE STRUCTURE: it is structured so the html seen in Developer Tools Inspector (Chrome) is readable and the parentheses line up.
-  *
+/* This file MUST be loaded by html <head> since it generates meta tags.
+ * DO NOT LET YOUR IDE RE-FORMAT THE CODE STRUCTURE: it is structured so the html source is readable and the parentheses (mostly) line up.
+ * https://github.com/torvista/Zen_Cart-Structured_Data
  * @license https://www.zen-cart.com/license/2_0.txt GNU Public License V2.0
  */
 /** directives for phpStorm code inspector
@@ -13,17 +13,19 @@
  ** @var $product_id
  */
 if (!defined('PLUGIN_SDATA_ENABLE') || PLUGIN_SDATA_ENABLE !== 'true') {
-  return;
+    return;
 }
 
 //new defines to add to installer one day
-define('PLUGIN_SDATA_REVIEW_USE_DEFAULT', 'true'); // if no product review, use a default value to stop Google warnings
-define('PLUGIN_SDATA_REVIEW_DEFAULT_VALUE', '3'); // avg. rating (when no product reviews exist)
-define('PLUGIN_SDATA_MAX_DESCRIPTION', 5000); // maximum characters allowed (Google)
-define('PLUGIN_SDATA_GOOGLE_PRODUCT_CATEGORY', ''); // fallback/default Google category ID (up to 6 digits). Used if a product does not have a specific category defined https://www.google.com/basepages/producttype/taxonomy-with-ids.en-US.xls
-//eg '5613'	= Vehicles & Parts, Vehicle Parts & Accessories
+define('PLUGIN_SDATA_REVIEW_USE_DEFAULT', 'true'); // if there are no reviews for a product, use a default value to stop Google warnings
+define('PLUGIN_SDATA_REVIEW_DEFAULT_VALUE', '3'); // if there are no reviews for a product, average rating
+define('PLUGIN_SDATA_MAX_DESCRIPTION', 5000); // maximum characters allowed in the description (Google)
+define('PLUGIN_SDATA_GOOGLE_PRODUCT_CATEGORY', ''); // fallback/default Google category ID (up to 6 digits). eg. '5613'	= Vehicles & Parts, Vehicle Parts & Accessories
+//Used if a product does not have a specific category defined https://www.google.com/basepages/producttype/taxonomy-with-ids.en-US.xls
 define('PLUGIN_SDATA_DEFAULT_WEIGHT', '0.3'); // fallback weight if product weight in database is not set
-//not used define ('PLUGIN_SDATA_NATIVE_URL', true); // if a url rewriter is in use, the native url is replaced by a more "friendly" one (eg. www.shop.com/products/widget1). If this option is set to true, the native url (www.shop.com/index.php?main_page=product_info&cPath=1_4&products_id=1) is always used.
+//define ('PLUGIN_SDATA_NATIVE_URL', true); // not in use
+//when a site uses a url rewriter, the native url (www.shop.com/index.php?main_page=product_info&cPath=1_4&products_id=1) is replaced by a more "friendly" one (www.shop.com/products/widget1).
+//If this option is set to true, the native url (www.shop.com/index.php?main_page=product_info&cPath=1_4&products_id=1) is always used.
 
 if (defined('PLUGIN_SDATA_PRICE_CURRRENCY')) {//sic: correct old typo
     $db->Execute("UPDATE `configuration` SET `configuration_key`= 'PLUGIN_SDATA_PRICE_CURRENCY' WHERE `configuration_key`= 'PLUGIN_SDATA_PRICE_CURRRENCY'");
@@ -39,8 +41,8 @@ $image_alt = '';
 $image_default = false;
 $facebook_type = 'business.business';
 $key = ''; //only to keep IDE happy
-$url = $canonicalLink; //may be native or friendly if rewriter in use
-/*cludged solution, don't like it so not implemented/incomplete. Should catch parameters passed to notify_sefu_intercept which url rewriter should be using
+$url = $canonicalLink; //may be native or friendly if a url rewriter in use: see note above for PLUGIN_SDATA_NATIVE_URL
+/*cludged solution to use the native urls. Don't like it so not implemented/incomplete. It should catch the parameters passed to notify_sefu_intercept which the url rewriter should be using
 if(PLUGIN_SDATA_NATIVE_URL === true) { //always use the native url
     $url = trim(HTTP_SERVER . DIR_WS_CATALOG . ($current_page === 'index' ? '' : 'index.php?main_page=' . $current_page . '&' . $_SERVER['QUERY_STRING']), '&');
 }*/
@@ -756,7 +758,7 @@ if ($image_info === false) {
 <meta property="og:image:height" content="<?php echo $image_info[1]; ?>" />
 <?php } ?>
 <meta property="og:description" content="<?php echo $description; ?>" />
-    <?php if  ( $facebook_type !== 'product') { ?>
+    <?php if ($facebook_type !== 'product') { ?>
 <meta property="og:type" content="<?php echo PLUGIN_SDATA_FOG_TYPE_SITE; ?>" />
     <?php if (PLUGIN_SDATA_STREET_ADDRESS !== '') { ?>
 <meta property="business:contact_data:street_address" content="<?php echo PLUGIN_SDATA_STREET_ADDRESS; ?>" />
