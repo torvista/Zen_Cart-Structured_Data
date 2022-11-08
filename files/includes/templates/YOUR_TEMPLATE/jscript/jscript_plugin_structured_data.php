@@ -1,12 +1,14 @@
 <?php
 /* This file MUST be loaded by html <head> since it generates meta tags.
- * DO NOT LET YOUR IDE RE-FORMAT THE CODE STRUCTURE: it is structured so the html source is readable and the parentheses (mostly) line up.
+ * DO NOT LET YOUR IDE RE-FORMAT THE CODE STRUCTURE: it is structured so the html source is readable and the parentheses line up.
+ * author: torvista 08/11/2022
  * https://github.com/torvista/Zen_Cart-Structured_Data
  * @license https://www.zen-cart.com/license/2_0.txt GNU Public License V2.0
  */
 /** directives for phpStorm code inspector
  ** @var queryFactory $db
  ** @var sniffer $sniffer
+ ** @var breadcrumb $breadcrumb
  ** @var $canonicalLink
  ** @var $current_page
  ** @var $current_page_base
@@ -31,16 +33,44 @@ if (defined('PLUGIN_SDATA_PRICE_CURRRENCY')) {//sic: correct old typo
     $db->Execute("UPDATE `configuration` SET `configuration_key`= 'PLUGIN_SDATA_PRICE_CURRENCY' WHERE `configuration_key`= 'PLUGIN_SDATA_PRICE_CURRRENCY'");
 }
 
-$debug_sd = false; // set to true (boolean) to display debugging info. Changes from the gods are imposed regularly, so I've left a lot of ugly debug output available.
+$debug_sd = false; // set to true (boolean) to display debugging info. Changes from the gods are imposed irregularly, so I've left a lot of ugly debug output available.
 
-//defaults (subsequently overwritten), defined to prevent php notices
-$description = '';
-$title = '';
-$image = '';
-$image_alt = '';
+//defaults
 $image_default = false;
 $facebook_type = 'business.business';
-$key = ''; //only to keep IDE happy
+
+//defaults defined to prevent php notices
+$breadcrumb_schema = [];
+$category_name = '';
+$description = '';
+$image = '';
+$image_alt = '';
+$manufacturer_name = '';
+$product_base_displayed_price = '';
+$product_base_mpn = '';
+$product_base_sku = '';
+$product_base_stock = 0;
+$reviewsArray = [];
+$title = '';
+//breadcrumb
+$breadcrumb_trail = $breadcrumb->trail(',');
+$breadcrumb_array = explode(',', $breadcrumb->trail(',')); // create array
+$breadcrumb_array = preg_replace("/\r|\n/", "", $breadcrumb_array); // remove line feeds
+$breadcrumb_array = array_map('trim', $breadcrumb_array); // remove whitespace
+$breadcrumb_count = count($breadcrumb_array);
+if ($breadcrumb_count > 0) {
+    foreach ($breadcrumb_array as $key => $value) {
+        $text = strip_tags($value);
+        preg_match('/^<a.*?href=(["\'])(.*?)\1.*$/', $value, $m);
+        $url = $m[2] ?? '';
+        $breadcrumb_schema[$key]['position'] = (int)$key + 1;
+        $breadcrumb_schema[$key]['id'] = $url;
+        $breadcrumb_schema[$key]['name'] = $text;
+    }
+    if ($breadcrumb_schema[$breadcrumb_count - 1]['id'] === '') {
+        $breadcrumb_schema[$breadcrumb_count - 1]['id'] = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]";
+    }
+}
 $url = $canonicalLink; //may be native or friendly if a url rewriter in use: see note above for PLUGIN_SDATA_NATIVE_URL
 /*cludged solution to use the native urls. Don't like it so not implemented/incomplete. It should catch the parameters passed to notify_sefu_intercept which the url rewriter should be using
 if(PLUGIN_SDATA_NATIVE_URL === true) { //always use the native url
@@ -239,7 +269,7 @@ if ($is_product_page) {//product page only
 
         /*THIRD PARTY ATTRIBUTE-STOCK CONTROL PLUGINS************************
         The existing array "$product_attributes" needs the extra elements to be added with this structure (although it may have more fields).
-        Each shop must add code from where to retrieve)the values to load into mpn/gtin. In case I have used ean.
+        Each shop must add code from where to retrieve the values to load into mpn/gtin. In case I have used ean.
                                     [2682] => Array
                                         (
                                             [price] => 26
@@ -386,7 +416,7 @@ if ($is_product_page) {//product page only
         }
         $description = zen_get_category_description($category_id, (int)$_SESSION['languages_id']) !== '' ? zen_get_category_description($category_id, (int)$_SESSION['languages_id'])
             : META_TAG_DESCRIPTION;
-        $product_category_name = $category_name;//used for twitter title, changes depending if page is product or category
+        $product_category_name = $category_name;//used for twitter title, it changes depending on if page is product or category
         $image_alt = $category_name;
         $facebook_type = 'product.group';
         $title = META_TAG_TITLE;
@@ -397,12 +427,9 @@ if ($is_product_page) {//product page only
     }
 
     $image_default = true;
-    $breadcrumb_this_page = $breadcrumb->_trail[count($breadcrumb->_trail) - 1]['title'] ?? '';
-    $image_alt = $breadcrumb_this_page;
+    //$image_alt = $breadcrumb_this_page;//todo, needed??
     $title = META_TAG_TITLE;
-    //$title = $breadcrumb_this_page;
     $description = META_TAG_DESCRIPTION;
-    $facebook_type = 'business.business';
 }
 
 //$description could be null from META_TAG_DESCRIPTION
@@ -490,7 +517,6 @@ if ($is_product_page) {
                 ORDER BY reviews_rating DESC';
     $reviews = $db->Execute($reviewQuery);
     if (!$reviews->EOF) {
-        $reviewsArray = [];
         foreach ($reviews as $review) {
             $reviewsArray[] = [
                 'reviewId' => $review['reviews_id'],
@@ -552,41 +578,26 @@ if ($is_product_page) {
                  }
 }
 </script>
-<?php if (isset($breadcrumb) && is_object($breadcrumb)) { ?>
+<?php if ($breadcrumb_count > 1) { ?>
 <script title="Structured Data: schemaBreadcrumb" type="application/ld+json">
 {
        "@context": "https://schema.org",
           "@type": "BreadcrumbList",
-"itemListElement": [
-<?php
-                foreach ($breadcrumb as $key => $value) {
-                    for ($i = 0, $n = count($value); $i < $n; $i++) {
-                        // If there is no title, then don't include in the breadcrumb list.
-                        if (!(isset($value[$i]['title']) && zen_not_null($value[$i]['title']))) {//if non-existent url used, title is null: php notice) 
-                            continue;
-                        }
-
-                        // If at least one breadcrumb has been added, then the next should be separated by a comma.
-                        if (!empty($min_one)) {
-                            echo ",\n";
-                        } else {
-                            // This is now the first breadcrumb, any future should be separated from the previous.
-                            $min_one = true;
-                        }
-                        ?>
-      {
-      "@type": "ListItem",
-   "position": "<?php echo $i + 1; //does not need to be quoted, but IDE complains ?>",
-       "item": {
-           "@id": "<?php echo $value[$i]['link']; ?>",
-          "name": <?php echo json_encode($value[$i]['title']) . "\n"; ?>
-               }
+"itemListElement":
+  [
+  <?php foreach ($breadcrumb_schema as $key => $value) { ?>
+  {
+        "@type": "ListItem",
+     "position": "<?php echo $value['position']; //does not need to be quoted, but IDE complains ?>",
+         "item":
+       {
+        "@id": "<?php echo $value['id']; ?>",
+       "name": <?php echo json_encode($value['name']) . "\n"; ?>
        }
-<?php //} //close isset
-   }//close for
- }//close foreach ?>
+    }<?php if ((int)$key+1 < $breadcrumb_count) echo ','; ?>
 
-                    ]
+<?php }//close foreach ?>
+  ]
 }
 </script>
 <?php } //eof breadcrumb ?>
@@ -638,7 +649,7 @@ if ($product_base_gpc !== '') {//google product category
                 "weight" : "<?php echo ($weight + $product_attribute['weight'] > 0 ? $weight + $product_attribute['weight'] : $weight) . TEXT_PRODUCT_WEIGHT_UNIT; //if a subtracted attribute weight is less than zero, use base weight ?>",
          "priceCurrency" : "<?php echo PLUGIN_SDATA_PRICE_CURRENCY; ?>",
           "availability" : "<?php echo $product_attribute['stock'] > 0 ? 'https://schema.org/InStock' : 'https://schema.org/PreOrder'; ?>",
-       "priceValidUntil" : "<?php echo date("Y") . '-12-31'; //eg 2020-12-31 NOT 2020-31-12: The date after which the price is no longer available. ?>",
+       "priceValidUntil" : "<?php echo date("Y") . '-12-31'; //e.g. 2020-12-31 NOT 2020-31-12: The date after which the price is no longer available. ?>",
                     "url": "<?php echo $url; ?>"}<?php if ($i < $attributes_count) { echo ",\n    "; } else {echo "\n";}?>
 <?php } ?>
          ]
@@ -658,7 +669,7 @@ if ($product_base_gpc !== '') {//google product category
                 "highPrice" : "<?php echo $attribute_highPrice; ?>",
                "offerCount" : "<?php echo $offerCount; //required for AggregateOffer. Not zero ?>",
             "priceCurrency" : "<?php echo PLUGIN_SDATA_PRICE_CURRENCY; ?>",
-          "priceValidUntil" : "<?php echo date("Y") . '-12-31'; //eg 2020-12-31 NOT 2020-31-12: The date after which the price is no longer available. ?>",
+          "priceValidUntil" : "<?php echo date("Y") . '-12-31'; //e.g. 2020-12-31 NOT 2020-31-12: The date after which the price is no longer available. ?>",
             "itemCondition" : "https://schema.org/<?php echo $itemCondition_array[PLUGIN_SDATA_FOG_PRODUCT_CONDITION]; ?>",
              "availability" : "<?php echo ($product_base_stock > 0 ? 'https://schema.org/InStock' : 'https://schema.org/PreOrder'); ?>",
                    "seller" : <?php echo json_encode(STORE_NAME); //json_encode adds external quotes as the other entries"?>,
@@ -672,14 +683,14 @@ if ($product_base_gpc !== '') {//google product category
                         "name" : [<?php echo $PaymentMethods; ?>]
                               }
                           }
-<?php }//close attributes switch
+<?php }//close attributes switch-
 } else { //simple product (no attributes) ?>
             "offers" :     {
                 "@type" : "Offer",
                 "price" : "<?php echo $product_base_displayed_price; ?>",
                    "url": "<?php echo $url; ?>",
         "priceCurrency" : "<?php echo PLUGIN_SDATA_PRICE_CURRENCY; ?>",
-      "priceValidUntil" : "<?php echo date("Y") . '-12-31'; //eg 2020-12-31 NOT 2020-31-12: The date after which the price is no longer available. ?>",
+      "priceValidUntil" : "<?php echo date("Y") . '-12-31'; //e.g. 2020-12-31 NOT 2020-31-12: The date after which the price is no longer available. ?>",
         "itemCondition" : "https://schema.org/<?php echo $itemCondition_array[PLUGIN_SDATA_FOG_PRODUCT_CONDITION]; ?>",
          "availability" : "<?php echo ($product_base_stock > 0 ? 'https://schema.org/InStock' : 'https://schema.org/PreOrder'); ?>",
                "seller" : <?php echo json_encode(STORE_NAME); //json_encode adds external quotes as the other entries"?>,
@@ -694,7 +705,7 @@ if ($product_base_gpc !== '') {//google product category
                           }
                }
 <?php } ?>
-<?php if ( $reviewCount > 0 ) { //do not bother if no reviews at all. Note note best/worstRating is for the max and min rating used in this review system. Default is 1 and 5 so no need to be declared ?>
+<?php if ( $reviewCount > 0 ) { //do not bother if no reviews at all. Note best/worstRating is for the max and min rating used in this review system. Default is 1 and 5 so no need to be declared ?>
 ,
   "aggregateRating": {
     "@type": "AggregateRating",
@@ -726,23 +737,23 @@ if ($product_base_gpc !== '') {//google product category
 <?php if (PLUGIN_SDATA_FOG_ENABLE === 'true') {?>
 <!-- Facebook structured data general-->
 <?php if (PLUGIN_SDATA_FOG_APPID !== '') { ?>
-<meta property="fb:app_id" content="<?php echo PLUGIN_SDATA_FOG_APPID; ?>" />
+<meta property="fb:app_id" content="<?php echo PLUGIN_SDATA_FOG_APPID; ?>">
 <?php } ?>
 <?php if (PLUGIN_SDATA_FOG_ADMINID !== '') { ?>
-<meta property="fb:admins" content="<?php echo PLUGIN_SDATA_FOG_ADMINID; ?>" />
+<meta property="fb:admins" content="<?php echo PLUGIN_SDATA_FOG_ADMINID; ?>">
 <?php } ?>
-<meta property="og:title" content="<?php echo $title; ?>" />
-<meta property="og:site_name" content="<?php echo STORE_NAME; ?>" />
-<meta property="og:url" content="<?php echo $url; ?>" />
-<?php if (!empty($locale)) { echo '<meta property="og:locale" content="' . $locale . '" />';
+<meta property="og:title" content="<?php echo $title; ?>">
+<meta property="og:site_name" content="<?php echo STORE_NAME; ?>">
+<meta property="og:url" content="<?php echo $url; ?>">
+<?php if (!empty($locale)) { echo '<meta property="og:locale" content="' . $locale . '">';
 if (count($locales_array) > 0) {
 foreach($locales_array as $key=>$value){ ?>
-<meta property="og:locale:alternate" content="<?php echo $value; ?>" />
+<meta property="og:locale:alternate" content="<?php echo $value; ?>">
 <?php }}} ?>
 <?php $image = ($image_default ? $image_default_facebook : $image); ?>
 <?php if ($debug_sd) {echo __LINE__ . ' $image_default=' . $image_default . '<br>';} ?>
-<meta property="og:image" content="<?php echo $image; ?>" />
-<meta property="og:image:url" content="<?php echo $image; ?>" />
+<meta property="og:image" content="<?php echo $image; ?>">
+<meta property="og:image:url" content="<?php echo $image; ?>">
 <?php
     if (is_readable(str_replace(HTTP_SERVER . DIR_WS_CATALOG, '', $image))) {
       $image_info = @getimagesize(str_replace(HTTP_SERVER . DIR_WS_CATALOG, '', $image));
@@ -753,72 +764,72 @@ if ($image_info === false) {
     $image_info = getimagesize(str_replace(HTTP_SERVER . DIR_WS_CATALOG, '', $image)); ?>
 <!-- ERROR: image is corrupt: see debug logs -->
 <?php } ?>
-<meta property="og:image:type" content="<?php echo $image_info['mime']; ?>" />
-<meta property="og:image:width" content="<?php echo $image_info[0]; ?>" />
-<meta property="og:image:height" content="<?php echo $image_info[1]; ?>" />
+<meta property="og:image:type" content="<?php echo $image_info['mime']; ?>">
+<meta property="og:image:width" content="<?php echo $image_info[0]; ?>">
+<meta property="og:image:height" content="<?php echo $image_info[1]; ?>">
 <?php } ?>
-<meta property="og:description" content="<?php echo $description; ?>" />
+<meta property="og:description" content="<?php echo $description; ?>">
     <?php if ($facebook_type !== 'product') { ?>
-<meta property="og:type" content="<?php echo PLUGIN_SDATA_FOG_TYPE_SITE; ?>" />
+<meta property="og:type" content="<?php echo PLUGIN_SDATA_FOG_TYPE_SITE; ?>">
     <?php if (PLUGIN_SDATA_STREET_ADDRESS !== '') { ?>
-<meta property="business:contact_data:street_address" content="<?php echo PLUGIN_SDATA_STREET_ADDRESS; ?>" />
+<meta property="business:contact_data:street_address" content="<?php echo PLUGIN_SDATA_STREET_ADDRESS; ?>">
     <?php } ?>
     <?php if (PLUGIN_SDATA_LOCALITY !== '') { ?>
-<meta property="business:contact_data:locality" content="<?php echo PLUGIN_SDATA_LOCALITY; ?>" />
+<meta property="business:contact_data:locality" content="<?php echo PLUGIN_SDATA_LOCALITY; ?>">
     <?php } ?>
     <?php if (PLUGIN_SDATA_REGION !== '') { ?>
-<meta property="business:contact_data:region" content="<?php echo PLUGIN_SDATA_REGION; ?>" />
+<meta property="business:contact_data:region" content="<?php echo PLUGIN_SDATA_REGION; ?>">
     <?php } ?>
     <?php if (PLUGIN_SDATA_POSTALCODE !== '') { ?>
-<meta property="business:contact_data:postal_code" content="<?php echo PLUGIN_SDATA_POSTALCODE; ?>" />
+<meta property="business:contact_data:postal_code" content="<?php echo PLUGIN_SDATA_POSTALCODE; ?>">
     <?php } ?>
     <?php if (PLUGIN_SDATA_COUNTRYNAME !== '') { ?>
-<meta property="business:contact_data:country_name" content="<?php echo PLUGIN_SDATA_COUNTRYNAME; ?>" />
+<meta property="business:contact_data:country_name" content="<?php echo PLUGIN_SDATA_COUNTRYNAME; ?>">
     <?php } ?>
     <?php if (PLUGIN_SDATA_EMAIL !== '') { ?>
-<meta property="business:contact_data:email" content="<?php echo PLUGIN_SDATA_EMAIL; ?>" />
+<meta property="business:contact_data:email" content="<?php echo PLUGIN_SDATA_EMAIL; ?>">
     <?php } ?>
     <?php if (PLUGIN_SDATA_TELEPHONE !== '') { ?>
-<meta property="business:contact_data:phone_number" content="<?php echo PLUGIN_SDATA_TELEPHONE; ?>" />
+<meta property="business:contact_data:phone_number" content="<?php echo PLUGIN_SDATA_TELEPHONE; ?>">
     <?php } ?>
     <?php if (PLUGIN_SDATA_FAX !== '') { ?>
-<meta property="business:contact_data:fax_number" content="<?php echo PLUGIN_SDATA_FAX; ?>" />
+<meta property="business:contact_data:fax_number" content="<?php echo PLUGIN_SDATA_FAX; ?>">
     <?php } ?>
-<meta property="business:contact_data:website" content="<?php echo HTTP_SERVER; ?>" />
+<meta property="business:contact_data:website" content="<?php echo HTTP_SERVER; ?>">
 <!-- eof Facebook structured data general-->
 <?php } else { ?>
 <!-- Facebook structured data for product-->
-<meta property="og:type" content="<?php echo trim(PLUGIN_SDATA_FOG_TYPE_PRODUCT); ?>" />
-<meta property="product:availability" content="<?php if ($product_base_stock > 0) { ?>instock<?php } ?><?php if ($product_base_stock < 1) { ?>pending<?php } ?>" />
-<meta property="product:brand" content="<?php echo $manufacturer_name; ?>" />
-<meta property="product:category" content="<?php echo htmlentities($category_name); ?>" />
-<meta property="product:condition" content="<?php echo PLUGIN_SDATA_FOG_PRODUCT_CONDITION; ?>" />
+<meta property="og:type" content="<?php echo trim(PLUGIN_SDATA_FOG_TYPE_PRODUCT); ?>">
+<meta property="product:availability" content="<?php if ($product_base_stock > 0) { ?>instock<?php } ?><?php if ($product_base_stock < 1) { ?>pending<?php } ?>">
+<meta property="product:brand" content="<?php echo $manufacturer_name; ?>">
+<meta property="product:category" content="<?php echo htmlentities($category_name); ?>">
+<meta property="product:condition" content="<?php echo PLUGIN_SDATA_FOG_PRODUCT_CONDITION; ?>">
 <?php if ($product_base_mpn !== '') {
-                echo '<meta property="product:mfr_part_no" content="' . $product_base_mpn . '" />' . "\n";
+                echo '<meta property="product:mfr_part_no" content="' . $product_base_mpn . '">' . "\n";
             } ?>
-<meta property="product:price:amount" content="<?php echo $product_base_displayed_price; ?>" />
-<meta property="product:price:currency" content="<?php echo PLUGIN_SDATA_PRICE_CURRENCY; ?>" />
-<meta property="product:product_link" content="<?php echo $url; ?>" />
-<meta property="product:retailer" content="<?php echo PLUGIN_SDATA_FOG_APPID; ?>" />
-<meta property="product:retailer_category" content="<?php echo htmlentities($category_name); ?>" />
-<meta property="product:retailer_part_no" content="<?php echo $product_base_sku; ?>" />
+<meta property="product:price:amount" content="<?php echo $product_base_displayed_price; ?>">
+<meta property="product:price:currency" content="<?php echo PLUGIN_SDATA_PRICE_CURRENCY; ?>">
+<meta property="product:product_link" content="<?php echo $url; ?>">
+<meta property="product:retailer" content="<?php echo PLUGIN_SDATA_FOG_APPID; ?>">
+<meta property="product:retailer_category" content="<?php echo htmlentities($category_name); ?>">
+<meta property="product:retailer_part_no" content="<?php echo $product_base_sku; ?>">
 <!-- eof Facebook structured data -->
 <?php } }//end facebook enabled  ?>
 <?php if (PLUGIN_SDATA_TWITTER_CARD_ENABLE === 'true') { ?>
 <!-- Twitter Card markup -->
-<meta name="twitter:card" content="summary_large_image" />
-<meta name="twitter:site" content="<?php echo PLUGIN_SDATA_TWITTER_USERNAME; ?>" />
-<meta name="twitter:title" content="<?php echo $title; ?>" />
-<meta name="twitter:description" content="<?php echo $description; ?>" />
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="<?php echo PLUGIN_SDATA_TWITTER_USERNAME; ?>">
+<meta name="twitter:title" content="<?php echo $title; ?>">
+<meta name="twitter:description" content="<?php echo $description; ?>">
 <?php $image = ($image_default ? $image_default_twitter : $image); ?>
-<meta name="twitter:image" content="<?php echo $image; ?>" />
-<meta name="twitter:image:alt" content="<?php echo htmlentities($image_alt, ENT_QUOTES, CHARSET, false); ?>" />
-<meta name="twitter:url" content="<?php echo htmlentities($url, ENT_COMPAT, CHARSET, false); ?>" />
-<meta name="twitter:domain" content="<?php echo HTTP_SERVER; ?>" />
+<meta name="twitter:image" content="<?php echo $image; ?>">
+<meta name="twitter:image:alt" content="<?php echo htmlentities($image_alt, ENT_QUOTES, CHARSET, false); ?>">
+<meta name="twitter:url" content="<?php echo htmlentities($url, ENT_COMPAT, CHARSET, false); ?>">
+<meta name="twitter:domain" content="<?php echo HTTP_SERVER; ?>">
 <!-- eof Twitter Card markup -->
 <?php } //end of Twitter enabled ?>
 <?php //google+ markup
 if (PLUGIN_SDATA_GOOGLE_PUBLISHER !== '') { ?>
 <!-- Google+-->
-<link href="<?php echo PLUGIN_SDATA_GOOGLE_PUBLISHER; ?>" rel="publisher" />
+<link href="<?php echo PLUGIN_SDATA_GOOGLE_PUBLISHER; ?>" rel="publisher">
 <!-- eof Google+--><?php } //eof Google+ ?>
