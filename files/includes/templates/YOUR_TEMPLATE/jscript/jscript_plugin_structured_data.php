@@ -445,7 +445,7 @@ if (empty($description)) {
 //build sameAs list
 $sameAs_array = explode(', ', PLUGIN_SDATA_SAMEAS);
 array_push($sameAs_array, PLUGIN_SDATA_FOG_PAGE, PLUGIN_SDATA_TWITTER_PAGE, PLUGIN_SDATA_GOOGLE_PUBLISHER);
-$contact_us = $_GET['main_page'] !== 'contact_us' ? HTTP_SERVER . DIR_WS_CATALOG . 'index.php?main_page=contact_us' : '';
+$contact_us = $_GET['main_page'] !== 'contact_us' ? zen_href_link(FILENAME_CONTACT_US, '', 'SSL') : '';
 if ($contact_us !== '') {
     $sameAs_array[] = $contact_us;
 }//show contact_us on all pages except contact_us
