@@ -1,6 +1,6 @@
 # Structured Data for Zen Cart
 Tested on Zen Cart 157/8.
-Compatible with php 7.0 onwards.
+Compatible with php 7.0-8.2
 
 Plugin that adds Schema (in JSON-LD format), Facebook and Twitter structured markup to all pages.
 Schema markup is added in three blocks: organisation, breadcrumbs and product (including reviews).
@@ -20,12 +20,12 @@ Super Data: If you wish to uninstall the old Super Data plugin, please note that
 
 1. BACKUP
 
-2. Use the installation sql to install constant definitions and register the new admin configuration page into the database.
-In my testing it was possible to run the sql code in the ZC->Admin->SQL Patch tool on a vanilla installation. But it's known to be pretty strict (https://www.zen-cart.com/showthread.php?216551-ERROR-Cannot-insert-configuration_key-quot-quot-because-it-already-exists-empty-db-key) so if this gives you an error, you can restore the database (from the backup you did immediately before trying this...), and try again using phpmyadmin instead. 
+2. Use the installation sql to install the constant definitions and register the new admin configuration page into the database.  
+In my testing it was possible to run the sql code in the ZC->Admin->SQL Patch tool on a vanilla installation. But it's known to be pretty strict (https://www.zen-cart.com/showthread.php?216551-ERROR-Cannot-insert-configuration_key-quot-quot-because-it-already-exists-empty-db-key), so if this gives you an error, you can restore the database (from the backup you did immediately before trying this...), and try again using phpmyadmin instead. 
 
-3. Copy the admin file to enable the admin page to display.
-CHECK THE ADMIN PAGE WORKS BEFORE GOING ANY FURTHER.
-    The plugin is disabled on installation, you need to add values to the constants and enable it in the configuration page before it will show up in the catalog \<head>.
+3. Copy the single admin file with the configuration menu title, to enable the admin page to display.  
+**CHECK THE ADMIN PAGE WORKS BEFORE GOING ANY FURTHER.**  
+    The plugin is disabled on installation as **YOU** need to add your site-specific values to the constants and enable it in the configuration page before it will show up in the catalog \<head>.
 
     Optional
 
@@ -33,9 +33,9 @@ CHECK THE ADMIN PAGE WORKS BEFORE GOING ANY FURTHER.
 	I have included a spreadsheet where you can enter all the constant values into a worksheet to generate sql UPDATE queries.
 	Hence you can copy and paste the queries to enter all the values into the database in one go (via the ZC admin SQL patch tool or phpmyadmin).
 	
-4. Copy catalog file to: `includes/templates/YOUR_TEMPLATE/jscript`
+4. Copy the catalog javascript file to: `includes/templates/YOUR_TEMPLATE/jscript`
 
-    The existence of this file in the /jscript folder will include the structured data blocks ALL pages automagically.
+    The existence of this file in the /jscript folder will include the structured data blocks in ALL pages automagically.
 
 5. Although the markup will display without any further template modifications, strictly you should make this additional modification to the html_header.php, assuming you have a HTML5 template.
 
@@ -54,10 +54,28 @@ to:
 
 This adds the namespaces for the properties og:, fb:, product: which are used later in the structured data block.
 
+6. Additional Constant Definitions in the javascript file.
+As bugs surface and additional code is required, I've added extra constants at the start of the file instead of making a comprehensive installer.
+**You must read and modify these constants as per your site needs.**
+
+### Availability
+If a product is out of stock (oos), there are various statuses to indicate the availability.
+https://developers.google.com/search/docs/appearance/structured-data/product
+
+You define your default oos status.  
+
+    define('PLUGIN_SDATA_OOS_DEFAULT', 'BackOrder');
+
+If your products have various possibilities, you'll have to deal with that...
+I use Products' Options' Stock Manager (https://vinosdefrutastropicales.com/index.php?main_page=product_info&products_id=46), that allows user-defined out of stock messages for products with attributes. I expanded that to also include simple products (without attributes) and integrated that into this plugin.
+
+
 ### Weight
 In the script there is a default weight constant which will be used if a product has no weight defined/weight is zero.
-Edit this to your needs.
+Edit this to your needs.  
+
     define('PLUGIN_SDATA_DEFAULT_WEIGHT', '0.3'); // fallback weight if product weight in database is not set
+
 
 ### Reviews
 Google Rich Results Tool gives warnings about no reviews on a product: 100's of products = 100's of warnings, obscuring any real problems. Tedious.
@@ -134,7 +152,9 @@ The code is written and commented to allow the easy addition of other plugins th
 
 ----------------
 
-Check the output on all your pages for empty parameters or properties that don't reflect what they should.
+## Check Your Output
+
+Check the output in the head on all your pages for empty parameters or properties that don't reflect what they should.
 
 Every site is different, so it is impossible to make this plugin 100% plug and play, you DO need to check the markup output carefully to ensure it reflects your business and be prepared to modify accordingly or report any omissions if you think they are relevant generally.
 
@@ -144,7 +164,7 @@ Every site is different, so it is impossible to make this plugin 100% plug and p
  - Facebook Opengraph Debugger
  - Twitter Card Validator
 
-If things are not what they should be, please review the code to try and resolve it, and then report the issue/fix on GitHub.
+If things are not what you think they should be, or you are getting errors in the tools, please report the issue on GitHub.
 
 ## USAGE
 Things behind some of the code that you may wish to modify/be aware of.
@@ -233,56 +253,42 @@ maximum size: approx. 1MB.
 "recommended" dimensions by users: 600x321 (1.867:1)
 
 ## Changelog
-2021 03 31 - torvista
-added support for google product category
+See GitHub History  
+2023 02 10 - torvista:
+truncate name and descriptions to Google limits, Added Item Availability for out of stock status
+
+2021 03 31 - torvista: added support for google product category
 added test values to spreadsheet
 
-2020 11 02 - torvista
-added support for attributes (default and Product Options Stock plugin)
+2020 11 02 - torvista: added support for attributes (default and Product Options Stock plugin), 
 corrected typo PLUGIN_SDATA_PRICE_CURRRENCY to PLUGIN_SDATA_PRICE_CURRENCY
 
-2020 10 28 - torvista
-separated sku, mpn, gtin entries
+2020 10 28 - torvista: separated sku, mpn, gtin entries
 
-2020 03 27 - torvista
-Added the option of creating an anonymous, blank review with an admin-defined star-rating for products with no review at all, in an attempt to stop hundreds of warnings:
-Missing field "aggregateRating"
+2020 03 27 - torvista: Added the option of creating an anonymous, blank review with an admin-defined star-rating for products with no review at all, in an attempt to stop hundreds of warnings, Missing field "aggregateRating", 
 Missing field "review"
-Remains to be seen if results in further warnings.
 
-2020 02 25 - torvista
-changed array declarations to short syntax
-changed while to a foreach
-2020 02 11 - torvista
-fixed double encoding ampersands.
-general revision for strict mode/EA inspection recommendations
-2019 06 18 - torvista
-for php notices: facebook reviews code to only run on a product page.
-2019 05 08 - torvista
-added schema: priceValidUntil
-	Used last day of the year.
-added schema: SKU
-	sku, mpn, ProductID all use the same products_model.
-Misc
-Moved fields around to mirror Google Structured Data Tool example.
-Edited the layout spacing for better visual presentation.
+2020 02 25 - torvista: changed array declarations to short syntax, changed while to a foreach
+
+2020 02 11 - torvista: fixed double encoding ampersands, general revision for strict mode/EA inspection recommendations
+
+2019 06 18 - torvista: review for php notices, facebook reviews code to only run on a product page.
+
+2019 05 08 - torvista: added schema: priceValidUntil (used last day of the year), 
+added schema: SKU. sku, mpn, ProductID all use the same products_model. Moved fields around to mirror Google Structured Data Tool example, edited the layout spacing for better visual presentation.
 
 Bugfix
 Improved cleaning of product description for schema (line feeds, carriage returns, extra spaces).
 meta property="og:description" was always using Meta Tag description instead of category description when defined.
 
-2018 10 03 - torvista
-Minor readme corrections. Uploaded to Zen Cart Plugins as v1.0
+2018 10 03 - torvista: Minor readme corrections. Uploaded to Zen Cart Plugins as v1.0
 
-2017 04 24 - Dr. Byte
-improved readme (and further modified by torvista to use Github markdown), install sql, trap error for getimagesize
+2017 04 24 - Dr. Byte: improved readme (and further modified by torvista to use Github markdown), install sql, trap error for getimagesize
 
-2017 04 - torvista
-changed review, datepublished to required format yyy-mm-dd
+2017 04 - torvista: changed review, datepublished to required format yyy-mm-dd
 bugfix: corrected product, offer, acceptedPaymentMethods
 
-2017 02 - torvista
-og: product_retailer changed from AdminID to Appid
+2017 02 - torvista: og: product_retailer changed from AdminID to Appid
 og: product:retailer_title removed (not in spec)
 
 complete overhaul...

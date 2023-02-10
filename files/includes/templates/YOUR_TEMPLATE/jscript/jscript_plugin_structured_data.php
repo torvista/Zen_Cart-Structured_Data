@@ -18,17 +18,34 @@ if (!defined('PLUGIN_SDATA_ENABLE') || PLUGIN_SDATA_ENABLE !== 'true') {
     return;
 }
 
-//new defines to add to installer one day
-define('PLUGIN_SDATA_REVIEW_USE_DEFAULT', 'true'); // if there are no reviews for a product, use a default value to stop Google warnings
-define('PLUGIN_SDATA_REVIEW_DEFAULT_VALUE', '3'); // if there are no reviews for a product, average rating
+//ADDITIONAL USER-EDITABLE CONSTANTS************************************************************************************
+
+// Fallback/default Google category ID (up to 6 digits). eg. '5613'	= Vehicles & Parts, Vehicle Parts & Accessories
+// This is used if a product does not have a specific category defined https://www.google.com/basepages/producttype/taxonomy-with-ids.en-US.xls
+define('PLUGIN_SDATA_GOOGLE_PRODUCT_CATEGORY', '');
+
+//REVIEWS
+// If there are no reviews for a product, use a default value to stop Google warnings
+define('PLUGIN_SDATA_REVIEW_USE_DEFAULT', 'true');
+// If there are no reviews for a product, average rating
+define('PLUGIN_SDATA_REVIEW_DEFAULT_VALUE', '3');
+
+// Fallback/default weight if product weight in database is not set
+define('PLUGIN_SDATA_DEFAULT_WEIGHT', '0.3');
+
+//ItemAvailability: https://developers.google.com/search/docs/appearance/structured-data/product
+//It seems there is no option for an Out Of Stock product that is only ordered from the supplier on demand...best option seems to be backorder... but this needs a date. Use today's date + some days delay.
+define('PLUGIN_SDATA_OOS_DEFAULT', 'BackOrder');
+//Days to add to todays date for BackOrder/PreOrder
+define('PLUGIN_SDATA_OOS_AVAILABILITY_DELAY', '10');
+
+//END OF USER_EDITABLE CONSTANTS************************************************************************************
+
 define('PLUGIN_SDATA_MAX_DESCRIPTION', 5000); // maximum characters allowed in the description (Google)
-define('PLUGIN_SDATA_GOOGLE_PRODUCT_CATEGORY', ''); // fallback/default Google category ID (up to 6 digits). eg. '5613'	= Vehicles & Parts, Vehicle Parts & Accessories
-//Used if a product does not have a specific category defined https://www.google.com/basepages/producttype/taxonomy-with-ids.en-US.xls
-define('PLUGIN_SDATA_DEFAULT_WEIGHT', '0.3'); // fallback weight if product weight in database is not set
+define('PLUGIN_SDATA_MAX_NAME', 150); // maximum characters allowed in the name (Google)
 //define ('PLUGIN_SDATA_NATIVE_URL', true); // not in use
 //when a site uses a url rewriter, the native url (www.shop.com/index.php?main_page=product_info&cPath=1_4&products_id=1) is replaced by a more "friendly" one (www.shop.com/products/widget1).
 //If this option is set to true, the native url (www.shop.com/index.php?main_page=product_info&cPath=1_4&products_id=1) is always used.
-
 if (defined('PLUGIN_SDATA_PRICE_CURRRENCY')) {//sic: correct old typo
     $db->Execute("UPDATE `configuration` SET `configuration_key`= 'PLUGIN_SDATA_PRICE_CURRENCY' WHERE `configuration_key`= 'PLUGIN_SDATA_PRICE_CURRRENCY'");
 }
@@ -38,6 +55,49 @@ $debug_sd = false; // set to true (boolean) to display debugging info. Changes f
 //defaults
 $image_default = false;
 $facebook_type = 'business.business';
+
+function sdata_prepare_string($string): string
+{
+    $string= html_entity_decode(trim($string), ENT_COMPAT, CHARSET);//convert html entities to characters
+    $string = strip_tags($string);//remove html tags
+    $string = str_replace(["\r\n", "\n", "\r"], '', $string);//remove LF, CR
+    $string = preg_replace('/\s+/', ' ', $string);//remove multiple spaces
+    return $string;
+}
+function sdata_truncate($string, $max_length): string
+{
+    $string_json = json_encode($string);
+    $string_json_length = strlen($string_json);
+    if ($string_json_length > $max_length) {//encoded multibyte characters will increase the length
+        //truncate original string by the excess characters before encoding
+        $string = zen_trunc_string($string, $max_length - ($string_json_length - strlen($string)));
+    }
+    return $string;
+}
+
+//only used for debugging
+function sdata_printvar($a): void
+{
+    $backtrace = debug_backtrace()[0];
+    $fh = fopen($backtrace['file'], 'rb');
+    $line = 0;
+    $code = '';
+    while (++$line <= $backtrace['line']) {
+        $code = fgets($fh);
+    }
+    fclose($fh);
+    $name = '';
+    if ($code !== false) {
+        preg_match('/' . __FUNCTION__ . '\s*\((.*)\)\s*;/u', $code, $name);
+    }
+    echo '<pre>';
+    if (!empty($name[1])) {
+        echo '<strong>' . trim($name[1]) . '</strong> (' . gettype($a) . "):\n";
+    }
+    //var_export($a);
+    print_r($a);
+    echo '</pre><br>';
+}
 
 //defaults defined to prevent php notices
 $breadcrumb_schema = [];
@@ -50,6 +110,7 @@ $product_base_displayed_price = '';
 $product_base_mpn = '';
 $product_base_sku = '';
 $product_base_stock = 0;
+$product_id = 0;
 $reviewsArray = [];
 $title = '';
 //breadcrumb
@@ -95,34 +156,6 @@ if (PLUGIN_SDATA_TWITTER_DEFAULT_IMAGE !== '') {
     $image_default_twitter = HTTP_SERVER . DIR_WS_CATALOG . DIR_WS_IMAGES . PRODUCTS_IMAGE_NO_IMAGE;
 }
 
-//only used for debugging
-if (!function_exists('mv_printVar')) {
-    /**
-     * @param $a
-     */
-    function mv_printVar($a)
-    {
-        $backtrace = debug_backtrace()[0];
-        $fh = fopen($backtrace['file'], 'rb');
-        $line = 0;
-        $code = '';
-        while (++$line <= $backtrace['line']) {
-            $code = fgets($fh);
-        }
-        fclose($fh);
-        $name = '';
-        if ($code !== false) {
-            preg_match('/' . __FUNCTION__ . '\s*\((.*)\)\s*;/u', $code, $name);
-        }
-        echo '<pre>';
-        if (!empty($name[1])) {
-            echo '<strong>' . trim($name[1]) . '</strong> (' . gettype($a) . "):\n";
-        }
-        //var_export($a);
-        print_r($a);
-        echo '</pre><br>';
-    }
-}
 if ($debug_sd) {
     echo 'PLUGIN_SDATA_FOG_DEFAULT_IMAGE=' . PLUGIN_SDATA_FOG_DEFAULT_IMAGE . '<br>';
     echo 'PLUGIN_SDATA_TWITTER_DEFAULT_IMAGE=' . PLUGIN_SDATA_TWITTER_DEFAULT_IMAGE . '<br>';
@@ -148,8 +181,8 @@ if ($is_product_page) {//product page only
     $product_info = $db->Execute($sql);
 
     $product_id = (int)$product_info->fields['products_id'];
-    $product_name = $product_info->fields['products_name'];
-    $description = $product_info->fields['products_description'];//variable used in twitter for categories & products
+    $product_name = sdata_prepare_string($product_info->fields['products_name']);
+    $description = sdata_prepare_string($product_info->fields['products_description']);
     $title = htmlspecialchars(STORE_NAME . ' - ' . $product_info->fields['products_name'], ENT_QUOTES);
     $weight = (float)($product_info->fields['products_weight'] === '0' ? PLUGIN_SDATA_DEFAULT_WEIGHT : $product_info->fields['products_weight']);
     $tax_class_id = $product_info->fields['products_tax_class_id'];
@@ -158,6 +191,27 @@ if ($is_product_page) {//product page only
     $product_date_added = $product_info->fields['products_date_added'];
     $manufacturer_name = zen_get_products_manufacturers_name((int)$_GET['products_id']);
     $product_base_stock = $product_info->fields['products_quantity'];
+
+    //ItemAvailability
+    $itemAvailability = [
+        'BackOrder' => 'https://schema.org/BackOrder',                     // The item is on back order. BackOrder needs a date for when it will become available
+        'Discontinued' => ' https://schema.org/Discontinued',              // The item has been discontinued.
+        'InStock' => 'https://schema.org/InStock',                         // The item is in stock.
+        'InStoreOnly' => 'https://schema.org/InStoreOnly',                 // The item is only available for purchase in store.
+        'LimitedAvailability' => 'https://schema.org/LimitedAvailability', // The item has limited availability.
+        'OnlineOnly' => 'https://schema.org/OnlineOnly',                   // The item is available online only.
+        'OutOfStock' => 'https://schema.org/OutOfStock',                   // The item is currently out of stock.
+        'PreOrder' => 'https://schema.org/PreOrder',                       // The item is available for pre-order: buying in advance of a NEW product being released for sale. PreOrder needs a date for when product will be released
+        'PreSale' => 'https://schema.org/PreSale',                         // The item is available for ordering and delivery NOW before it is released for general availability.
+        'SoldOut' => 'https://schema.org/SoldOut'                          // The item has been sold out.
+    ];
+//BackOrder/PreSales have dates added
+    $oosItemAvailability = array_key_exists(PLUGIN_SDATA_OOS_DEFAULT, $itemAvailability) ? $itemAvailability[PLUGIN_SDATA_OOS_DEFAULT] : $itemAvailability['OutOfStock'];
+    if (PLUGIN_SDATA_OOS_DEFAULT === 'BackOrder' || PLUGIN_SDATA_OOS_DEFAULT === 'PreSales') {
+        $backPreOrderDate = date('Y-m-d', strtotime('+' . (int)PLUGIN_SDATA_OOS_AVAILABILITY_DELAY . ' days'));
+    } else {
+        $backPreOrderDate = '';
+    }
 
     //sku: the Merchant-specific product identifier (not necessarily the same as the manufacturer mpn / gtin)
     $product_base_sku = $product_info->fields['products_model'];
@@ -204,12 +258,6 @@ if ($is_product_page) {//product page only
     }
 //bof ******************CUSTOM CODE for extra product fields for mpn, ean and google product category***********************/
 
-//torvista: my site uses boilerplate texts for product descriptions ************
-//Product Descriptions
-    if (function_exists('mv_get_boilerplate')) {
-        $description = mv_get_boilerplate($description, $product_id);
-    }
-//****************************************************
 //sku/mpn/gtin, price, stock may all vary per attribute
 //Attributes handling info: https://www.schemaapp.com/newsletter/schema-org-variable-products-productmodels-offers/#
     $product_attributes = false;
@@ -253,7 +301,7 @@ if ($is_product_page) {//product page only
 
         if ($debug_sd) {
             echo __LINE__ . ' $attribute_lowPrice=' . $attribute_lowPrice . ' | $attribute_highPrice=' . $attribute_highPrice . '<br>count($product_attributes)=' . count($product_attributes);
-            mv_printVar($product_attributes);
+            sdata_printvar($product_attributes);
         }
 //$product_attributes array structure (key is products_attributes_id, ordered by the option value text) example
         /*
@@ -368,7 +416,7 @@ if ($is_product_page) {//product page only
     }
     if ($debug_sd) {
         echo __LINE__;
-        mv_printVar($product_attributes);
+        sdata_printvar($product_attributes);
     }
     $product_image = $product_info->fields['products_image'];
     if ($product_image !== '') {
@@ -435,12 +483,6 @@ if ($is_product_page) {//product page only
 //$description could be null from META_TAG_DESCRIPTION
 if (empty($description)) {
     $description = '';
-} else {
-    //clean $description
-    $description = htmlentities(strip_tags(trim($description)), ENT_COMPAT, CHARSET);//remove tags
-    $description = str_replace(["\r\n", "\n", "\r"], '', $description);//remove LF, CR
-    $description = preg_replace('/\s+/', ' ', $description);//remove multiple spaces
-    $description = zen_trunc_string($description, PLUGIN_SDATA_MAX_DESCRIPTION);
 }
 //build sameAs list
 $sameAs_array = explode(', ', PLUGIN_SDATA_SAMEAS);
@@ -606,9 +648,9 @@ if ($is_product_page) {
 {<?php //structured as per Google example for comparison:https://developers.google.com/search/docs/data-types/product ?>
    "@context": "https://schema.org",
       "@type": "Product",
-       "name": <?php echo json_encode($product_name); ?>,
+       "name": <?php echo json_encode(sdata_truncate($product_name, PLUGIN_SDATA_MAX_NAME)); ?>,
       "image": "<?php echo $image; ?>",
-"description": <?php echo json_encode($description); ?>,
+"description": <?php echo json_encode(sdata_truncate($description, PLUGIN_SDATA_MAX_DESCRIPTION)); ?>,
         "sku": <?php echo json_encode($product_base_sku); //The Stock Keeping Unit (SKU), i.e. a merchant-specific identifier for a product or service ?>,
      "weight": <?php echo json_encode($weight . TEXT_PRODUCT_WEIGHT_UNIT); ?>,
 <?php
@@ -623,6 +665,7 @@ if ($product_base_productID !== '') {//a non-standard code
 }
 if ($product_base_gpc !== '') {//google product category
     echo '  "googleProductCategory": "' . $product_base_gpc . '"' . ",\n";
+    echo '  "google_product_category": "' . $product_base_gpc . '"' . ",\n";//belt and braces
 } ?>
       "brand": {
               "@type" : "Brand",
@@ -648,8 +691,10 @@ if ($product_base_gpc !== '') {//google product category
                  "price" : "<?php echo $product_attribute['price']; ?>",
                 "weight" : "<?php echo ($weight + $product_attribute['weight'] > 0 ? $weight + $product_attribute['weight'] : $weight) . TEXT_PRODUCT_WEIGHT_UNIT; //if a subtracted attribute weight is less than zero, use base weight ?>",
          "priceCurrency" : "<?php echo PLUGIN_SDATA_PRICE_CURRENCY; ?>",
-          "availability" : "<?php echo $product_attribute['stock'] > 0 ? 'https://schema.org/InStock' : 'https://schema.org/PreOrder'; ?>",
-       "priceValidUntil" : "<?php echo date("Y") . '-12-31'; //e.g. 2020-12-31 NOT 2020-31-12: The date after which the price is no longer available. ?>",
+          "availability" : "<?php echo $product_attribute['stock'] > 0 ? $itemAvailability['InStock'] : $oosItemAvailability; ?>",
+    <?php if ($product_attribute['stock'] < 1 && $backPreOrderDate !== '') { ?> "availability_date" : "<?php echo $backPreOrderDate; ?>",
+    <?php } ?>
+   "priceValidUntil" : "<?php echo date("Y") . '-12-31'; //e.g. 2020-12-31 NOT 2020-31-12: The date after which the price is no longer available. ?>",
                     "url": "<?php echo $url; ?>"}<?php if ($i < $attributes_count) { echo ",\n    "; } else {echo "\n";}?>
 <?php } ?>
          ]
@@ -671,8 +716,9 @@ if ($product_base_gpc !== '') {//google product category
             "priceCurrency" : "<?php echo PLUGIN_SDATA_PRICE_CURRENCY; ?>",
           "priceValidUntil" : "<?php echo date("Y") . '-12-31'; //e.g. 2020-12-31 NOT 2020-31-12: The date after which the price is no longer available. ?>",
             "itemCondition" : "https://schema.org/<?php echo $itemCondition_array[PLUGIN_SDATA_FOG_PRODUCT_CONDITION]; ?>",
-             "availability" : "<?php echo ($product_base_stock > 0 ? 'https://schema.org/InStock' : 'https://schema.org/PreOrder'); ?>",
-                   "seller" : <?php echo json_encode(STORE_NAME); //json_encode adds external quotes as the other entries"?>,
+         "availability" : "<?php echo ($product_base_stock > 0 ? $itemAvailability['InStock'] : $oosItemAvailability); ?>",
+    <?php if ($backPreOrderDate !== '') { ?>"availability_date" : "<?php echo $backPreOrderDate; ?>",
+    <?php } ?>          "seller" : <?php echo json_encode(STORE_NAME); //json_encode adds external quotes as the other entries"?>,
          "deliveryLeadTime" : "<?php echo ($product_base_stock > 0 ? PLUGIN_SDATA_DELIVERYLEADTIME : PLUGIN_SDATA_DELIVERYLEADTIME_OOS); ?>",
               "itemOffered" : <?php echo json_encode($product_name); ?>,
 <?php if (PLUGIN_SDATA_ELIGIBLE_REGION !== '') { ?>
@@ -692,8 +738,9 @@ if ($product_base_gpc !== '') {//google product category
         "priceCurrency" : "<?php echo PLUGIN_SDATA_PRICE_CURRENCY; ?>",
       "priceValidUntil" : "<?php echo date("Y") . '-12-31'; //e.g. 2020-12-31 NOT 2020-31-12: The date after which the price is no longer available. ?>",
         "itemCondition" : "https://schema.org/<?php echo $itemCondition_array[PLUGIN_SDATA_FOG_PRODUCT_CONDITION]; ?>",
-         "availability" : "<?php echo ($product_base_stock > 0 ? 'https://schema.org/InStock' : 'https://schema.org/PreOrder'); ?>",
-               "seller" : <?php echo json_encode(STORE_NAME); //json_encode adds external quotes as the other entries"?>,
+         "availability" : "<?php echo ($product_base_stock > 0 ? $itemAvailability['InStock'] : $oosItemAvailability); ?>",
+    <?php if ($backPreOrderDate !== '') { ?>"availability_date" : "<?php echo $backPreOrderDate; ?>",
+    <?php } ?>           "seller" : <?php echo json_encode(STORE_NAME); //json_encode adds external quotes as the other entries"?>,
      "deliveryLeadTime" : "<?php echo ($product_base_stock > 0 ? PLUGIN_SDATA_DELIVERYLEADTIME : PLUGIN_SDATA_DELIVERYLEADTIME_OOS); ?>",
           "itemOffered" : <?php echo json_encode($product_name); ?>,
 <?php if (PLUGIN_SDATA_ELIGIBLE_REGION !== '') { ?>
@@ -768,7 +815,7 @@ if ($image_info === false) {
 <meta property="og:image:width" content="<?php echo $image_info[0]; ?>">
 <meta property="og:image:height" content="<?php echo $image_info[1]; ?>">
 <?php } ?>
-<meta property="og:description" content="<?php echo $description; ?>">
+<meta property="og:description" content="<?php echo htmlentities($description); ?>">
     <?php if ($facebook_type !== 'product') { ?>
 <meta property="og:type" content="<?php echo PLUGIN_SDATA_FOG_TYPE_SITE; ?>">
     <?php if (PLUGIN_SDATA_STREET_ADDRESS !== '') { ?>
@@ -820,7 +867,7 @@ if ($image_info === false) {
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:site" content="<?php echo PLUGIN_SDATA_TWITTER_USERNAME; ?>">
 <meta name="twitter:title" content="<?php echo $title; ?>">
-<meta name="twitter:description" content="<?php echo $description; ?>">
+<meta name="twitter:description" content="<?php echo htmlentities($description); ?>">
 <?php $image = ($image_default ? $image_default_twitter : $image); ?>
 <meta name="twitter:image" content="<?php echo $image; ?>">
 <meta name="twitter:image:alt" content="<?php echo htmlentities($image_alt, ENT_QUOTES, CHARSET, false); ?>">
