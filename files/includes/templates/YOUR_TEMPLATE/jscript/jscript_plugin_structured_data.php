@@ -838,6 +838,7 @@ if ($image_info === false) {
     $image_info = getimagesize(str_replace(HTTP_SERVER . DIR_WS_CATALOG, '', $image)); ?>
 <!-- ERROR: image is corrupt: see debug logs -->
 <?php } ?>
+<meta property="og:image:alt" content="<?php echo htmlentities($image_alt, ENT_QUOTES, CHARSET, false); ?>">
 <meta property="og:image:type" content="<?php echo $image_info['mime']; ?>">
 <meta property="og:image:width" content="<?php echo $image_info[0]; ?>">
 <meta property="og:image:height" content="<?php echo $image_info[1]; ?>">
