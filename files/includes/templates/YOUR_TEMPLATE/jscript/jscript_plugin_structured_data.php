@@ -63,6 +63,8 @@ $facebook_type = 'business.business';
 function sdata_prepare_string($string): string
 {
     $string= html_entity_decode(trim($string), ENT_COMPAT, CHARSET);//convert html entities to characters
+    $string = str_replace('</p>', '</p> ', $string); //add a space to separate text when tags are removed
+    $string = str_replace('<br>', '<br> ', $string); //add a space to separate text when tags are removed
     $string = strip_tags($string);//remove html tags
     $string = str_replace(["\r\n", "\n", "\r"], '', $string);//remove LF, CR
     $string = preg_replace('/\s+/', ' ', $string);//remove multiple spaces
