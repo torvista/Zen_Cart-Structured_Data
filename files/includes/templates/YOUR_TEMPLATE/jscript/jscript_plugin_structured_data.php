@@ -36,7 +36,7 @@ define('PLUGIN_SDATA_DEFAULT_WEIGHT', '0.3');
 //ItemAvailability: https://developers.google.com/search/docs/appearance/structured-data/product
 //It seems there is no option for an Out Of Stock product that is only ordered from the supplier on demand...best option seems to be backorder... but this needs a date. Use today's date + some days delay.
 define('PLUGIN_SDATA_OOS_DEFAULT', 'BackOrder');
-//Days to add to todays date for BackOrder/PreOrder
+//Days to add to today's date for BackOrder/PreOrder
 define('PLUGIN_SDATA_OOS_AVAILABILITY_DELAY', '10');
 
 //END OF USER_EDITABLE CONSTANTS************************************************************************************
@@ -56,6 +56,10 @@ $debug_sd = false; // set to true (boolean) to display debugging info. Changes f
 $image_default = false;
 $facebook_type = 'business.business';
 
+/**
+ * @param $string
+ * @return string
+ */
 function sdata_prepare_string($string): string
 {
     $string= html_entity_decode(trim($string), ENT_COMPAT, CHARSET);//convert html entities to characters
@@ -64,6 +68,12 @@ function sdata_prepare_string($string): string
     $string = preg_replace('/\s+/', ' ', $string);//remove multiple spaces
     return $string;
 }
+
+/**
+ * @param $string
+ * @param $max_length
+ * @return string
+ */
 function sdata_truncate($string, $max_length): string
 {
     $string_json = json_encode($string);
@@ -76,6 +86,10 @@ function sdata_truncate($string, $max_length): string
 }
 
 //only used for debugging
+/**
+ * @param $a
+ * @return void
+ */
 function sdata_printvar($a): void
 {
     $backtrace = debug_backtrace()[0];
