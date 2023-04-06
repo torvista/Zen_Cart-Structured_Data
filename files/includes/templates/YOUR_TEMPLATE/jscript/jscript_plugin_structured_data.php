@@ -80,9 +80,20 @@ function sdata_truncate($string, $max_length): string
 {
     $string_json = json_encode($string);
     $string_json_length = strlen($string_json);
-    if ($string_json_length > $max_length) {//encoded multibyte characters will increase the length
-        //truncate original string by the excess characters before encoding
-        $string = zen_trunc_string($string, $max_length - ($string_json_length - strlen($string)));
+    //encoded multibyte characters increase the length
+    if ($string_json_length > $max_length+2) {//allow for enclosing double quotes
+        //remove the enclosing double quotes
+        $string_json_truncated = trim($string_json, '"');
+        //truncate to $max_length, allowing for space to add ellipsis
+        $string_json_truncated = substr($string_json_truncated, 0, $max_length-3);
+        //find last backslash from json encoding
+        $position_last_backslash = strrpos($string_json_truncated, '\\');
+        //check for bisected encoding e.g.\u00f3 cropped to less than 6 chars
+        if ( $position_last_backslash !== false && (strlen($string_json_truncated) - ($position_last_backslash+1) < 6) ) {
+            $string_json_truncated = substr($string_json_truncated, 0, $position_last_backslash);
+        }
+        //add enclosing double quotes
+        $string = json_decode('"' . $string_json_truncated . '..."');
     }
     return $string;
 }
