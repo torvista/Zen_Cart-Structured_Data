@@ -143,7 +143,7 @@ $title = '';
 //breadcrumb
 $breadcrumb_trail = $breadcrumb->trail(',');
 $breadcrumb_array = explode(',', $breadcrumb->trail(',')); // create array
-$breadcrumb_array = preg_replace("/\r|\n/", "", $breadcrumb_array); // remove line feeds
+$breadcrumb_array = preg_replace("/\r|\n/", '', $breadcrumb_array); // remove line feeds
 $breadcrumb_array = array_map('trim', $breadcrumb_array); // remove whitespace
 $breadcrumb_count = count($breadcrumb_array);
 if ($breadcrumb_count > 0) {
