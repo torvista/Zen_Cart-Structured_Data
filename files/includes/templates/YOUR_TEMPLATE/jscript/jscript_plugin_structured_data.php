@@ -156,7 +156,7 @@ if ($breadcrumb_count > 0) {
         $breadcrumb_schema[$key]['name'] = $text;
     }
     if ($breadcrumb_schema[$breadcrumb_count - 1]['id'] === '') {
-        $breadcrumb_schema[$breadcrumb_count - 1]['id'] = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]";
+        $breadcrumb_schema[$breadcrumb_count - 1]['id'] = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http') . "://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]";
     }
 }
 $url = $canonicalLink; //may be native or friendly if a url rewriter in use: see note above for PLUGIN_SDATA_NATIVE_URL
@@ -298,13 +298,13 @@ if ($is_product_page) {//product page only
         $attribute_prices = [];
 
 // Get attribute info
-        $sql = "SELECT patrib.products_attributes_id, patrib.options_id, patrib.options_values_id, patrib.options_values_price, patrib.products_attributes_weight, patrib.products_attributes_weight_prefix, popt.products_options_name, poptv.products_options_values_name
-                    FROM " . TABLE_PRODUCTS_OPTIONS . " popt
-                    LEFT JOIN " . TABLE_PRODUCTS_ATTRIBUTES . " patrib ON (popt.products_options_id = patrib.options_id)
-                    LEFT JOIN " . TABLE_PRODUCTS_OPTIONS_VALUES . " poptv ON (poptv.products_options_values_id = patrib.options_values_id AND poptv.language_id = popt.language_id)
-                    WHERE patrib.products_id = " . $product_id . "
-                    AND popt.language_id = " . (int)$_SESSION['languages_id'] . "
-                    ORDER BY popt.products_options_name, poptv.products_options_values_name";
+        $sql = 'SELECT patrib.products_attributes_id, patrib.options_id, patrib.options_values_id, patrib.options_values_price, patrib.products_attributes_weight, patrib.products_attributes_weight_prefix, popt.products_options_name, poptv.products_options_values_name
+                    FROM ' . TABLE_PRODUCTS_OPTIONS . ' popt
+                    LEFT JOIN ' . TABLE_PRODUCTS_ATTRIBUTES . ' patrib ON (popt.products_options_id = patrib.options_id)
+                    LEFT JOIN ' . TABLE_PRODUCTS_OPTIONS_VALUES . ' poptv ON (poptv.products_options_values_id = patrib.options_values_id AND poptv.language_id = popt.language_id)
+                    WHERE patrib.products_id = ' . $product_id . '
+                    AND popt.language_id = ' . (int)$_SESSION['languages_id'] . '
+                    ORDER BY popt.products_options_name, poptv.products_options_values_name';
         $results = $db->Execute($sql);
 
         foreach ($results as $attribute) {
@@ -388,7 +388,7 @@ if ($is_product_page) {//product page only
                         //copied from observer function getOptionsStockRecord as it's a Protected function
                         $hash = generate_pos_option_hash($product_id, [$product_attribute['option_name_id'] => $product_attribute['option_value_id']]);
 
-                        $posm_record = $db->Execute("SELECT * FROM " . TABLE_PRODUCTS_OPTIONS_STOCK . " WHERE products_id = $product_id AND pos_hash = '$hash' LIMIT 1", false, false, 0, true);
+                        $posm_record = $db->Execute('SELECT * FROM ' . TABLE_PRODUCTS_OPTIONS_STOCK . ' WHERE products_id = ' . $product_id . ' AND pos_hash = "' . $hash . '" LIMIT 1', false, false, 0, true);
                         /* example output if extra fields have been added:
                         ALTER TABLE `products_options_stock` ADD `pos_mpn` VARCHAR(32) NOT NULL DEFAULT '' AFTER `pos_model`;
                         ALTER TABLE `products_options_stock` ADD `pos_ean` VARCHAR(13) NOT NULL DEFAULT '' AFTER `pos_mpn`;
@@ -721,7 +721,7 @@ if ($product_base_gpc !== '') {//google product category
           "availability" : "<?php echo $product_attribute['stock'] > 0 ? $itemAvailability['InStock'] : $oosItemAvailability; ?>",
     <?php if ($product_attribute['stock'] < 1 && $backPreOrderDate !== '') { ?> "availability_date" : "<?php echo $backPreOrderDate; ?>",
     <?php } ?>
-   "priceValidUntil" : "<?php echo date("Y") . '-12-31'; //e.g. 2020-12-31 NOT 2020-31-12: The date after which the price is no longer available. ?>",
+   "priceValidUntil" : "<?php echo date('Y') . '-12-31'; //e.g. 2020-12-31 NOT 2020-31-12: The date after which the price is no longer available. ?>",
                     "url": "<?php echo $url; ?>"}<?php if ($i < $attributes_count) { echo ",\n    "; } else {echo "\n";}?>
 <?php } ?>
          ]
@@ -741,7 +741,7 @@ if ($product_base_gpc !== '') {//google product category
                 "highPrice" : "<?php echo $attribute_highPrice; ?>",
                "offerCount" : "<?php echo $offerCount; //required for AggregateOffer. Not zero ?>",
             "priceCurrency" : "<?php echo PLUGIN_SDATA_PRICE_CURRENCY; ?>",
-          "priceValidUntil" : "<?php echo date("Y") . '-12-31'; //e.g. 2020-12-31 NOT 2020-31-12: The date after which the price is no longer available. ?>",
+          "priceValidUntil" : "<?php echo date('Y') . '-12-31'; //e.g. 2020-12-31 NOT 2020-31-12: The date after which the price is no longer available. ?>",
             "itemCondition" : "https://schema.org/<?php echo $itemCondition_array[PLUGIN_SDATA_FOG_PRODUCT_CONDITION]; ?>",
          "availability" : "<?php echo ($product_base_stock > 0 ? $itemAvailability['InStock'] : $oosItemAvailability); ?>",
     <?php if ($backPreOrderDate !== '') { ?>"availability_date" : "<?php echo $backPreOrderDate; ?>",
@@ -763,7 +763,7 @@ if ($product_base_gpc !== '') {//google product category
                 "price" : "<?php echo $product_base_displayed_price; ?>",
                    "url": "<?php echo $url; ?>",
         "priceCurrency" : "<?php echo PLUGIN_SDATA_PRICE_CURRENCY; ?>",
-      "priceValidUntil" : "<?php echo date("Y") . '-12-31'; //e.g. 2020-12-31 NOT 2020-31-12: The date after which the price is no longer available. ?>",
+      "priceValidUntil" : "<?php echo date('Y') . '-12-31'; //e.g. 2020-12-31 NOT 2020-31-12: The date after which the price is no longer available. ?>",
         "itemCondition" : "https://schema.org/<?php echo $itemCondition_array[PLUGIN_SDATA_FOG_PRODUCT_CONDITION]; ?>",
          "availability" : "<?php echo ($product_base_stock > 0 ? $itemAvailability['InStock'] : $oosItemAvailability); ?>",
     <?php if ($backPreOrderDate !== '') { ?>"availability_date" : "<?php echo $backPreOrderDate; ?>",
@@ -792,7 +792,7 @@ if ($product_base_gpc !== '') {//google product category
     "@type" : "Review",
     "author" : {
       "@type" : "Person",
-      "name" : <?php echo json_encode(strtok($reviewsArray[$i]['customerName']," ")); //to use only the forename, encoded, does NOT need enclosing quotation marks ?>
+      "name" : <?php echo json_encode(strtok($reviewsArray[$i]['customerName'], ' ')); //to use only the forename, encoded, does NOT need enclosing quotation marks ?>
     },
     "reviewBody" : <?php echo json_encode($reviewsArray[$i]['reviewText']); //added json_encode to catch quotation marks and pesky accents etc., does NOT need enclosing quotation marks ?>,
     "datePublished" : "<?php echo substr($reviewsArray[$i]['dateAdded'], 0, 10); ?>",
