@@ -42,6 +42,20 @@ define('PLUGIN_SDATA_OOS_DEFAULT', 'BackOrder'); // as per key in $itemAvailabil
 //Days to add to today's date for BackOrder/PreOrder
 define('PLUGIN_SDATA_OOS_AVAILABILITY_DELAY', '10');
 
+// Merchant Return Policy
+// https://schema.org/MerchantReturnPolicy
+// https://developers.google.com/search/docs/appearance/structured-data/product#returns
+// applicableCountry
+define('PLUGIN_SDATA_RETURNS_APPLICABLE_COUNTRY', ''); // country to which the returns policy applies: 2-char ISO. I failed to figure out a structure where multiple countries can be used.
+define('PLUGIN_SDATA_RETURNS_POLICY_COUNTRY', ''); // country to which the product is to be returned/STORE Country: 2-char ISO.
+// returnPolicyCategory
+define('PLUGIN_SDATA_RETURNS_POLICY', 'finite'); // 'finite' / 'not_permitted' / 'unlimited':  the returns category as per key of $returnPolicyCategory defined below.
+// merchantReturnDays.  Only required if PLUGIN_SDATA_RETURNS_POLICY = finite
+define('PLUGIN_SDATA_RETURNS_DAYS', '14'); // limit of period (days) within which a product can be returned.
+// returnMethod
+define('PLUGIN_SDATA_RETURNS_METHOD', 'mail'); // 'kiosk' / 'mail' / 'store': method of returning a product, as per key in $returnMethod defined below.
+// returnShippingFeesAmount
+define('PLUGIN_SDATA_RETURNS_FEES', '0'); // cost to return a product. Use 0 or a decimal.
 
 //***** eof SITE-SPECIFIC constants additional to the Admin constants ************
 
@@ -80,6 +94,19 @@ $itemAvailability = [
 // Product Condition options
 $itemCondition = ['new' => 'NewCondition', 'used' => 'UsedCondition', 'refurbished' => 'RefurbishedCondition'];
 
+// Merchant Return Policy options
+$returnPolicyCategory = [
+    'finite' => 'https://schema.org/MerchantReturnFiniteReturnWindow',
+    'not_permitted' => 'https://schema.org/MerchantReturnNotPermitted',
+    'unlimited' => 'https://schema.org/MerchantReturnUnlimitedWindow',
+    //'none' => 'https://schema.org/MerchantReturnUnspecified' // 'this Schema option is not supported by Google
+];
+// used only with 'finite' and 'unlimited'
+$returnMethod = [
+    'kiosk' => 'https://schema.org/ReturnAtKiosk',
+    'mail' => 'https://schema.org/ReturnByMail',
+    'store ' => 'https://schema.org/ReturnInStore'
+];
 // eof Schema arrays
 
 /** parse string to make it suitable for embedding in the head
@@ -769,6 +796,18 @@ if ($product_base_gpc !== '') {//google product category
 <?php }//close attributes switch-
 } else { //simple product (no attributes) ?>
             "offers" :     {
+              "hasMerchantReturnPolicy": {
+                  "@type": "MerchantReturnPolicy",
+                  "returnPolicyCountry": "<?php echo PLUGIN_SDATA_RETURNS_POLICY_COUNTRY; ?>",
+                  "returnPolicyCategory": "<?php echo $returnPolicyCategory[PLUGIN_SDATA_RETURNS_POLICY]; ?>",
+                  <?php if (PLUGIN_SDATA_RETURNS_POLICY === 'finite') { ?>"merchantReturnDays": "<?php echo (int)PLUGIN_SDATA_RETURNS_DAYS; ?>",<?php } echo "\n"; ?>
+                  "returnMethod": "<?php echo $returnMethod[PLUGIN_SDATA_RETURNS_METHOD]; ?>",
+                  <?php if (PLUGIN_SDATA_RETURNS_FEES === '0') { ?>"returnFees": "https://schema.org/FreeReturn"<?php } else { ?>"returnShippingFeesAmount": {
+                      "currency" : "<?php echo PLUGIN_SDATA_PRICE_CURRENCY; ?>",
+                      "value": "<?php echo PLUGIN_SDATA_RETURNS_FEES; ?>"
+                  }<?php } ?>,
+                  "applicableCountry": "<?php echo PLUGIN_SDATA_RETURNS_APPLICABLE_COUNTRY; ?>"
+              },
                 "@type" : "Offer",
                 "price" : "<?php echo $product_base_displayed_price; ?>",
                    "url": "<?php echo $url; ?>",

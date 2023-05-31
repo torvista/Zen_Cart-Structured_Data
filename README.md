@@ -1,6 +1,5 @@
 # Structured Data for Zen Cart
-Tested on Zen Cart 157/8.
-Compatible with php 7.0-8.2
+Tested on Zen Cart 158 on php 7.3/8.2
 
 Plugin that adds Schema (in JSON-LD format), Facebook and Twitter structured markup to all pages.
 Schema markup is added in three blocks: organisation, breadcrumbs and product (including reviews).
@@ -20,10 +19,10 @@ Super Data: If you wish to uninstall the old Super Data plugin, please note that
 
 1. BACKUP
 
-2. Use the installation sql to install the constant definitions and register the new admin configuration page into the database.  
+1. Use the installation sql to install the constant definitions and register the new admin configuration page into the database.  
 In my testing it was possible to run the sql code in the ZC->Admin->SQL Patch tool on a vanilla installation. But it's known to be pretty strict (https://www.zen-cart.com/showthread.php?216551-ERROR-Cannot-insert-configuration_key-quot-quot-because-it-already-exists-empty-db-key), so if this gives you an error, you can restore the database (from the backup you did immediately before trying this...), and try again using phpmyadmin instead. 
 
-3. Copy the single admin file with the configuration menu title, to enable the admin page to display.  
+1. Copy the single admin file with the configuration menu title, to enable the admin page to display.  
 **CHECK THE ADMIN PAGE WORKS BEFORE GOING ANY FURTHER.**  
     The plugin is disabled on installation as **YOU** need to add your site-specific values to the constants and enable it in the configuration page before it will show up in the catalog \<head>.
 
@@ -33,11 +32,11 @@ In my testing it was possible to run the sql code in the ZC->Admin->SQL Patch to
 	I have included a spreadsheet where you can enter all the constant values into a worksheet to generate sql UPDATE queries.
 	Hence you can copy and paste the queries to enter all the values into the database in one go (via the ZC admin SQL patch tool or phpmyadmin).
 	
-4. Copy the catalog javascript file to: `includes/templates/YOUR_TEMPLATE/jscript`
+1. Copy the catalog javascript file to: `includes/templates/YOUR_TEMPLATE/jscript`
 
     The existence of this file in the /jscript folder will include the structured data blocks in ALL pages automagically.
 
-5. Although the markup will display without any further template modifications, strictly you should make this additional modification to the html_header.php, assuming you have a HTML5 template.
+1. Although the markup will display without any further template modifications, strictly you should make this additional modification to the html_header.php, assuming you have a HTML5 template.
 
     from:
 ```php
@@ -70,13 +69,6 @@ If your products have various possibilities, you'll have to deal with that...
 I use Products' Options' Stock Manager (https://vinosdefrutastropicales.com/index.php?main_page=product_info&products_id=46), that allows user-defined out of stock messages for products with attributes. I expanded that to also include simple products (without attributes) and integrated that into this plugin.
 
 
-### Weight
-In the script there is a default weight constant which will be used if a product has no weight defined/weight is zero.
-Edit this to your needs.  
-
-    define('PLUGIN_SDATA_DEFAULT_WEIGHT', '0.3'); // fallback weight if product weight in database is not set
-
-
 ### Reviews
 Google Rich Results Tool gives warnings about no reviews on a product: 100's of products = 100's of warnings, obscuring any real problems. Tedious.
 
@@ -91,7 +83,21 @@ If you don't want to be naughty and not offer reviews when there are none, set
 
     define('PLUGIN_SDATA_REVIEW_USE_DEFAULT', 'false'); // if no product review, use a default value to stop Google warnings
     define('PLUGIN_SDATA_REVIEW_DEFAULT_VALUE', '3'); // avg. rating (when no product reviews exist)
-	
+
+### Returns Policy
+Set in the script constants the limit (days) for returning a product, the cost if non-zero and the method.
+
+The applicableCountry attribute is for the country FROM WHICH the product is to be returned, so the policy (time-restiction/cost) applies to that one country.
+I could not find a way to use multiple countries for the same policy, nor multiple policies for multiple countries.
+
+ 
+### Weight
+In the script there is a default weight constant which will be used if a product has no weight defined/weight is zero.
+Edit this to your needs.  
+
+    define('PLUGIN_SDATA_DEFAULT_WEIGHT', '0.3'); // fallback weight if product weight in database is not set
+
+
 ### SKU/MPN/GTIN
 This section describes adding custom fields to your product table.
 
@@ -253,7 +259,10 @@ maximum size: approx. 1MB.
 "recommended" dimensions by users: 600x321 (1.867:1)
 
 ## Changelog
-See GitHub History  
+
+2023 05 31 - torvista:
+added hasMerchantReturnPolicy
+
 2023 02 10 - torvista:
 truncate name and descriptions to Google limits, Added Item Availability for out of stock status
 
