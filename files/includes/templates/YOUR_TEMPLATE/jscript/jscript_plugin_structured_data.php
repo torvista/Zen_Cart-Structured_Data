@@ -1,24 +1,26 @@
 <?php
+
+declare(strict_types=1);
 /* This file MUST be loaded by html <head> since it generates meta tags.
  * DO NOT LET YOUR IDE RE-FORMAT THE CODE STRUCTURE: it is structured so the html source is readable and the parentheses line up.
- * author: torvista 08/11/2022
+ * author: torvista 31/05/2023
  * https://github.com/torvista/Zen_Cart-Structured_Data
  * @license https://www.zen-cart.com/license/2_0.txt GNU Public License V2.0
  */
 /** directives for phpStorm code inspector
- ** @var queryFactory $db
- ** @var sniffer $sniffer
- ** @var breadcrumb $breadcrumb
- ** @var $canonicalLink
- ** @var $current_page
- ** @var $current_page_base
- ** @var $product_id
+ * @var breadcrumb $breadcrumb
+ * @var $canonicalLink
+ * @var $current_page
+ * @var $current_page_base
+ * @var queryFactory $db
+ * @var $product_id
+ * @var sniffer $sniffer
  */
 if (!defined('PLUGIN_SDATA_ENABLE') || PLUGIN_SDATA_ENABLE !== 'true') {
     return;
 }
 
-//ADDITIONAL USER-EDITABLE CONSTANTS************************************************************************************
+//***** SITE-SPECIFIC constants additional to the Admin constants ************
 
 // Fallback/default Google category ID (up to 6 digits). eg. '5613'	= Vehicles & Parts, Vehicle Parts & Accessories
 // This is used if a product does not have a specific category defined https://www.google.com/basepages/producttype/taxonomy-with-ids.en-US.xls
@@ -33,30 +35,54 @@ define('PLUGIN_SDATA_REVIEW_DEFAULT_VALUE', '3');
 // Fallback/default weight if product weight in database is not set
 define('PLUGIN_SDATA_DEFAULT_WEIGHT', '0.3');
 
-//ItemAvailability: https://developers.google.com/search/docs/appearance/structured-data/product
-//It seems there is no option for an Out Of Stock product that is only ordered from the supplier on demand...best option seems to be backorder... but this needs a date. Use today's date + some days delay.
-define('PLUGIN_SDATA_OOS_DEFAULT', 'BackOrder');
+// ItemAvailability
+// https://developers.google.com/search/docs/appearance/structured-data/product
+// It seems there is no option for an Out Of Stock product that is only ordered from the supplier on demand...best option seems to be backorder... but this needs a date. Use today's date + some days delay.
+define('PLUGIN_SDATA_OOS_DEFAULT', 'BackOrder'); // as per key in $itemAvailability below
 //Days to add to today's date for BackOrder/PreOrder
 define('PLUGIN_SDATA_OOS_AVAILABILITY_DELAY', '10');
 
-//END OF USER_EDITABLE CONSTANTS************************************************************************************
+
+//***** eof SITE-SPECIFIC constants additional to the Admin constants ************
 
 define('PLUGIN_SDATA_MAX_DESCRIPTION', 5000); // maximum characters allowed in the description (Google)
 define('PLUGIN_SDATA_MAX_NAME', 150); // maximum characters allowed in the name (Google)
-//define ('PLUGIN_SDATA_NATIVE_URL', true); // not in use
+
 //when a site uses a url rewriter, the native url (www.shop.com/index.php?main_page=product_info&cPath=1_4&products_id=1) is replaced by a more "friendly" one (www.shop.com/products/widget1).
 //If this option is set to true, the native url (www.shop.com/index.php?main_page=product_info&cPath=1_4&products_id=1) is always used.
+//define ('PLUGIN_SDATA_NATIVE_URL', true); // not in use
+
 if (defined('PLUGIN_SDATA_PRICE_CURRRENCY')) {//sic: correct old typo
     $db->Execute("UPDATE `configuration` SET `configuration_key`= 'PLUGIN_SDATA_PRICE_CURRENCY' WHERE `configuration_key`= 'PLUGIN_SDATA_PRICE_CURRRENCY'");
 }
 
 $debug_sd = false; // set to true (boolean) to display debugging info. Changes from the gods are imposed irregularly, so I've left a lot of ugly debug output available.
 
-//defaults
+// defaults
 $image_default = false;
 $facebook_type = 'business.business';
 
-/**
+// Schema arrays
+// ItemAvailability options
+$itemAvailability = [
+    'BackOrder' => 'https://schema.org/BackOrder',                     // The item is on back order. BackOrder needs a date for when it will become available
+    'Discontinued' => ' https://schema.org/Discontinued',              // The item has been discontinued.
+    'InStock' => 'https://schema.org/InStock',                         // The item is in stock.
+    'InStoreOnly' => 'https://schema.org/InStoreOnly',                 // The item is only available for purchase in store.
+    'LimitedAvailability' => 'https://schema.org/LimitedAvailability', // The item has limited availability.
+    'OnlineOnly' => 'https://schema.org/OnlineOnly',                   // The item is available online only.
+    'OutOfStock' => 'https://schema.org/OutOfStock',                   // The item is currently out of stock.
+    'PreOrder' => 'https://schema.org/PreOrder',                       // The item is available for pre-order: buying in advance of a NEW product being released for sale. PreOrder needs a date for when product will be released
+    'PreSale' => 'https://schema.org/PreSale',                         // The item is available for ordering and delivery NOW before it is released for general availability.
+    'SoldOut' => 'https://schema.org/SoldOut'                          // The item has been sold out.
+];
+
+// Product Condition options
+$itemCondition = ['new' => 'NewCondition', 'used' => 'UsedCondition', 'refurbished' => 'RefurbishedCondition'];
+
+// eof Schema arrays
+
+/** parse string to make it suitable for embedding in the head
  * @param $string
  * @return string
  */
@@ -71,7 +97,7 @@ function sdata_prepare_string($string): string
     return $string;
 }
 
-/**
+/** truncate long descriptions as legibly as possible
  * @param $string
  * @param $max_length
  * @return string
@@ -98,8 +124,7 @@ function sdata_truncate($string, $max_length): string
     return $string;
 }
 
-//only used for debugging
-/**
+/** display variable/array with name and type, debugging only
  * @param $a
  * @return void
  */
@@ -164,8 +189,6 @@ $url = $canonicalLink; //may be native or friendly if a url rewriter in use: see
 if(PLUGIN_SDATA_NATIVE_URL === true) { //always use the native url
     $url = trim(HTTP_SERVER . DIR_WS_CATALOG . ($current_page === 'index' ? '' : 'index.php?main_page=' . $current_page . '&' . $_SERVER['QUERY_STRING']), '&');
 }*/
-//product condition mapping for Schema
-$itemCondition_array = ['new' => 'NewCondition', 'used' => 'UsedCondition', 'refurbished' => 'RefurbishedCondition'];
 
 //image
 if (PLUGIN_SDATA_FOG_DEFAULT_IMAGE !== '') {
@@ -191,7 +214,6 @@ if ($debug_sd) {
     echo '$image_default_twitter=' . $image_default_twitter . '<br>';
 }
 
-// mc12345678, this appeared to only cover one product type, not all of them. Corrected 2022-07-04
 $is_product_page = (substr($current_page_base, -5) === '_info' && (!empty($_GET['products_id']) && zen_products_lookup($_GET['products_id'], 'products_status') === '1')
     && zen_get_info_page($_GET['products_id']) === $current_page_base);
 if ($is_product_page) {//product page only
@@ -219,19 +241,6 @@ if ($is_product_page) {//product page only
     $manufacturer_name = zen_get_products_manufacturers_name((int)$_GET['products_id']);
     $product_base_stock = $product_info->fields['products_quantity'];
 
-    //ItemAvailability
-    $itemAvailability = [
-        'BackOrder' => 'https://schema.org/BackOrder',                     // The item is on back order. BackOrder needs a date for when it will become available
-        'Discontinued' => ' https://schema.org/Discontinued',              // The item has been discontinued.
-        'InStock' => 'https://schema.org/InStock',                         // The item is in stock.
-        'InStoreOnly' => 'https://schema.org/InStoreOnly',                 // The item is only available for purchase in store.
-        'LimitedAvailability' => 'https://schema.org/LimitedAvailability', // The item has limited availability.
-        'OnlineOnly' => 'https://schema.org/OnlineOnly',                   // The item is available online only.
-        'OutOfStock' => 'https://schema.org/OutOfStock',                   // The item is currently out of stock.
-        'PreOrder' => 'https://schema.org/PreOrder',                       // The item is available for pre-order: buying in advance of a NEW product being released for sale. PreOrder needs a date for when product will be released
-        'PreSale' => 'https://schema.org/PreSale',                         // The item is available for ordering and delivery NOW before it is released for general availability.
-        'SoldOut' => 'https://schema.org/SoldOut'                          // The item has been sold out.
-    ];
 //BackOrder/PreSales have dates added
     $oosItemAvailability = array_key_exists(PLUGIN_SDATA_OOS_DEFAULT, $itemAvailability) ? $itemAvailability[PLUGIN_SDATA_OOS_DEFAULT] : $itemAvailability['OutOfStock'];
     if (PLUGIN_SDATA_OOS_DEFAULT === 'BackOrder' || PLUGIN_SDATA_OOS_DEFAULT === 'PreSales') {
@@ -379,7 +388,7 @@ if ($is_product_page) {//product page only
                     $attribute_stock_handler = 'posm';
                     $total_attributes_stock = 0;
                     foreach ($product_attributes as $key => $product_attribute) {
-                        //some defaults in case there is no POSM entry despite an attribute existing
+                        //set some defaults from the base product in case there is no POSM entry for the attribute, despite an attribute existing
                         $product_attributes[$key]['stock'] = 0;
                         $product_attributes[$key]['sku'] = $product_base_productID;
                         $product_attributes[$key]['mpn'] = $product_base_mpn;
@@ -511,6 +520,7 @@ if ($is_product_page) {//product page only
 if (empty($description)) {
     $description = '';
 }
+$description = sdata_prepare_string($description);
 //build sameAs list
 $sameAs_array = explode(', ', PLUGIN_SDATA_SAMEAS);
 array_push($sameAs_array, PLUGIN_SDATA_FOG_PAGE, PLUGIN_SDATA_TWITTER_PAGE, PLUGIN_SDATA_GOOGLE_PUBLISHER);
@@ -687,7 +697,7 @@ if ($product_base_mpn !== '') {//The Manufacturer Part Number (MPN) of the produ
 if ($product_base_gtin !== '') {//The Manufacturer-supplied standard international code
     echo '       "gtin": ' . json_encode($product_base_gtin) . ",\n";
 }
-if ($product_base_productID !== '') {//a non-standard code
+if ($product_base_productID !== '') {//a non-standard code according to Google, but a real product identifier (ISBN, EAN) according to Schema. Default is products_model, so if not being used, this will not be created.
     echo '  "productID": ' . json_encode($product_base_productID) . ",\n";
 }
 if ($product_base_gpc !== '') {//google product category
@@ -742,7 +752,7 @@ if ($product_base_gpc !== '') {//google product category
                "offerCount" : "<?php echo $offerCount; //required for AggregateOffer. Not zero ?>",
             "priceCurrency" : "<?php echo PLUGIN_SDATA_PRICE_CURRENCY; ?>",
           "priceValidUntil" : "<?php echo date('Y') . '-12-31'; //e.g. 2020-12-31 NOT 2020-31-12: The date after which the price is no longer available. ?>",
-            "itemCondition" : "https://schema.org/<?php echo $itemCondition_array[PLUGIN_SDATA_FOG_PRODUCT_CONDITION]; ?>",
+            "itemCondition" : "https://schema.org/<?php echo $itemCondition[PLUGIN_SDATA_FOG_PRODUCT_CONDITION]; ?>",
          "availability" : "<?php echo ($product_base_stock > 0 ? $itemAvailability['InStock'] : $oosItemAvailability); ?>",
     <?php if ($backPreOrderDate !== '') { ?>"availability_date" : "<?php echo $backPreOrderDate; ?>",
     <?php } ?>          "seller" : <?php echo json_encode(STORE_NAME); //json_encode adds external quotes as the other entries"?>,
@@ -764,7 +774,7 @@ if ($product_base_gpc !== '') {//google product category
                    "url": "<?php echo $url; ?>",
         "priceCurrency" : "<?php echo PLUGIN_SDATA_PRICE_CURRENCY; ?>",
       "priceValidUntil" : "<?php echo date('Y') . '-12-31'; //e.g. 2020-12-31 NOT 2020-31-12: The date after which the price is no longer available. ?>",
-        "itemCondition" : "https://schema.org/<?php echo $itemCondition_array[PLUGIN_SDATA_FOG_PRODUCT_CONDITION]; ?>",
+        "itemCondition" : "https://schema.org/<?php echo $itemCondition[PLUGIN_SDATA_FOG_PRODUCT_CONDITION]; ?>",
          "availability" : "<?php echo ($product_base_stock > 0 ? $itemAvailability['InStock'] : $oosItemAvailability); ?>",
     <?php if ($backPreOrderDate !== '') { ?>"availability_date" : "<?php echo $backPreOrderDate; ?>",
     <?php } ?>           "seller" : <?php echo json_encode(STORE_NAME); //json_encode adds external quotes as the other entries"?>,
