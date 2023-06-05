@@ -31,6 +31,8 @@ define('PLUGIN_SDATA_GOOGLE_PRODUCT_CATEGORY', '');
 define('PLUGIN_SDATA_REVIEW_USE_DEFAULT', 'true');
 // If there are no reviews for a product, average rating
 define('PLUGIN_SDATA_REVIEW_DEFAULT_VALUE', '3');
+// If the review date is null (should not occur/it's an error in the entry in the reviews table), use this date
+define('PLUGIN_SDATA_REVIEW_DEFAULT_DATE', '2020-06-04 13:48:39');
 
 // Fallback/default weight if product weight in database is not set
 define('PLUGIN_SDATA_DEFAULT_WEIGHT', '0.3');
@@ -264,7 +266,7 @@ if ($is_product_page) {//product page only
     $tax_class_id = $product_info->fields['products_tax_class_id'];
     $product_base_displayed_price = round(zen_get_products_actual_price($product_id) * (1 + zen_get_tax_rate($tax_class_id) / 100),
         2);//shown price with tax, decimal point (not comma), two decimal places.
-    $product_date_added = $product_info->fields['products_date_added'];
+    $product_date_added = $product_info->fields['products_date_added'];//should never be default '0001-01-01 00:00:00'
     $manufacturer_name = zen_get_products_manufacturers_name((int)$_GET['products_id']);
     $product_base_stock = $product_info->fields['products_quantity'];
 
@@ -628,17 +630,15 @@ if ($is_product_page) {
                 'reviewId' => $review['reviews_id'],
                 'customerName' => $review['customers_name'],
                 'reviewRating' => $review['reviews_rating'],
-                'dateAdded' => $review['date_added'],
+                'dateAdded' => (!empty($review['date_added']) ? $review['date_added'] : PLUGIN_SDATA_REVIEW_DEFAULT_DATE), // $review['date_added'] may be NULL
                 'reviewText' => $review['reviews_text']
             ];
             $ratingSum += $review['reviews_rating']; // mc12345678 2022-07-04: If going to omit this review now or in the future, then need to consider this value.
         }
         $reviewCount = count($reviewsArray);
-        /*            foreach ($reviewsArray as $row) { // This is an increase of O of the runtime.
-                        $ratingSum += $row['reviewRating'];
-                    }*/
         $ratingValue = round($ratingSum / $reviewCount, 1);
     }
+    // if no reviews, make a default review to satisfy testing tool
     if ($reviewCount === 0 && PLUGIN_SDATA_REVIEW_USE_DEFAULT === 'true') {
         $reviewsArray[] = [
             'reviewId' => 0, // not used

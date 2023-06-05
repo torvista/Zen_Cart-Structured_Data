@@ -1,5 +1,5 @@
 # Structured Data for Zen Cart
-Tested on Zen Cart 158 on php 7.3/8.2
+Tested on Zen Cart 158 on php 7.3 to 8.2.
 
 Plugin that adds Schema (in JSON-LD format), Facebook and Twitter structured markup to all pages.
 Schema markup is added in three blocks: organisation, breadcrumbs and product (including reviews).
@@ -28,7 +28,7 @@ In my testing it was possible to run the sql code in the ZC->Admin->SQL Patch to
 
     Optional
 
-    There are 38 constants and it's very tedious to update them one by one (especially if repeatedly testing the sql install and thereby starting from scratch each time).
+    There are 38 constants added into the Amdin and it's very tedious to update them one by one (especially if repeatedly testing the sql install and thereby starting from scratch each time).
 	I have included a spreadsheet where you can enter all the constant values into a worksheet to generate sql UPDATE queries.
 	Hence you can copy and paste the queries to enter all the values into the database in one go (via the ZC admin SQL patch tool or phpmyadmin).
 	
@@ -36,26 +36,28 @@ In my testing it was possible to run the sql code in the ZC->Admin->SQL Patch to
 
     The existence of this file in the /jscript folder will include the structured data blocks in ALL pages automagically.
 
-1. Although the markup will display without any further template modifications, strictly you should make this additional modification to the html_header.php, assuming you have a HTML5 template.
-
-    from:
+1. Although the markup will display without any further template modifications, strictly you should make this additional modification to the html_header.php, assuming you have a HTML5 template. 
+ 
+From:
 ```php
 <!DOCTYPE html>
 <html <?php echo HTML_PARAMS; ?>>
-```
-
+```  
 to:
-
 ```php
 <!DOCTYPE html>
 <html <?php echo HTML_PARAMS; ?> prefix="og: https://ogp.me/ns# fb: https://ogp.me/ns/fb# product: https://ogp.me/ns/product#">
 ```
+This adds the namespaces for the properties og:, fb:, product: which are used later in the structured data block. 
+ 
+6. Edit the additional constants in the javascript file.
 
-This adds the namespaces for the properties og:, fb:, product: which are used later in the structured data block.
+**YOU NEED TO READ AND EDIT THE CONSTANTS DEFINED AT THE BEGINNING OF THE SCRIPT.**
 
-6. Additional Constant Definitions in the javascript file.
-As bugs surface and additional code is required, I've added extra constants at the start of the file instead of making a comprehensive installer.
-**You must read and modify these constants as per your site needs.**
+As bugs surface and additional code is required, I've added extra constants ("define" statements) at the start of the file as I really can't be bothered to update an installer with version numbers etc...  
+At some point all the constants (admin too) should be relocated to a single file as they are never edited after the initial setup.
+
+**You MUST read and modify these constants as per your site needs.**
 
 ### Availability
 If a product is out of stock (oos), there are various statuses to indicate the availability.
@@ -74,15 +76,19 @@ Google Rich Results Tool gives warnings about no reviews on a product: 100's of 
 
 These two constants are used to prevent that/provide a  review rating in the absence of a real one.
 
-In the script there are two constants
+In the script there are some constants:
 
-    define('PLUGIN_SDATA_REVIEW_USE_DEFAULT', 'true'); // if no product review, use a default value to stop Google warnings
-    define('PLUGIN_SDATA_REVIEW_DEFAULT_VALUE', '3'); // avg. rating (when no product reviews exist)
+    // If there are no reviews for a product, use a default value to stop Google warnings
+    define('PLUGIN_SDATA_REVIEW_USE_DEFAULT', 'true');
+    // If there are no reviews for a product, average rating
+    define('PLUGIN_SDATA_REVIEW_DEFAULT_VALUE', '3');
+    // If the review date is null (should not occur/it's an error in the entry in the reviews table), use this date
+    define('PLUGIN_SDATA_REVIEW_DEFAULT_DATE', '2020-06-04 13:48:39');
 
 If you don't want to be naughty and not offer reviews when there are none, set 
 
     define('PLUGIN_SDATA_REVIEW_USE_DEFAULT', 'false'); // if no product review, use a default value to stop Google warnings
-    define('PLUGIN_SDATA_REVIEW_DEFAULT_VALUE', '3'); // avg. rating (when no product reviews exist)
+
 
 ### Returns Policy
 Set in the script constants the limit (days) for returning a product, the cost if non-zero and the method.
