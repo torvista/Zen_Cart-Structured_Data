@@ -31,6 +31,8 @@ define('PLUGIN_SDATA_GOOGLE_PRODUCT_CATEGORY', '');
 define('PLUGIN_SDATA_REVIEW_USE_DEFAULT', 'true');
 // If there are no reviews for a product, average rating
 define('PLUGIN_SDATA_REVIEW_DEFAULT_VALUE', '3');
+// If the review date is null (should not occur/it's an error in the entry in the reviews table), use this date
+define('PLUGIN_SDATA_REVIEW_DEFAULT_DATE', '2020-06-04 13:48:39');
 
 // Fallback/default weight if product weight in database is not set
 define('PLUGIN_SDATA_DEFAULT_WEIGHT', '0.3');
@@ -42,6 +44,20 @@ define('PLUGIN_SDATA_OOS_DEFAULT', 'BackOrder'); // as per key in $itemAvailabil
 //Days to add to today's date for BackOrder/PreOrder
 define('PLUGIN_SDATA_OOS_AVAILABILITY_DELAY', '10');
 
+// Merchant Return Policy
+// https://schema.org/MerchantReturnPolicy
+// https://developers.google.com/search/docs/appearance/structured-data/product#returns
+// applicableCountry
+define('PLUGIN_SDATA_RETURNS_APPLICABLE_COUNTRY', ''); // country to which the returns policy applies: 2-char ISO. I failed to figure out a structure where multiple countries can be used.
+define('PLUGIN_SDATA_RETURNS_POLICY_COUNTRY', ''); // country to which the product is to be returned/STORE Country: 2-char ISO.
+// returnPolicyCategory
+define('PLUGIN_SDATA_RETURNS_POLICY', 'finite'); // 'finite' / 'not_permitted' / 'unlimited':  the returns category as per key of $returnPolicyCategory defined below.
+// merchantReturnDays.  Only required if PLUGIN_SDATA_RETURNS_POLICY = finite
+define('PLUGIN_SDATA_RETURNS_DAYS', '14'); // limit of period (days) within which a product can be returned.
+// returnMethod
+define('PLUGIN_SDATA_RETURNS_METHOD', 'mail'); // 'kiosk' / 'mail' / 'store': method of returning a product, as per key in $returnMethod defined below.
+// returnShippingFeesAmount
+define('PLUGIN_SDATA_RETURNS_FEES', '0'); // cost to return a product. Use 0 or a decimal.
 
 //***** eof SITE-SPECIFIC constants additional to the Admin constants ************
 
@@ -80,6 +96,19 @@ $itemAvailability = [
 // Product Condition options
 $itemCondition = ['new' => 'NewCondition', 'used' => 'UsedCondition', 'refurbished' => 'RefurbishedCondition'];
 
+// Merchant Return Policy options
+$returnPolicyCategory = [
+    'finite' => 'https://schema.org/MerchantReturnFiniteReturnWindow',
+    'not_permitted' => 'https://schema.org/MerchantReturnNotPermitted',
+    'unlimited' => 'https://schema.org/MerchantReturnUnlimitedWindow',
+    //'none' => 'https://schema.org/MerchantReturnUnspecified' // 'this Schema option is not supported by Google
+];
+// used only with 'finite' and 'unlimited'
+$returnMethod = [
+    'kiosk' => 'https://schema.org/ReturnAtKiosk',
+    'mail' => 'https://schema.org/ReturnByMail',
+    'store ' => 'https://schema.org/ReturnInStore'
+];
 // eof Schema arrays
 
 /** parse string to make it suitable for embedding in the head
@@ -237,7 +266,7 @@ if ($is_product_page) {//product page only
     $tax_class_id = $product_info->fields['products_tax_class_id'];
     $product_base_displayed_price = round(zen_get_products_actual_price($product_id) * (1 + zen_get_tax_rate($tax_class_id) / 100),
         2);//shown price with tax, decimal point (not comma), two decimal places.
-    $product_date_added = $product_info->fields['products_date_added'];
+    $product_date_added = $product_info->fields['products_date_added'];//should never be default '0001-01-01 00:00:00'
     $manufacturer_name = zen_get_products_manufacturers_name((int)$_GET['products_id']);
     $product_base_stock = $product_info->fields['products_quantity'];
 
@@ -601,17 +630,15 @@ if ($is_product_page) {
                 'reviewId' => $review['reviews_id'],
                 'customerName' => $review['customers_name'],
                 'reviewRating' => $review['reviews_rating'],
-                'dateAdded' => $review['date_added'],
+                'dateAdded' => (!empty($review['date_added']) ? $review['date_added'] : PLUGIN_SDATA_REVIEW_DEFAULT_DATE), // $review['date_added'] may be NULL
                 'reviewText' => $review['reviews_text']
             ];
             $ratingSum += $review['reviews_rating']; // mc12345678 2022-07-04: If going to omit this review now or in the future, then need to consider this value.
         }
         $reviewCount = count($reviewsArray);
-        /*            foreach ($reviewsArray as $row) { // This is an increase of O of the runtime.
-                        $ratingSum += $row['reviewRating'];
-                    }*/
         $ratingValue = round($ratingSum / $reviewCount, 1);
     }
+    // if no reviews, make a default review to satisfy testing tool
     if ($reviewCount === 0 && PLUGIN_SDATA_REVIEW_USE_DEFAULT === 'true') {
         $reviewsArray[] = [
             'reviewId' => 0, // not used
@@ -769,6 +796,18 @@ if ($product_base_gpc !== '') {//google product category
 <?php }//close attributes switch-
 } else { //simple product (no attributes) ?>
             "offers" :     {
+              "hasMerchantReturnPolicy": {
+                  "@type": "MerchantReturnPolicy",
+                  "returnPolicyCountry": "<?php echo PLUGIN_SDATA_RETURNS_POLICY_COUNTRY; ?>",
+                  "returnPolicyCategory": "<?php echo $returnPolicyCategory[PLUGIN_SDATA_RETURNS_POLICY]; ?>",
+                  <?php if (PLUGIN_SDATA_RETURNS_POLICY === 'finite') { ?>"merchantReturnDays": "<?php echo (int)PLUGIN_SDATA_RETURNS_DAYS; ?>",<?php } echo "\n"; ?>
+                  "returnMethod": "<?php echo $returnMethod[PLUGIN_SDATA_RETURNS_METHOD]; ?>",
+                  <?php if (PLUGIN_SDATA_RETURNS_FEES === '0') { ?>"returnFees": "https://schema.org/FreeReturn"<?php } else { ?>"returnShippingFeesAmount": {
+                      "currency" : "<?php echo PLUGIN_SDATA_PRICE_CURRENCY; ?>",
+                      "value": "<?php echo PLUGIN_SDATA_RETURNS_FEES; ?>"
+                  }<?php } ?>,
+                  "applicableCountry": "<?php echo PLUGIN_SDATA_RETURNS_APPLICABLE_COUNTRY; ?>"
+              },
                 "@type" : "Offer",
                 "price" : "<?php echo $product_base_displayed_price; ?>",
                    "url": "<?php echo $url; ?>",
