@@ -70,6 +70,11 @@ You define your default oos status.
 If your products have various possibilities, you'll have to deal with that...
 I use Products' Options' Stock Manager (https://vinosdefrutastropicales.com/index.php?main_page=product_info&products_id=46), that allows user-defined out of stock messages for products with attributes. I expanded that to also include simple products (without attributes) and integrated that into this plugin.
 
+### Call for Price
+If a product is Call for Price, the price is set to zero...if price is  missing, it is invalid data.
+https://support.google.com/webmasters/thread/2444180/schema-mark-up-offers-when-price-only-available-upon-request?hl=en
+
+If product has attributes, these are skipped completely.
 
 ### Reviews
 Google Rich Results Tool gives warnings about no reviews on a product: 100's of products = 100's of warnings, obscuring any real problems. Tedious.
@@ -96,13 +101,11 @@ Set in the script constants the limit (days) for returning a product, the cost i
 The applicableCountry attribute is for the country FROM WHICH the product is to be returned, so the policy (time-restiction/cost) applies to that one country.
 I could not find a way to use multiple countries for the same policy, nor multiple policies for multiple countries.
 
- 
 ### Weight
 In the script there is a default weight constant which will be used if a product has no weight defined/weight is zero.
 Edit this to your needs.  
 
     define('PLUGIN_SDATA_DEFAULT_WEIGHT', '0.3'); // fallback weight if product weight in database is not set
-
 
 ### SKU/MPN/GTIN
 This section describes adding custom fields to your product table.

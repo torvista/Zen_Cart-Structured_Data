@@ -72,7 +72,8 @@ if (defined('PLUGIN_SDATA_PRICE_CURRRENCY')) {//sic: correct old typo
     $db->Execute("UPDATE `configuration` SET `configuration_key`= 'PLUGIN_SDATA_PRICE_CURRENCY' WHERE `configuration_key`= 'PLUGIN_SDATA_PRICE_CURRRENCY'");
 }
 
-$debug_sd = false; // set to true (boolean) to display debugging info. Changes from the gods are imposed irregularly, so I've left a lot of ugly debug output available.
+$debug_sd = false; // set to true (boolean) to display debugging info. Changes from the gods are imposed irregularly, so I've left a lot of ugly debug output available. Some outputs to the viewport, the rest in the head: view with Browser Developer Tools. Most has the line number prefixed so you can search in Developer tools for the line number.
+// to show formatted contents/type of a variable/array, use this inbuilt function: sd_printvar($variableName);
 
 // defaults
 $image_default = false;
@@ -117,7 +118,7 @@ $returnMethod = [
  */
 function sdata_prepare_string($string): string
 {
-    $string= html_entity_decode(trim($string), ENT_COMPAT, CHARSET);//convert html entities to characters
+    $string = html_entity_decode(trim($string), ENT_COMPAT, CHARSET);//convert html entities to characters
     $string = str_replace('</p>', '</p> ', $string); //add a space to separate text when tags are removed
     $string = str_replace('<br>', '<br> ', $string); //add a space to separate text when tags are removed
     $string = strip_tags($string);//remove html tags
@@ -136,15 +137,15 @@ function sdata_truncate($string, $max_length): string
     $string_json = json_encode($string);
     $string_json_length = strlen($string_json);
     //encoded multibyte characters increase the length
-    if ($string_json_length > $max_length+2) {//allow for enclosing double quotes
+    if ($string_json_length > $max_length + 2) {//allow for enclosing double quotes
         //remove the enclosing double quotes
         $string_json_truncated = trim($string_json, '"');
         //truncate to $max_length, allowing for space to add ellipsis
-        $string_json_truncated = substr($string_json_truncated, 0, $max_length-3);
+        $string_json_truncated = substr($string_json_truncated, 0, $max_length - 3);
         //find last backslash from json encoding
         $position_last_backslash = strrpos($string_json_truncated, '\\');
         //check for bisected encoding e.g.\u00f3 cropped to less than 6 chars
-        if ( $position_last_backslash !== false && (strlen($string_json_truncated) - ($position_last_backslash+1) < 6) ) {
+        if ($position_last_backslash !== false && (strlen($string_json_truncated) - ($position_last_backslash + 1) < 6)) {
             $string_json_truncated = substr($string_json_truncated, 0, $position_last_backslash);
         }
         //add enclosing double quotes
@@ -251,7 +252,7 @@ if ($is_product_page) {//product page only
     }
     //get product info
 
-    $sql = 'SELECT p.products_id, p.products_quantity, p.products_model, p.products_image, p.products_price, p.products_date_added, p.products_weight, p.products_tax_class_id, p.products_priced_by_attribute, pd.products_name, pd.products_description
+    $sql = 'SELECT p.products_id, p.products_quantity, p.products_model, p.products_image, p.products_price, p.products_date_added, p.products_weight, p.products_tax_class_id, p.products_priced_by_attribute, p.product_is_call, pd.products_name, pd.products_description
            FROM ' . TABLE_PRODUCTS . ' p, ' . TABLE_PRODUCTS_DESCRIPTION . ' pd
            WHERE p.products_id = ' . (int)$_GET['products_id'] . '
            AND pd.products_id = p.products_id
@@ -264,8 +265,14 @@ if ($is_product_page) {//product page only
     $title = htmlspecialchars(STORE_NAME . ' - ' . $product_info->fields['products_name'], ENT_QUOTES);
     $weight = (float)($product_info->fields['products_weight'] === '0' ? PLUGIN_SDATA_DEFAULT_WEIGHT : $product_info->fields['products_weight']);
     $tax_class_id = $product_info->fields['products_tax_class_id'];
-    $product_base_displayed_price = round(zen_get_products_actual_price($product_id) * (1 + zen_get_tax_rate($tax_class_id) / 100),
-        2);//shown price with tax, decimal point (not comma), two decimal places.
+    if ($product_info->fields['product_is_call'] === '1') {
+        $product_base_displayed_price = 0;
+    } else {
+        $product_base_displayed_price = round(
+            zen_get_products_actual_price($product_id) * (1 + zen_get_tax_rate($tax_class_id) / 100),
+            2
+        );//shown price with tax, decimal point (not comma), two decimal places.
+    }
     $product_date_added = $product_info->fields['products_date_added'];//should never be default '0001-01-01 00:00:00'
     $manufacturer_name = zen_get_products_manufacturers_name((int)$_GET['products_id']);
     $product_base_stock = $product_info->fields['products_quantity'];
@@ -331,7 +338,7 @@ if ($is_product_page) {//product page only
     $attribute_highPrice = 0;
     $offerCount = 1; //but what the hell is it? Sum of all variants in stock or just the number of variants? Should not be zero.
 
-    if (zen_has_product_attributes($product_id)) {
+    if ($product_info->fields['product_is_call'] === '0' && zen_has_product_attributes($product_id)) {
         $product_attributes = [];
         $attribute_prices = [];
 
@@ -353,7 +360,10 @@ if ($is_product_page) {//product page only
                 $product_attributes[$attribute['products_attributes_id']]['option_value'] = $attribute['products_options_values_name'];
                 $product_attributes[$attribute['products_attributes_id']]['price'] = zen_get_products_price_is_priced_by_attributes($product_id) ? $attribute['options_values_price']
                     : $product_base_displayed_price;
-                $attribute_prices[] = $product_attributes[$attribute['products_attributes_id']]['price'];
+                //unlikely that a product price is 0, so only store non-zero prices to subsequently get the high and low prices
+                if ($product_attributes[$attribute['products_attributes_id']]['price'] > 0) {
+                    $attribute_prices[] = $product_attributes[$attribute['products_attributes_id']]['price'];
+                }
                 $product_attributes[$attribute['products_attributes_id']]['weight'] = 0;
                 if ($attribute['products_attributes_weight'] !== '0') {
                     $product_attributes[$attribute['products_attributes_id']]['weight'] = (float)(($attribute['products_attributes_weight_prefix'] === '-' ? '-' : '')
@@ -367,6 +377,7 @@ if ($is_product_page) {//product page only
         if ($debug_sd) {
             echo __LINE__ . ' $attribute_lowPrice=' . $attribute_lowPrice . ' | $attribute_highPrice=' . $attribute_highPrice . '<br>count($product_attributes)=' . count($product_attributes);
             sdata_printvar($product_attributes);
+            sdata_printvar($attribute_prices);
         }
 //$product_attributes array structure (key is products_attributes_id, ordered by the option value text) example
         /*
@@ -393,7 +404,6 @@ if ($is_product_page) {//product page only
                                         )
                                 */
         switch (true) {
-
             case (defined('POSM_ENABLE') && POSM_ENABLE === 'true'):
                 //todo bof hack to break to default, when dependant attributes/more than one attribute
                 $option_ids = [];
