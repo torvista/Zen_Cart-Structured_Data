@@ -516,15 +516,17 @@ if ($is_product_page) {//product page only
 
     $image_alt = $product_name;
     $facebook_type = 'product';
-} elseif (isset($_GET['cPath'])) {//NOT a product page
+} elseif (isset($_GET['cPath'])) { // NOT a product page
+
     if ($debug_sd) {
-        echo __LINE__ . ' is NOT product page<br>';
+        echo __LINE__ . ': $current_page=' . $current_page . ', is NOT product page<br>';
     }
+
     $cPath_array = explode('_', $_GET['cPath']);
     $category_id = end($cPath_array);
     reset($cPath_array);
     $category_name = zen_get_category_name($category_id, (int)$_SESSION['languages_id']); // ZC158 does not need language parameter8
-    if ($category_name !== '') { //a valid category
+    if (!empty($category_name)) { //a valid category
         $category_image = zen_get_categories_image($category_id);
 
         if ($debug_sd) {
@@ -543,8 +545,14 @@ if ($is_product_page) {//product page only
         $image_alt = $category_name;
         $facebook_type = 'product.group';
         $title = META_TAG_TITLE;
+    } else {
+        // something wrong: a category with no name/does not exist!
+        $image_default = true;
+        $image_alt = '';
+        $product_category_name = '';
+        $title = META_TAG_TITLE;
     }
-} else {//some other page - not product or category, maybe a bad cPath https://github.com/zencart/zencart/issues/2903
+} else {//some other page - not product or category
     if ($debug_sd) {
         echo __LINE__ . ' is "Other" page<br>';
     }
