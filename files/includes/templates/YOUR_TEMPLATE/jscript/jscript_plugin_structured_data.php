@@ -525,7 +525,7 @@ if ($is_product_page) {//product page only
     $cPath_array = explode('_', $_GET['cPath']);
     $category_id = end($cPath_array);
     reset($cPath_array);
-    $category_name = zen_get_category_name($category_id, (int)$_SESSION['languages_id']); // ZC158 does not need language parameter8
+    $category_name = zen_get_category_name($category_id, (int)$_SESSION['languages_id']); // ZC158 does not need language parameter
     if (!empty($category_name)) { //a valid category
         $category_image = zen_get_categories_image($category_id);
 
@@ -669,6 +669,26 @@ if ($is_product_page) {
         $reviewCount = 1;
     }
 }
+//Merchant Return Policy
+//common code block used in attribute-handling option and simple product
+if(!empty(PLUGIN_SDATA_RETURNS_POLICY_COUNTRY)) {
+    $hasMerchantReturnPolicy = '"hasMerchantReturnPolicy": {
+                  "@type": "MerchantReturnPolicy",
+                  "returnPolicyCountry": "' . PLUGIN_SDATA_RETURNS_POLICY_COUNTRY . '",
+                  "returnPolicyCategory": "' . $returnPolicyCategory[PLUGIN_SDATA_RETURNS_POLICY] . '",' .
+        (PLUGIN_SDATA_RETURNS_POLICY === 'finite' ? '
+                  "merchantReturnDays": "' . (int)PLUGIN_SDATA_RETURNS_DAYS . '",' : '') . '
+                  "returnMethod": "' . $returnMethod[PLUGIN_SDATA_RETURNS_METHOD] . '", ' .
+        (PLUGIN_SDATA_RETURNS_FEES === '0' ? '
+                  "returnFees": "https://schema.org/FreeReturn"' : '"returnShippingFeesAmount": {
+                      "currency" : "' . PLUGIN_SDATA_PRICE_CURRENCY . '",
+                      "value": "' . PLUGIN_SDATA_RETURNS_FEES . '"
+                  }') . ',
+                  "applicableCountry": "' . PLUGIN_SDATA_RETURNS_APPLICABLE_COUNTRY . '"
+                  },' . "\n";
+} else {
+    $hasMerchantReturnPolicy = '';
+}
 ?>
 <?php if (PLUGIN_SDATA_SCHEMA_ENABLE === 'true') { ?>
 <script title="Structured Data: schemaOrganisation" type="application/ld+json">
@@ -760,7 +780,11 @@ if ($product_base_gpc !== '') {//google product category
 "__comment" : "attribute stock handling:<?php echo $attribute_stock_handler; ?>",
     "offers" : [
     <?php $i = 0;$attributes_count=count($product_attributes);foreach($product_attributes as $index=>$product_attribute) { $i++;?>
-            {"@type" : "Offer",
+            {
+            <?php if (!empty($hasMerchantReturnPolicy)) {
+                echo $hasMerchantReturnPolicy;
+            } ?>
+            "@type" : "Offer",
 <?php if (!empty($product_attribute['sku'])) {?>
                    "sku" : "<?php echo $product_attribute['sku']; ?>",
 <?php } ?>
@@ -785,6 +809,9 @@ if ($product_base_gpc !== '') {//google product category
             default://'default' Zen Cart attribute prices only (no sku/mpn/gtin) ?>
             "__comment" : "attribute stock handling default:<?php echo $attribute_stock_handler; ?>",
                "offers" : {
+               <?php if (!empty($hasMerchantReturnPolicy)) {
+                echo $hasMerchantReturnPolicy;
+            } ?>
                        "url": "<?php echo $url; ?>",
 <?php if ($attribute_lowPrice === $attribute_highPrice) { //or if price not set by attributes, this is already set to base price ?>
                     "@type" : "Offer",
@@ -814,18 +841,9 @@ if ($product_base_gpc !== '') {//google product category
 <?php }//close attributes switch-
 } else { //simple product (no attributes) ?>
             "offers" :     {
-              "hasMerchantReturnPolicy": {
-                  "@type": "MerchantReturnPolicy",
-                  "returnPolicyCountry": "<?php echo PLUGIN_SDATA_RETURNS_POLICY_COUNTRY; ?>",
-                  "returnPolicyCategory": "<?php echo $returnPolicyCategory[PLUGIN_SDATA_RETURNS_POLICY]; ?>",
-                  <?php if (PLUGIN_SDATA_RETURNS_POLICY === 'finite') { ?>"merchantReturnDays": "<?php echo (int)PLUGIN_SDATA_RETURNS_DAYS; ?>",<?php } echo "\n"; ?>
-                  "returnMethod": "<?php echo $returnMethod[PLUGIN_SDATA_RETURNS_METHOD]; ?>",
-                  <?php if (PLUGIN_SDATA_RETURNS_FEES === '0') { ?>"returnFees": "https://schema.org/FreeReturn"<?php } else { ?>"returnShippingFeesAmount": {
-                      "currency" : "<?php echo PLUGIN_SDATA_PRICE_CURRENCY; ?>",
-                      "value": "<?php echo PLUGIN_SDATA_RETURNS_FEES; ?>"
-                  }<?php } ?>,
-                  "applicableCountry": "<?php echo PLUGIN_SDATA_RETURNS_APPLICABLE_COUNTRY; ?>"
-              },
+              <?php if (!empty($hasMerchantReturnPolicy)) {
+                  echo $hasMerchantReturnPolicy;
+    } ?>
                 "@type" : "Offer",
                 "price" : "<?php echo $product_base_displayed_price; ?>",
                    "url": "<?php echo $url; ?>",
