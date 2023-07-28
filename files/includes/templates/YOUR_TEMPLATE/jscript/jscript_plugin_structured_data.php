@@ -210,7 +210,7 @@ if ($breadcrumb_count > 0) {
         $breadcrumb_schema[$key]['id'] = $url;
         $breadcrumb_schema[$key]['name'] = $text;
     }
-    if ($breadcrumb_schema[$breadcrumb_count - 1]['id'] === '') {
+    if ($breadcrumb_schema[$breadcrumb_count - 1]['id'] === '' && isset($_SERVER['HTTP_HOST'], $_SERVER['REQUEST_URI'])) {
         $breadcrumb_schema[$breadcrumb_count - 1]['id'] = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http') . "://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]";
     }
 }
