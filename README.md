@@ -1,5 +1,5 @@
 # Structured Data for Zen Cart
-Tested on Zen Cart 158 on php 7.3 to 8.2.
+Tested on Zen Cart 158 on php 7.3 to 8.3.
 
 Plugin that adds Schema (in JSON-LD format), Facebook and Twitter structured markup to all pages.
 Schema markup is added in three blocks: organisation, breadcrumbs and product (including reviews).
@@ -268,6 +268,9 @@ maximum size: approx. 1MB.
 "recommended" dimensions by users: 600x321 (1.867:1)
 
 ## Changelog
+
+2023 09 04 - torvista:
+bugfix: allow for core variable $reviewsArray on the product review page.
 
 2023 05 31 - torvista:
 added hasMerchantReturnPolicy

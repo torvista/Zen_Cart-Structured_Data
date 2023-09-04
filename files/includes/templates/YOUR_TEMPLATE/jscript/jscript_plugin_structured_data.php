@@ -2,10 +2,11 @@
 
 declare(strict_types=1);
 /* This file MUST be loaded by html <head> since it generates meta tags.
- * DO NOT LET YOUR IDE RE-FORMAT THE CODE STRUCTURE: it is structured so the html source is readable and the parentheses line up.
- * author: torvista 31/05/2023
- * https://github.com/torvista/Zen_Cart-Structured_Data
+ * DO NOT LET YOUR IDE RE-FORMAT THE CODE STRUCTURE: it is structured so the html SOURCE is readable/the parentheses line up.
+ * @author: torvista
+ * @link: https://github.com/torvista/Zen_Cart-Structured_Data
  * @license https://www.zen-cart.com/license/2_0.txt GNU Public License V2.0
+ * @version: torvista 04/09/2023
  */
 /** directives for phpStorm code inspector
  * @var breadcrumb $breadcrumb
@@ -193,7 +194,7 @@ $product_base_mpn = '';
 $product_base_sku = '';
 $product_base_stock = 0;
 $product_id = 0;
-$reviewsArray = [];
+$reviewsArray = empty($reviewsArray) ? [] : $reviewsArray;//$reviewsArray already exists on the product review page
 $title = '';
 //breadcrumb
 $breadcrumb_trail = $breadcrumb->trail(',');
@@ -645,11 +646,11 @@ if ($is_product_page) {
     if (!$reviews->EOF) {
         foreach ($reviews as $review) {
             $reviewsArray[] = [
-                'reviewId' => $review['reviews_id'],
-                'customerName' => $review['customers_name'],
-                'reviewRating' => $review['reviews_rating'],
+                'id' => $review['reviews_id'],
+                'customersName' => $review['customers_name'],
+                'reviewsRating' => $review['reviews_rating'],
                 'dateAdded' => (!empty($review['date_added']) ? $review['date_added'] : PLUGIN_SDATA_REVIEW_DEFAULT_DATE), // $review['date_added'] may be NULL
-                'reviewText' => $review['reviews_text']
+                'reviewsText' => $review['reviews_text']
             ];
             $ratingSum += $review['reviews_rating']; // mc12345678 2022-07-04: If going to omit this review now or in the future, then need to consider this value.
         }
@@ -658,12 +659,12 @@ if ($is_product_page) {
     }
     // if no reviews, make a default review to satisfy testing tool
     if ($reviewCount === 0 && PLUGIN_SDATA_REVIEW_USE_DEFAULT === 'true') {
-        $reviewsArray[] = [
-            'reviewId' => 0, // not used
-            'customerName' => 'anonymous',
-            'reviewRating' => (int)PLUGIN_SDATA_REVIEW_DEFAULT_VALUE,
+        $reviewsArray[0] = [
+            'id' => 0, // not used
+            'customersName' => 'anonymous',
+            'reviewsRating' => (int)PLUGIN_SDATA_REVIEW_DEFAULT_VALUE,
             'dateAdded' => $product_date_added,
-            'reviewText' => ''
+            'reviewsText' => ''
         ];
         $ratingValue = (int)PLUGIN_SDATA_REVIEW_DEFAULT_VALUE;
         $reviewCount = 1;
@@ -877,13 +878,13 @@ if ($product_base_gpc !== '') {//google product category
     "@type" : "Review",
     "author" : {
       "@type" : "Person",
-      "name" : <?php echo json_encode(strtok($reviewsArray[$i]['customerName'], ' ')); //to use only the forename, encoded, does NOT need enclosing quotation marks ?>
+      "name" : <?php echo json_encode(strtok($reviewsArray[$i]['customersName'], ' ')); //to use only the forename, encoded, does NOT need enclosing quotation marks ?>
     },
-    "reviewBody" : <?php echo json_encode($reviewsArray[$i]['reviewText']); //added json_encode to catch quotation marks and pesky accents etc., does NOT need enclosing quotation marks ?>,
+    "reviewBody" : <?php echo json_encode($reviewsArray[$i]['reviewsText']); //added json_encode to catch quotation marks and pesky accents etc., does NOT need enclosing quotation marks ?>,
     "datePublished" : "<?php echo substr($reviewsArray[$i]['dateAdded'], 0, 10); ?>",
     "reviewRating" : {
       "@type" : "Rating",
-      "ratingValue" : "<?php echo $reviewsArray[$i]['reviewRating']; ?>"
+      "ratingValue" : "<?php echo $reviewsArray[$i]['reviewsRating']; ?>"
       }
     }<?php if ($i+1 !== $n) { echo ','; } ?>
   <?php } ?>
