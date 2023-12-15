@@ -77,7 +77,7 @@ $debug_sd = false; // set to true (boolean) to display debugging info. Changes f
 // to show formatted contents/type of a variable/array, use this inbuilt function: sd_printvar($variableName);
 
 // defaults
-$image_default = false;
+$image_default = false; //if true, use a substitute generic image if no specific image found/exists
 $facebook_type = 'business.business';
 
 // Schema arrays
@@ -329,7 +329,7 @@ if ($is_product_page) {//product page only
         $product_base_gpc = (int)(!empty($product_codes->fields['products_google_product_category']) ? $product_codes->fields['products_google_product_category']
             : PLUGIN_SDATA_GOOGLE_PRODUCT_CATEGORY);//google merchant taxonomy
     }
-//bof ******************CUSTOM CODE for extra product fields for mpn, ean and google product category***********************/
+//eof ******************CUSTOM CODE for extra product fields for mpn, ean and google product category***********************/
 
 //sku/mpn/gtin, price, stock may all vary per attribute
 //Attributes handling info: https://www.schemaapp.com/newsletter/schema-org-variable-products-productmodels-offers/#
@@ -645,7 +645,7 @@ if ($is_product_page) {
     $reviews = $db->Execute($reviewQuery);
     if (!$reviews->EOF) {
         foreach ($reviews as $review) {
-            $reviewsArray[] = [
+           $reviewsArray[] = [
                 'id' => $review['reviews_id'],
                 'customersName' => $review['customers_name'],
                 'reviewsRating' => $review['reviews_rating'],
@@ -780,7 +780,7 @@ if ($product_base_gpc !== '') {//google product category
             case ('posm'): ?>
 "__comment" : "attribute stock handling:<?php echo $attribute_stock_handler; ?>",
     "offers" : [
-    <?php $i = 0;$attributes_count=count($product_attributes);foreach($product_attributes as $index=>$product_attribute) { $i++;?>
+    <?php $i = 0;$attributes_count=count($product_attributes);foreach($product_attributes as $index=>$product_attribute) { $i++; ?>
             {
             <?php if (!empty($hasMerchantReturnPolicy)) {
                 echo $hasMerchantReturnPolicy;
