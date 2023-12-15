@@ -372,8 +372,13 @@ if ($is_product_page) {//product page only
                 }
             }
         }
-        $attribute_lowPrice = min($attribute_prices);
-        $attribute_highPrice = max($attribute_prices);
+        if (count($attribute_prices) > 0) {
+            $attribute_lowPrice = min($attribute_prices);
+            $attribute_highPrice = max($attribute_prices);
+        } else {
+            $attribute_lowPrice = 0;
+            $attribute_highPrice = 0;
+        }
 
         if ($debug_sd) {
             echo __LINE__ . ' $attribute_lowPrice=' . $attribute_lowPrice . ' | $attribute_highPrice=' . $attribute_highPrice . '<br>count($product_attributes)=' . count($product_attributes);
@@ -405,73 +410,85 @@ if ($is_product_page) {//product page only
                                         )
                                 */
         switch (true) {
-            case (defined('POSM_ENABLE') && POSM_ENABLE === 'true'):
-                //todo bof hack to break to default, when dependant attributes/more than one attribute
-                $option_ids = [];
-                foreach ($product_attributes as $key => $product_attribute) {
-                    $option_ids[] = $product_attribute['option_name_id'];
-                }
-                $option_id_min = min($option_ids);
-                $option_id_max = max($option_ids);
-                if ($option_id_min !== $option_id_max) {//there are two or more option names....run away!
-                    $attribute_stock_handler = 'posm_multiple'; //todo
-                    break;
-                }
-                //eof hack
-
+            case (defined('POSM_ENABLE') && POSM_ENABLE === 'true' && is_pos_product($product_id)):
                 //using "Products Options Stock Manager": https://vinosdefrutastropicales.com/index.php?main_page=product_info&cPath=2_7&products_id=46
                 if ($debug_sd) {
                     echo __LINE__ . ' Attributes: using POSM<br>';
+                    sdata_printvar($product_attributes);
                 }
-
-                if (is_pos_product($product_id)) {//POSM manages stock of this product
                     $attribute_stock_handler = 'posm';
+
+                    if (product_has_pos_attributes($product_id)) {
+
                     $total_attributes_stock = 0;
-                    foreach ($product_attributes as $key => $product_attribute) {
-                        //set some defaults from the base product in case there is no POSM entry for the attribute, despite an attribute existing
-                        $product_attributes[$key]['stock'] = 0;
-                        $product_attributes[$key]['sku'] = $product_base_productID;
-                        $product_attributes[$key]['mpn'] = $product_base_mpn;
-                        $product_attributes[$key]['gtin'] = $product_base_gtin;
+                    $posm_records = $db->Execute('SELECT * FROM ' . TABLE_PRODUCTS_OPTIONS_STOCK . ' WHERE products_id = ' . $product_id);
+/*
+ $posm_record (array):
+Array
+(
+    [pos_id] => 3953
+    [products_id] => 6583
+    [pos_name_id] => 5
+    [products_quantity] => 1
+    [pos_hash] => e330ff5e3adedc34f1f9622ccfeb95a8
+    [pos_model] => HNW-EVO424BL
+    [pos_mpn] => EVO424BL
+    [pos_ean] => 5056137206872
+    [pos_date] => 2003-01-01
+    [last_modified] => 2023-04-03 23:38:08
+)
+ */
+                        $product_attributes = [];
+                        $attribute_posm_price_temp = $attribute_lowPrice + ($attribute_highPrice-$attribute_lowPrice)/2;
+                    foreach ($posm_records as $key => $posm_record) {
+                        $product_attributes[$key]['price'] = $attribute_posm_price_temp;
+                        $product_attributes[$key]['stock'] = (int)$posm_record['products_quantity'];
+                        $product_attributes[$key]['sku'] = $posm_record['pos_model'];
+                        $total_attributes_stock += $posm_record['products_quantity'];
 
-                        //copied from observer function getOptionsStockRecord as it's a Protected function
-                        $hash = generate_pos_option_hash($product_id, [$product_attribute['option_name_id'] => $product_attribute['option_value_id']]);
-
-                        $posm_record = $db->Execute('SELECT * FROM ' . TABLE_PRODUCTS_OPTIONS_STOCK . ' WHERE products_id = ' . $product_id . ' AND pos_hash = "' . $hash . '" LIMIT 1', false, false, 0, true);
-                        /* example output if extra fields have been added:
-                        ALTER TABLE `products_options_stock` ADD `pos_mpn` VARCHAR(32) NOT NULL DEFAULT '' AFTER `pos_model`;
-                        ALTER TABLE `products_options_stock` ADD `pos_ean` VARCHAR(13) NOT NULL DEFAULT '' AFTER `pos_mpn`;
-                        (
-                            [pos_id] => 2737
-                            [products_id] => 115
-                            [pos_name_id] => 2
-                            [products_quantity] => 1
-                            [pos_hash] => 456b69e6df96dd253fc746afd1c3d04d
-                            [pos_model] => HT-1156
-                            [pos_mpn] =>SH-A01
-                            [pos_ean] =>1234567891234
-                            [pos_date] => 0001-01-01
-                            [last_modified] => 2020-06-19 14:48:16
-                        )
-                         */
-                        if ($posm_record->EOF) {
-                            continue;
+                        //CUSTOM CODING REQUIRED: custom fields will vary per shop ***************************************
+                        if ($sniffer->field_exists(TABLE_PRODUCTS_OPTIONS_STOCK, 'pos_mpn')) {
+                            $product_attributes[$key]['mpn'] = $posm_record['pos_mpn'];
                         }
-                        $product_attributes[$key]['stock'] = $posm_record->fields['products_quantity'];
-                        $product_attributes[$key]['sku'] = $posm_record->fields['pos_model'];//as per individual shop
-                        $total_attributes_stock += $posm_record->fields['products_quantity'];
-
-                        //CUSTOM CODING REQUIRED***************************************
-                        if ($sniffer->field_exists(TABLE_PRODUCTS_OPTIONS_STOCK, 'pos_mpn') && $sniffer->field_exists(TABLE_PRODUCTS_OPTIONS_STOCK, 'pos_ean')) {
-                            //$product_attributes[$key]['mpn'] = $product_attributes[$key]['option_value'];//as per individual shop
-                            $product_attributes[$key]['mpn'] = $posm_record->fields['pos_mpn'];//as per individual shop
-                            $product_attributes[$key]['gtin'] = $posm_record->fields['pos_ean'];//as per individual shop
+                        if ($sniffer->field_exists(TABLE_PRODUCTS_OPTIONS_STOCK, 'pos_ean')) {
+                            $product_attributes[$key]['gtin'] = empty((int)$posm_record['pos_ean']) ? $product_base_gtin : (int)$posm_record['pos_ean'];
                         }
                         //eof CUSTOM CODING REQUIRED***********************************
+
                     }
-                    $offerCount = (max($product_base_stock + $total_attributes_stock, 1)); //maybe, hard to find a definition
+                        if ($debug_sd) {
+                            echo __LINE__ ;
+                            sdata_printvar($product_attributes);
+                        }
                 }
-                break;
+                    break;
+
+                foreach($product_attributes as $products_attributes_id=>$product_attribute)  {
+
+                    /*
+                     * $product_attribute (array):
+                        Array
+                        (
+                            [option_name_id] => 10
+                            [option_name] => colour
+                            [option_value_id] => 140
+                            [option_value] => clear
+                            [price] => 0.0000
+                            [weight] => 0
+                        )
+                    //to get POSM record, need to pass array to observer function getOptionsStockRecordArray
+                    eg:
+                    [option_name_id] =>option_value_id
+                (
+                    [25] => 392
+                    [10] => 48
+                )
+                    */
+                    $posm_options = array($product_attribute['option_name_id'] => $product_attribute['option_value_id']);
+                    //mv_printVar($posm_options);die;
+                    $posm_record = $posObserver->getOptionsStockRecord($product_id, $posm_options);
+                    mv_printVar($posm_record);
+                }
 
             case (defined('STOCK BY ATTRIBUTES')):
                 //over to YOU
@@ -796,7 +813,9 @@ if ($product_base_gpc !== '') {//google product category
                   "gtin" : "<?php echo $product_attribute['gtin']; ?>",
 <?php } ?>
                  "price" : "<?php echo $product_attribute['price']; ?>",
+<?php if (!empty($product_attribute['weight'])) {//TODO temporary fix for missing attribute in POSM handling ?>
                 "weight" : "<?php echo ($weight + $product_attribute['weight'] > 0 ? $weight + $product_attribute['weight'] : $weight) . TEXT_PRODUCT_WEIGHT_UNIT; //if a subtracted attribute weight is less than zero, use base weight ?>",
+<?php } ?>
          "priceCurrency" : "<?php echo PLUGIN_SDATA_PRICE_CURRENCY; ?>",
           "availability" : "<?php echo $product_attribute['stock'] > 0 ? $itemAvailability['InStock'] : $oosItemAvailability; ?>",
     <?php if ($product_attribute['stock'] < 1 && $backPreOrderDate !== '') { ?> "availability_date" : "<?php echo $backPreOrderDate; ?>",
