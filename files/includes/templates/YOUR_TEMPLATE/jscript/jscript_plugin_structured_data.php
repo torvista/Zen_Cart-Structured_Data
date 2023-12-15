@@ -372,8 +372,13 @@ if ($is_product_page) {//product page only
                 }
             }
         }
-        $attribute_lowPrice = min($attribute_prices);
-        $attribute_highPrice = max($attribute_prices);
+        if (count($attribute_prices) > 0) {
+            $attribute_lowPrice = min($attribute_prices);
+            $attribute_highPrice = max($attribute_prices);
+        } else {
+            $attribute_lowPrice = 0;
+            $attribute_highPrice = 0;
+        }
 
         if ($debug_sd) {
             echo __LINE__ . ' $attribute_lowPrice=' . $attribute_lowPrice . ' | $attribute_highPrice=' . $attribute_highPrice . '<br>count($product_attributes)=' . count($product_attributes);
