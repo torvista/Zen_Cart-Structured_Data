@@ -33,7 +33,7 @@ define('PLUGIN_SDATA_REVIEW_USE_DEFAULT', 'true');
 // If there are no reviews for a product, average rating
 define('PLUGIN_SDATA_REVIEW_DEFAULT_VALUE', '3');
 // If the review date is null (should not occur/it's an error in the entry in the reviews table), use this date
-define('PLUGIN_SDATA_REVIEW_DEFAULT_DATE', '2020-06-04 13:48:39');
+define('PLUGIN_SDATA_REVIEW_DEFAULT_DATE', '2024-01-04 13:48:39');
 
 // Fallback/default weight if product weight in database is not set
 define('PLUGIN_SDATA_DEFAULT_WEIGHT', '0.3');
@@ -194,7 +194,7 @@ $product_base_mpn = '';
 $product_base_sku = '';
 $product_base_stock = 0;
 $product_id = 0;
-$reviewsArray = empty($reviewsArray) ? [] : $reviewsArray;//$reviewsArray already exists on the product review page
+$reviewsArray = empty($reviewsArray) ? [] : $reviewsArray; // If reviews have modified to display on the product page, $reviewsArray may have already been created, so use it.
 $title = '';
 //breadcrumb
 $breadcrumb_trail = $breadcrumb->trail(',');
@@ -635,35 +635,36 @@ if ($locale_count > 1 && ($locale_count % 2 === 0)) { // is more than one value 
     }
 }
 
-//build Reviews array
+// build a Reviews array if not already created by the product_info page
 if ($is_product_page) {
-    $ratingSum = 0;
-    $ratingValue = 0;
-    $reviewCount = 0;
-    $reviewQuery = 'SELECT r.reviews_id, r.customers_name, r.reviews_rating, r.date_added, r.status, rd.reviews_text
+    if (count($reviewsArray) === 0) {
+        $ratingSum = 0;
+        $ratingValue = 0;
+        $reviewCount = 0;
+        $reviewQuery = 'SELECT r.reviews_id, r.customers_name, r.reviews_rating, r.date_added, r.status, rd.reviews_text
                 FROM ' . TABLE_REVIEWS . ' r
                 LEFT JOIN ' . TABLE_REVIEWS_DESCRIPTION . ' rd ON rd.reviews_id = r.reviews_id
                 WHERE products_id = ' . (int)$_GET['products_id'] . '
                 AND status = 1
                 AND languages_id= ' . $_SESSION['languages_id'] . '
                 ORDER BY reviews_rating DESC';
-    $reviews = $db->Execute($reviewQuery);
-    if (!$reviews->EOF) {
-        foreach ($reviews as $review) {
-           $reviewsArray[] = [
-                'id' => $review['reviews_id'],
-                'customersName' => $review['customers_name'],
-                'reviewsRating' => $review['reviews_rating'],
-                'dateAdded' => (!empty($review['date_added']) ? $review['date_added'] : PLUGIN_SDATA_REVIEW_DEFAULT_DATE), // $review['date_added'] may be NULL
-                'reviewsText' => $review['reviews_text']
-            ];
-            $ratingSum += $review['reviews_rating']; // mc12345678 2022-07-04: If going to omit this review now or in the future, then need to consider this value.
+        $reviews = $db->Execute($reviewQuery);
+
+        if (!$reviews->EOF) {
+            foreach ($reviews as $review) {
+                $reviewsArray[] = [
+                    'id' => $review['reviews_id'],
+                    'customersName' => $review['customers_name'],
+                    'reviewsRating' => $review['reviews_rating'],
+                    'dateAdded' => (!empty($review['date_added']) ? $review['date_added'] : PLUGIN_SDATA_REVIEW_DEFAULT_DATE), // $review['date_added'] may be NULL
+                    'reviewsText' => $review['reviews_text']
+                ];
+                $ratingSum += $review['reviews_rating']; // mc12345678 2022-07-04: If going to omit this review now or in the future, then need to consider this value.
+            }
         }
-        $reviewCount = count($reviewsArray);
-        $ratingValue = round($ratingSum / $reviewCount, 1);
     }
-    // if no reviews, make a default review to satisfy testing tool
-    if ($reviewCount === 0 && PLUGIN_SDATA_REVIEW_USE_DEFAULT === 'true') {
+// if no reviews, make a default review to satisfy Rich Results testing tool
+    if (count($reviewsArray) === 0 && PLUGIN_SDATA_REVIEW_USE_DEFAULT === 'true') {
         $reviewsArray[0] = [
             'id' => 0, // not used
             'customersName' => 'anonymous',
@@ -671,10 +672,13 @@ if ($is_product_page) {
             'dateAdded' => $product_date_added,
             'reviewsText' => ''
         ];
-        $ratingValue = (int)PLUGIN_SDATA_REVIEW_DEFAULT_VALUE;
-        $reviewCount = 1;
+        $ratingSum = (int)PLUGIN_SDATA_REVIEW_DEFAULT_VALUE;
     }
+
+    $reviewCount = count($reviewsArray);
+    $ratingValue = round($ratingSum / $reviewCount, 1);
 }
+
 //Merchant Return Policy
 //common code block used in attribute-handling option and simple product
 if(!empty(PLUGIN_SDATA_RETURNS_POLICY_COUNTRY)) {

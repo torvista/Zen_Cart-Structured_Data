@@ -1,5 +1,5 @@
 <?php
-/*
+/* https://github.com/torvista/Zen_Cart-Structured_Data
  * plugin_structured_data.php
  * 
  */
