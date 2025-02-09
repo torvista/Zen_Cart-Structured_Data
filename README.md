@@ -1,40 +1,37 @@
 # Structured Data for Zen Cart
-Tested on Zen Cart 158 on php 7.3 to 8.3.
+Tested on Zen Cart 2.1.0+ on php 8+
 
-Plugin that adds Schema (in JSON-LD format), Facebook and Twitter structured markup to all pages.
+Encapsulated Plugin that adds Schema (in JSON-LD format), Facebook and Twitter structured markup to all pages.
 Schema markup is added in three blocks: organisation, breadcrumbs and product (including reviews).
 
-This plugin was originally based on the Super Data code with reviews and breadcrumbs added from Zen 4All Github but my modifications got out of hand and I redid it completely.
-I made considerable changes for some bugs, multilanguage site with multibyte characters and removed/added fields as demanded by the various validators.
-
-Plugin Forum Thread:
+Plugin Forum Thread:  
 https://www.zen-cart.com/showthread.php?221868-Structured-Data-Markup-for-Schema-Facebook-Open-Graph-Twitter
 
-## INSTALLATION
+GitHub:  
+https://github.com/torvista/Zen_Cart-Structured_Data
 
-As ALWAYS, expect that ANY new code will self-destruct your shop and eat your pets, so test ALL new code on your development server FIRST.
+## INSTALLATION
+As ALWAYS, expect that ANY new code will self-destruct your shop and eat your pets, so test ALL new code on your development server FIRST: consider your production site (which you don't touch much) as a backup for your development site (which you modify continually...).
+
 When you are satisfied, ensure your production files and database are backed up prior to installing in the production site. 
 
-Super Data: If you wish to uninstall the old Super Data plugin, please note that the uninstall sql included with that plugin is incorrect. A corrected version is included with these files.
+1. Backup any previous version of Structured Data.  
+The previous version contained constants defined in the script: YOUR/TEMPLATE/jscript/jscript_structured_data.php  
+Make a copy of this file for reference.
 
-1. BACKUP
+1. BACKUP DATABASE: the install _should_ retain all your previous settings...but in case, you have been warned twice now.
 
-1. Use the installation sql to install the constant definitions and register the new admin configuration page into the database.  
-In my testing it was possible to run the sql code in the ZC->Admin->SQL Patch tool on a vanilla installation. But it's known to be pretty strict (https://www.zen-cart.com/showthread.php?216551-ERROR-Cannot-insert-configuration_key-quot-quot-because-it-already-exists-empty-db-key), so if this gives you an error, you can restore the database (from the backup you did immediately before trying this...), and try again using phpmyadmin instead. 
+1. Copy contents of /files/zc_plugins to the corresponding folder in your development site and Install it.  
+If you have a prior installation of Structured Data it will remove those files and add new constants which were previously defined in the script.
 
-1. Copy the single admin file with the configuration menu title, to enable the admin page to display.  
-**CHECK THE ADMIN PAGE WORKS BEFORE GOING ANY FURTHER.**  
-    The plugin is disabled on installation as **YOU** need to add your site-specific values to the constants and enable it in the configuration page before it will show up in the catalog \<head>.
-
-    Optional
-
-    There are 38 constants added into the Amdin and it's very tedious to update them one by one (especially if repeatedly testing the sql install and thereby starting from scratch each time).
-	I have included a spreadsheet where you can enter all the constant values into a worksheet to generate sql UPDATE queries.
-	Hence you can copy and paste the queries to enter all the values into the database in one go (via the ZC admin SQL patch tool or phpmyadmin).
-	
-1. Copy the catalog javascript file to: `includes/templates/YOUR_TEMPLATE/jscript`
-
-    The existence of this file in the /jscript folder will include the structured data blocks in ALL pages automagically.
+## Configuration
+1. Admin->Configuration->Structured Data  
+Add your site-specific values.  
+** You MUST read and modify these constants, they are SITE-SPECIFIC. **  
+Refer to Google and Schema pages for further explanation.  
+Optional Setup by spreadsheet.  
+There are 53 constants added into the Admin and it's very tedious to update them one by one (especially if repeatedly testing the sql install and thereby starting from scratch each time).  
+You may use /docs/Structured_Data-Bulk_UPDATE_sql to enter all the constant values into a worksheet and generate a set sql UPDATE queries to update all the values into the database in one go (via the ZC admin SQL patch tool or phpmyadmin).
 
 1. Although the markup will display without any further template modifications, strictly you should make this additional modification to the html_header.php, assuming you have a HTML5 template. 
  
@@ -48,16 +45,23 @@ to:
 <!DOCTYPE html>
 <html <?php echo HTML_PARAMS; ?> prefix="og: https://ogp.me/ns# fb: https://ogp.me/ns/fb# product: https://ogp.me/ns/product#">
 ```
-This adds the namespaces for the properties og:, fb:, product: which are used later in the structured data block. 
+This adds the namespaces for the properties og:, fb:, product: which are used later in the structured data block.
+
+## Check Your Output
+
+Check the output in the head on all your pages for empty parameters or properties that don't reflect what they should.
+
+Every site is different, so it is impossible to make this plugin 100% plug and play, you DO need to check the markup output carefully to ensure it reflects your business and be prepared to modify accordingly or report any omissions if you think they are relevant generally.
+
+ Use the various debuggers to check the various blocks:
  
-6. Edit the additional constants in the javascript file.
+ - Google Rich Results Test
+ - Facebook Opengraph Debugger
+ - Twitter Card Validator
 
-**YOU NEED TO READ AND EDIT THE CONSTANTS DEFINED AT THE BEGINNING OF THE SCRIPT.**
+If things are not what you think they should be, or you are getting errors in the tools, please report the issue on GitHub.
 
-As bugs surface and additional code is required, I've added extra constants ("define" statements) at the start of the file as I really can't be bothered to update an installer with version numbers etc...  
-At some point all the constants (admin too) should be relocated to a single file as they are never edited after the initial setup.
-
-**You MUST read and modify these constants as per your site needs.**
+## Addition Information on the Parameters
 
 ### Availability
 If a product is out of stock (oos), there are various statuses to indicate the availability.
@@ -67,8 +71,7 @@ You define your default oos status.
 
     define('PLUGIN_SDATA_OOS_DEFAULT', 'BackOrder');
 
-If your products have various possibilities, you'll have to deal with that...
-I use Products' Options' Stock Manager (https://vinosdefrutastropicales.com/index.php?main_page=product_info&products_id=46), that allows user-defined out of stock messages for products with attributes. I expanded that to also include simple products (without attributes) and integrated that into this plugin.
+The core plugin Products' Options' Stock Manager allows user-defined out of stock messages for products with attributes. 
 
 ### Call for Price
 If a product is Call for Price, the price is set to zero...if price is  missing, it is invalid data.
@@ -76,36 +79,19 @@ https://support.google.com/webmasters/thread/2444180/schema-mark-up-offers-when-
 
 If product has attributes, these are skipped completely.
 
-### Reviews
-Google Rich Results Tool gives warnings about no reviews on a product: 100's of products = 100's of warnings, obscuring any real problems. Tedious.
-
-These two constants are used to prevent that/provide a  review rating in the absence of a real one.
-
-In the script there are some constants:
-
-    // If there are no reviews for a product, use a default value to stop Google warnings
-    define('PLUGIN_SDATA_REVIEW_USE_DEFAULT', 'true');
-    // If there are no reviews for a product, average rating
-    define('PLUGIN_SDATA_REVIEW_DEFAULT_VALUE', '3');
-    // If the review date is null (should not occur/it's an error in the entry in the reviews table), use this date
-    define('PLUGIN_SDATA_REVIEW_DEFAULT_DATE', '2020-06-04 13:48:39');
-
-If you don't want to be naughty and not offer reviews when there are none, set 
-
-    define('PLUGIN_SDATA_REVIEW_USE_DEFAULT', 'false'); // if no product review, use a default value to stop Google warnings
-
-
 ### Returns Policy
-Set in the script constants the limit (days) for returning a product, the cost if non-zero and the method.
+There are constants for the limit (days) for returning a product, the cost if non-zero and the method.
 
-The applicableCountry attribute is for the country FROM WHICH the product is to be returned, so the policy (time-restiction/cost) applies to that one country.
+The applicableCountry attribute is for the country FROM WHICH the product is to be returned, so the policy (time-restiction/cost) applies to THAT one country.
 I could not find a way to use multiple countries for the same policy, nor multiple policies for multiple countries.
+
+### Reviews
+If a product has no reviews, Google Rich Results Tool gives warnings: 100's of products = 100's of warnings, obscuring any real problems. Tedious.
+
+In this case an optional dummy review rating is supplied to prevent those warnings. The date of the dummy review is the product creation.
 
 ### Weight
 In the script there is a default weight constant which will be used if a product has no weight defined/weight is zero.
-Edit this to your needs.  
-
-    define('PLUGIN_SDATA_DEFAULT_WEIGHT', '0.3'); // fallback weight if product weight in database is not set
 
 ### SKU/MPN/GTIN
 This section describes adding custom fields to your product table.
@@ -116,18 +102,14 @@ https://github.com/torvista/Zen_Cart-Extra_Product_Fields
 
 **_sku:_** is populated by products_model. This is the code used by **_your_** shop, which is probably unique to **_your_** shop.
 
-**_mpn:_** is the original **_manufacturers part number_**. It is unlikely that you are using that as your shop sku, so you will need to add this column to your products table and populate it.
-
-ALTER TABLE `products` ADD `products_mpn` VARCHAR(32) NOT NULL DEFAULT '';
 
 **_gtin:_** international identification number that depends on the products you sell: UPC / GTIN-12 / EAN / JAN / ISBN / ITF-14. 
-You'll need to deal with this similarly to mpn.
 
-I used ean and added a products_ean field to the products table:
+I used gtin and added a products_gtin field to the products table:
 
-ALTER TABLE `products` ADD `products_ean` VARCHAR(13) NOT NULL DEFAULT '';  
+ALTER TABLE `products` ADD `products_gtin` VARCHAR(13) NOT NULL DEFAULT '';  
 
-In the code, you will need to modify the code to use the column names you have created: the necessary sections for modification are marked CUSTOM CODING.
+Set the name of your custom GTIN field in the Admin.
 
 By default, they are left unpopulated so Google Rich Results Tool will remind you they are missing.
 
@@ -144,42 +126,33 @@ If your products fall into different categories, you will need to add a new colu
 
 ALTER TABLE `products` ADD `products_google_product_category` VARCHAR(6) NOT NULL DEFAULT '';
 
+Set the name of your custom GPC field in the Admin.
+
 Products without any specific category defined will use the value in PLUGIN_SDATA_GOOGLE_PRODUCT_CATEGORY.
 
+Code to allow the admin editing of these values is out of the scope of this plugin.
+
 ### Attributes
-Vanilla Zen Cart does not have provision for attribute sku nor stock control, only prices.
-So, the 'default' handling of attributes will only provide an aggregateOffer in "offers": separating out each attribute would only generate more Google Rich Results warnings as no sku/mpn/gtin can be provided.
+Attributes handling info: https://www.schemaapp.com/newsletter/schema-org-variable-products-productmodels-offers/#
 
-### Third-party attribute-stock plugins
-#### Products Options Stock Manager (POSM)
+Historically, Zen Cart had no attribute-stock control so the 'default' handling of attributes only provides an aggregateOffer in "offers": separating out each attribute would only generate more Google Rich Results warnings as no sku/mpn/gtin can be provided.
 
-I use this plugin, so have added the code necessary to deal with one attribute (dependent attributes are pending/too hard).
+Zen Cart now includes a plugin POSM for attribute-stock control. However it does not include fields for mpn, GTIN for each attribute combination.
 
-However, it still requires extra fields adding per attribute:
+I have added the code necessary to deal with one attribute (dependent attributes are pending...).  
+However, extra fields are required to provide mpn/GTIN per attribute.
+
+e.g.
 
 ALTER TABLE `products_options_stock` ADD `pos_mpn` VARCHAR(32) NOT NULL DEFAULT '' AFTER `pos_model`;
 
-ALTER TABLE `products_options_stock` ADD `pos_ean` VARCHAR(13) NOT NULL DEFAULT '' AFTER `pos_mpn`;
+ALTER TABLE `products_options_stock` ADD `pos_gtin` VARCHAR(13) NOT NULL DEFAULT '' AFTER `pos_mpn`;
 
-You may choose to use something other than ean.
+You may choose to use something other than gtin.
 
-The code is written and commented to allow the easy addition of other plugins that handle attribute-stock such as Stock by Attributes....but you will have to do that and push the changes to GitHub for inclusion.
+Code to allow the admin editing of these values is out of the scope of this plugin.
 
-----------------
-
-## Check Your Output
-
-Check the output in the head on all your pages for empty parameters or properties that don't reflect what they should.
-
-Every site is different, so it is impossible to make this plugin 100% plug and play, you DO need to check the markup output carefully to ensure it reflects your business and be prepared to modify accordingly or report any omissions if you think they are relevant generally.
-
- Use the various debuggers to check the various blocks:
- 
- - Google Rich Results Test
- - Facebook Opengraph Debugger
- - Twitter Card Validator
-
-If things are not what you think they should be, or you are getting errors in the tools, please report the issue on GitHub.
+The script code is written and commented to allow the addition of other plugins that handle attribute-stock such as Stock by Attributes...but you will have to do that yourself.
 
 ## USAGE
 Things behind some of the code that you may wish to modify/be aware of.
@@ -268,6 +241,11 @@ maximum size: approx. 1MB.
 "recommended" dimensions by users: 600x321 (1.867:1)
 
 ## Changelog
+See commit history for further changes
+
+2025 02 11 - Convert to encapsulated plugin, update of install and spreadsheet with script-based additional constants.
+2025 02 10 - torvista:
+modify reviewsArray name to prevent conflict with reviews on product page.
 
 2023 09 04 - torvista:
 bugfix: allow for core variable $reviewsArray on the product review page.
@@ -313,6 +291,8 @@ bugfix: corrected product, offer, acceptedPaymentMethods
 og: product:retailer_title removed (not in spec)
 
 complete overhaul...
+I made considerable changes for some bugs, multilanguage site with multibyte characters and removed/added fields as demanded by the various validators.
+
 revised Super Data, breadcrumb code and added/revised Review code for products from Zen4all:
 https://github.com/Zen4All-nl/Zen-Cart-Structured-Data-using-Json
 
