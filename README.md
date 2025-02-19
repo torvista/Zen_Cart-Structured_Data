@@ -24,6 +24,11 @@ Make a copy of this file for reference.
 1. Copy contents of /files/zc_plugins to the corresponding folder in your development site and Install it.  
 If you have a prior installation of Structured Data it will remove those files and add new constants which were previously defined in the script.
 
+## UNINSTALL
+Er...Click on Uninstall.
+
+Note that the uninstall will remove all the settings.
+
 ## Configuration
 1. Admin->Configuration->Structured Data  
 Add your site-specific values.  
@@ -241,9 +246,10 @@ maximum size: approx. 1MB.
 "recommended" dimensions by users: 600x321 (1.867:1)
 
 ## Changelog
-See commit history for further changes
+See the commit history for subsequent changes.
 
-2025 02 11 - Convert to encapsulated plugin, update of install and spreadsheet with script-based additional constants.
+2025 02 19 - Convert to an encapsulated plugin, fix for breadcrumb containing quotes, update of install and spreadsheet with script-based additional constants.
+
 2025 02 10 - torvista:
 modify reviewsArray name to prevent conflict with reviews on product page.
 
