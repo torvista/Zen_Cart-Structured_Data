@@ -168,25 +168,13 @@ $reviewsArr = empty($reviewsArray) ? [] : $reviewsArray;
 $title = '';
 
 // breadcrumbs
-if (isset($breadcrumb) && is_object($breadcrumb)) {
-    // Use %% as a separator
-    $breadcrumb_array = explode('%%', $breadcrumb->trail('%%')); // create an array
-    $breadcrumb_array = preg_replace("/\r|\n/", '', $breadcrumb_array); // remove line feeds
-    $breadcrumb_array = array_map('trim', $breadcrumb_array); // remove whitespace
-    $breadcrumb_count = count($breadcrumb_array);
-}
-if ($breadcrumb_count > 0) {
-    foreach ($breadcrumb_array as $key => $value) {
-        $text = strip_tags($value);
-        preg_match('/^<a.*?href=(["\'])(.*?)\1.*$/', $value, $m);
-        $url = $m[2] ?? '';
-        $breadcrumb_schema[$key]['position'] = (int)$key + 1;
-        $breadcrumb_schema[$key]['id'] = $url;
-        $breadcrumb_schema[$key]['name'] = $text;
-    }
-    if ($breadcrumb_schema[$breadcrumb_count - 1]['id'] === '' && isset($_SERVER['HTTP_HOST'], $_SERVER['REQUEST_URI'])) {
-        $breadcrumb_schema[$breadcrumb_count - 1]['id'] = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http') . "://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]";
-    }
+$breadcrumb_schema = $breadcrumb->getTrail();
+for ($i = 0, $size = count($breadcrumb_schema); $i < $size; ++$i) {
+    $breadcrumb_schema[$i]['position'] = $i + 1;
+    $breadcrumb_schema[$i]['id'] = $breadcrumb_schema[$i]['link'];
+    unset ($breadcrumb_schema[$i]['link']);
+    $breadcrumb_schema[$i]['name'] = $breadcrumb_schema[$i]['title'];
+    unset ($breadcrumb_schema[$i]['title']);
 }
 
 $url = $canonicalLink;
