@@ -8,7 +8,7 @@ declare(strict_types=1);
  * @author: torvista
  * @link: https://github.com/torvista/Zen_Cart-Structured_Data
  * @license https://www.zen-cart.com/license/2_0.txt GNU Public License V2.0
- * @version structured_data_jscript.php torvista 19 Feb 2025
+ * @version structured_data_jscript.php torvista 25 Feb 2025
  */
 /** directives for phpStorm code inspector
  * @var breadcrumb $breadcrumb
@@ -169,8 +169,8 @@ $title = '';
 
 // breadcrumbs
 if (isset($breadcrumb) && is_object($breadcrumb)) {
-    $breadcrumb_trail = $breadcrumb->trail(',');
-    $breadcrumb_array = explode(',', $breadcrumb->trail(',')); // create an array
+    // Use %% as a separator
+    $breadcrumb_array = explode('%%', $breadcrumb->trail('%%')); // create an array
     $breadcrumb_array = preg_replace("/\r|\n/", '', $breadcrumb_array); // remove line feeds
     $breadcrumb_array = array_map('trim', $breadcrumb_array); // remove whitespace
     $breadcrumb_count = count($breadcrumb_array);
@@ -270,7 +270,10 @@ if ($is_product_page && (isset($product_info) && is_object($product_info))) {
     if ($sniffer->field_exists(TABLE_PRODUCTS, PLUGIN_SDATA_GTIN_FIELD)) {
         $sql = 'SELECT ' . PLUGIN_SDATA_GTIN_FIELD . ' FROM ' . TABLE_PRODUCTS . ' WHERE products_id = ' . $product_id;
         $result = $db->Execute($sql);
-        $product_base_gtin = !empty($result->fields[PLUGIN_SDATA_GTIN_FIELD]) ? $result->fields[PLUGIN_SDATA_GTIN_FIELD] : '';
+        //Google Merchant Center feed complains if no GTIN. I use "no" in this field to omit that product from that feed.
+        $product_base_gtin = (empty($result->fields[PLUGIN_SDATA_GTIN_FIELD]) || $result->fields[PLUGIN_SDATA_GTIN_FIELD] === 'no') 
+            ? ''
+            : $result->fields[PLUGIN_SDATA_GTIN_FIELD];
     }
 
     //ATTRIBUTES
