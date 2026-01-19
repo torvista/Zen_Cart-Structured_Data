@@ -11,7 +11,7 @@ GitHub:
 https://github.com/torvista/Zen_Cart-Structured_Data
 
 ## INSTALLATION
-As ALWAYS, expect that ANY new code will self-destruct your shop and eat your pets, so test ALL new code on your development server FIRST: consider your production site (which you don't touch much) as a backup for your development site (which you modify continually...).
+As ALWAYS, expect that ANY new code will self-destruct your shop and eat your pets, so test ALL new code on your development server FIRST: consider your production site (which you don't fiddle with while it is working) as a backup for your development site (which you may fiddle with...).
 
 When you are satisfied, ensure your production files and database are backed up prior to installing in the production site. 
 
@@ -247,6 +247,13 @@ maximum size: approx. 1MB.
 
 ## Changelog
 See the commit history for all details.
+
+2026 01 19 - brittainmark
+- Breadcrumb: handle empty final page (zen cart default) and templates (Bootstrap) that put the landing page in twice.
+- Url: so they are the actual url not the html safe ones. (Apparently &amp; is not valid in json files for url's).
+- Correct json for contact up page. PLUGIN_SDATA_AREA_SERVED, and PLUGIN_SDATA_AVAILABLE_LANGUAGE are optional, move contactType to end to prevent a trailing comma.
+- Process leadtime and only display if it is not empty, change to a quantitative value.
+- Add text "Reviewer did not leave a written comment." if reviewsText is blank or does not exist.
 
 2025 02 19 - zenExpert v2.10  
 Fields added:  
