@@ -9,7 +9,7 @@ declare(strict_types=1);
  * @link: https://github.com/torvista/Zen_Cart-Structured_Data
  * @license https://www.zen-cart.com/license/2_0.txt GNU Public License V2.0
  * @version structured_data_jscript.php ZenExpert 20 Dec 2025
- * @version markbrittain 15 Jan 2026
+ * @version markbrittain 18 Jan 2026
  */
 /** directives for phpStorm code inspector
  * @var breadcrumb $breadcrumb
@@ -172,14 +172,23 @@ $title = '';
 $breadcrumb_schema = $breadcrumb->getTrail();
 for ($i = 0, $size = count($breadcrumb_schema); $i < $size; ++$i) {
     $breadcrumb_schema[$i]['position'] = $i + 1;
-    $breadcrumb_schema[$i]['id'] = $breadcrumb_schema[$i]['link'];
+    $breadcrumb_schema[$i]['id'] = htmlspecialchars_decode($breadcrumb_schema[$i]['link']);
     unset ($breadcrumb_schema[$i]['link']);
     $breadcrumb_schema[$i]['name'] = $breadcrumb_schema[$i]['title'];
     unset ($breadcrumb_schema[$i]['title']);
     $breadcrumb_count++;
 }
+// Some templates (bootstrap) Have the last page in the breadcrumb twice. So remove the last one
+if ($breadcrumb_count > 1 && $breadcrumb_schema[$breadcrumb_count - 1]['id'] === $breadcrumb_schema[$breadcrumb_count - 2]['id']) {
+    $breadcrumb_count--;
+    unset($breadcrumb_schema[$breadcrumb_count]);
+}
 
 $url = $canonicalLink;
+// As breadcrumb does not always add the final page url (zen cart default). Check if link is empty and if it is add the canonical link
+if (empty($breadcrumb_schema[$breadcrumb_count - 1]['id'])) {
+    $breadcrumb_schema[$breadcrumb_count - 1]['id'] = htmlspecialchars_decode($url);
+}
 
 // Images
 if (PLUGIN_SDATA_FOG_DEFAULT_IMAGE !== '') {
@@ -501,7 +510,7 @@ if ($is_product_page && (isset($product_info) && is_object($product_info))) {
                 $listing_schema[] = [
                     '@type' => 'ListItem',
                     'position' => $list_pos,
-                    'url' => $item_link,
+                    'url' => htmlspecialchars_decode($item_link),
                     'name' => sdata_prepare_string($p_name),
                     'image' => $item_image_url
                 ];
@@ -855,11 +864,12 @@ if (!empty(PLUGIN_SDATA_RETURNS_POLICY_COUNTRY)) {
             <?php foreach ($breadcrumb_schema as $key => $value) { ?>
   {
         "@type": "ListItem",
-     "position": "<?= $value['position'] //does not need to be quoted, but IDE complains ?>",
+     "position": <?= $value['position'] //does not need to be quoted, but IDE complains ?>,
          "name": "<?= json_encode_sdata($value['name']) ?>",
          "item": "<?= $value['id'] ?>"
-       }<?php if ((int)$key+1 < $breadcrumb_count) echo ','; ?>
-            <?php } ?>
+       }<?= (((int)$key + 1) < $breadcrumb_count)? ',': ''; ?>
+       
+             <?php } ?>
             ]
           }
         </script>
@@ -875,7 +885,7 @@ if (!empty(PLUGIN_SDATA_RETURNS_POLICY_COUNTRY)) {
               "@type": "ContactPage",
               "name": "<?php echo sdata_prepare_string(STORE_NAME); ?> Contact Us",
               "description": "Contact information for <?php echo sdata_prepare_string(STORE_NAME); ?>",
-              "url": "<?php echo zen_href_link(FILENAME_CONTACT_US, '', 'SSL'); ?>",
+              "url": "<?= htmlspecialchars_decode(zen_href_link(FILENAME_CONTACT_US, '', 'SSL')); ?>",
               "mainEntity": {
                 "@type": "Organization",
                 "name": "<?php echo sdata_prepare_string(STORE_NAME); ?>",
@@ -883,9 +893,19 @@ if (!empty(PLUGIN_SDATA_RETURNS_POLICY_COUNTRY)) {
                 "contactPoint": {
                   "@type": "ContactPoint",
                   "telephone": "<?php echo sdata_prepare_string(STORE_TELEPHONE_CUSTSERVICE); ?>",
-                  "contactType": "customer service",
+<?php
+        if (!empty(PLUGIN_SDATA_AREA_SERVED)) {
+?>            
                   "areaServed": "<?php echo PLUGIN_SDATA_AREA_SERVED; ?>",
+<?php
+        }
+        if (!empty(PLUGIN_SDATA_AVAILABLE_LANGUAGE)) {
+?>
                   "availableLanguage": "<?php echo PLUGIN_SDATA_AVAILABLE_LANGUAGE; ?>"
+<?php
+        }
+?>
+                  "contactType": "customer service"
                 }
               }
             }
@@ -976,7 +996,7 @@ if (!empty(PLUGIN_SDATA_RETURNS_POLICY_COUNTRY)) {
     <?php if ($product_attribute['stock'] < 1 && $backPreOrderDate !== '') { ?> "availability_date" : "<?= $backPreOrderDate ?>",
     <?php } ?>
    "priceValidUntil" : "<?= date('Y') . '-12-31' //e.g. 2020-12-31 NOT 2020-31-12: The date after which the price is no longer available. ?>",
-                    "url": "<?= $url ?>"}<?php if ($i < $attributes_count) { echo ",\n    "; } else { echo PHP_EOL; } ?>
+                    "url": "<?= htmlspecialchars_decode($url) ?>"}<?php if ($i < $attributes_count) { echo ",\n    "; } else { echo PHP_EOL; } ?>
                     <?php } ?>
          ]
 <?php break;
@@ -987,7 +1007,7 @@ if (!empty(PLUGIN_SDATA_RETURNS_POLICY_COUNTRY)) {
                <?php if (!empty($hasMerchantReturnPolicy)) {
                         echo $hasMerchantReturnPolicy;
                     } ?>
-        "url": "<?= $url ?>",
+        "url": "<?= htmlspecialchars_decode($url) ?>",
 <?php if ($attribute_lowPrice === $attribute_highPrice) { //or if price not set by attributes, this is already set to base price ?>
                     "@type" : "Offer",
                     "price" : "<?= $attribute_lowPrice ?>",
@@ -1003,9 +1023,18 @@ if (!empty(PLUGIN_SDATA_RETURNS_POLICY_COUNTRY)) {
              "availability" : "<?= ($product_base_stock > 0 ? $itemAvailability['InStock'] : $oosItemAvailability) ?>",
     <?php if ($backPreOrderDate !== '') { ?>    "availability_date" : "<?= $backPreOrderDate ?>",
     <?php } ?>               "seller" : "<?= json_encode_sdata(STORE_NAME) ?>",
-         "deliveryLeadTime" : "<?= ($product_base_stock > 0 ? (int)PLUGIN_SDATA_DELIVERYLEADTIME : (int)PLUGIN_SDATA_DELIVERYLEADTIME_OOS) ?>",
-              "itemOffered" : "<?= json_encode_sdata($product_name) ?>",
-<?php if (PLUGIN_SDATA_ELIGIBLE_REGION !== '') { ?>
+<?php
+ $leadTime  = ($product_base_stock > 0 ? (int)PLUGIN_SDATA_DELIVERYLEADTIME : (int)PLUGIN_SDATA_DELIVERYLEADTIME_OOS);
+if (!empty($leadTime)) {
+?>
+            "deliveryLeadTime" : {
+                "@type": "QuantitativeValue",
+                "value": <?= $leadTime ?>,
+                "unitCode": "DAY"
+            },
+<?php
+}                
+if (PLUGIN_SDATA_ELIGIBLE_REGION !== '') { ?>
            "eligibleRegion" : "<?=PLUGIN_SDATA_ELIGIBLE_REGION ?>",<?= PHP_EOL ?>
                     <?php } ?>
     "acceptedPaymentMethod" : {
@@ -1021,16 +1050,25 @@ if (!empty(PLUGIN_SDATA_RETURNS_POLICY_COUNTRY)) {
             } ?>
   "@type" : "Offer",
                 "price" : "<?= $product_base_displayed_price ?>",
-                   "url": "<?= $url ?>",
+                   "url": "<?= htmlspecialchars_decode($url) ?>",
         "priceCurrency" : "<?= PLUGIN_SDATA_PRICE_CURRENCY ?>",
       "priceValidUntil" : "<?= date('Y') . '-12-31' //e.g. 2020-12-31 NOT 2020-31-12: The date after which the price is no longer available. ?>",
         "itemCondition" : "https://schema.org/<?= $itemCondition[PLUGIN_SDATA_FOG_PRODUCT_CONDITION] ?>",
          "availability" : "<?= ($product_base_stock > 0 ? $itemAvailability['InStock'] : $oosItemAvailability) ?>",
     <?php if ($backPreOrderDate !== '') { ?>"availability_date" : "<?= $backPreOrderDate ?>",
     <?php } ?>           "seller" : "<?= json_encode_sdata(STORE_NAME) ?>",
-     "deliveryLeadTime" : "<?= ($product_base_stock > 0 ? PLUGIN_SDATA_DELIVERYLEADTIME : PLUGIN_SDATA_DELIVERYLEADTIME_OOS) ?>",
-          "itemOffered" : "<?= json_encode_sdata($product_name) ?>",
-<?php if (PLUGIN_SDATA_ELIGIBLE_REGION !== '') { ?>
+<?php
+$leadTime  = ($product_base_stock > 0 ? (int)PLUGIN_SDATA_DELIVERYLEADTIME : (int)PLUGIN_SDATA_DELIVERYLEADTIME_OOS);
+if (!empty($leadTime)) {
+?>
+            "deliveryLeadTime" : {
+                "@type": "QuantitativeValue",
+                "value": <?= $leadTime ?>,
+                "unitCode": "DAY"
+            },
+<?php
+}                
+if (PLUGIN_SDATA_ELIGIBLE_REGION !== '') { ?>
        "eligibleRegion" : "<?= PLUGIN_SDATA_ELIGIBLE_REGION ?>",
 <?php } ?>
 "acceptedPaymentMethod" : {
@@ -1054,7 +1092,7 @@ if (!empty(PLUGIN_SDATA_RETURNS_POLICY_COUNTRY)) {
       "@type" : "Person",
       "name" : "<?= json_encode_sdata(strtok($reviewsArr[$i]['customersName'], ' ')) //to use only the forename, encoded ?>"
     },
-    "reviewBody" : "<?= json_encode_sdata($reviewsArr[$i]['reviewsText']) //added json_encode to catch quotation marks and accents, etc. ?>",
+    "reviewBody" : "<?= json_encode_sdata($reviewsArr[$i]['reviewsText'] ?: 'Reviewer did not leave a written comment.') //added json_encode to catch quotation marks and accents, etc. ?>",
     "datePublished" : "<?= substr($reviewsArr[$i]['dateAdded'], 0, 10) ?>",
     "reviewRating" : {
       "@type" : "Rating",
