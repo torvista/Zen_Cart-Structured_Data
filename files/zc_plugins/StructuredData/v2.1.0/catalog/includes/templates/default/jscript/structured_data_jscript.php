@@ -151,8 +151,6 @@ function sdata_printvar($a): void
 }
 
 // Initialise defaults to prevent php notices
-$breadcrumb_count = 0;
-$breadcrumb_schema = [];
 $category_name = '';
 $description = '';
 $image = '';
@@ -168,27 +166,7 @@ $product_id = 0;
 $reviewsArr = empty($reviewsArray) ? [] : $reviewsArray;
 $title = '';
 
-// breadcrumbs
-$breadcrumb_schema = $breadcrumb->getTrail();
-for ($i = 0, $size = count($breadcrumb_schema); $i < $size; ++$i) {
-    $breadcrumb_schema[$i]['position'] = $i + 1;
-    $breadcrumb_schema[$i]['id'] = htmlspecialchars_decode($breadcrumb_schema[$i]['link']);
-    unset ($breadcrumb_schema[$i]['link']);
-    $breadcrumb_schema[$i]['name'] = $breadcrumb_schema[$i]['title'];
-    unset ($breadcrumb_schema[$i]['title']);
-    $breadcrumb_count++;
-}
-// Some templates (bootstrap) Have the last page in the breadcrumb twice. So remove the last one
-if ($breadcrumb_count > 1 && $breadcrumb_schema[$breadcrumb_count - 1]['id'] === $breadcrumb_schema[$breadcrumb_count - 2]['id']) {
-    $breadcrumb_count--;
-    unset($breadcrumb_schema[$breadcrumb_count]);
-}
-
 $url = $canonicalLink;
-// As breadcrumb does not always add the final page url (zen cart default). Check if link is empty and if it is add the canonical link
-if (empty($breadcrumb_schema[$breadcrumb_count - 1]['id'])) {
-    $breadcrumb_schema[$breadcrumb_count - 1]['id'] = htmlspecialchars_decode($url);
-}
 
 // Images
 if (PLUGIN_SDATA_FOG_DEFAULT_IMAGE !== '') {
@@ -905,27 +883,65 @@ if (PLUGIN_SDATA_SCHEMA_ENABLE === 'true') {
 <script title="Structured Data: schemaOrganisation" type="application/ld+json">
 <?= json_encode($schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . PHP_EOL; ?>
 </script>
-    <?php if ($breadcrumb_count > 1) { ?>
-        <script title="Structured Data: schemaBreadcrumb" type="application/ld+json">
-            {
-                   "@context": "https://schema.org",
-                      "@type": "BreadcrumbList",
-            "itemListElement":
-              [
-            <?php foreach ($breadcrumb_schema as $key => $value) { ?>
-  {
-        "@type": "ListItem",
-     "position": <?= $value['position'] //does not need to be quoted, but IDE complains ?>,
-         "name": "<?= json_encode_sdata($value['name']) ?>",
-         "item": "<?= $value['id'] ?>"
-       }<?= (((int)$key + 1) < $breadcrumb_count)? ',': ''; ?>
-       
-             <?php } ?>
-            ]
-          }
-        </script>
-    <?php } //eof breadcrumb ?>
+<?php
+    /*
+     *  Breadcrumb Schema
+     */
 
+    // Get breadcrumb trail
+    $trail = $breadcrumb->getTrail();
+
+    // Build normalised breadcrumb list
+    $items = [];
+
+    foreach ($trail as $i => $item) {
+        $items[] = [
+            'position' => $i + 1,
+            'id'       => htmlspecialchars_decode($item['link']),
+            'name'     => $item['title']
+        ];
+    }
+    
+    $breadcrumb_count = count($items);
+
+
+    // Remove duplicate last breadcrumb (Bootstrap issue)
+    if ($breadcrumb_count > 1 &&
+        $items[$breadcrumb_count - 1]['id'] === $items[$breadcrumb_count - 2]['id']
+    ) {
+        array_pop($items);
+        $breadcrumb_count--;
+    }
+
+    // Ensure final breadcrumb has a URL Zen cart default is not to show the url.
+    if ($breadcrumb_count > 0 && empty($items[$breadcrumb_count - 1]['id'])) {
+        $items[$breadcrumb_count - 1]['id'] = htmlspecialchars_decode($canonicalLink);
+    }
+
+    // Only output schema if more than one breadcrumb exists
+    if ($breadcrumb_count > 1) {
+
+        $breadcrumbSchema = [
+            "@context" => "https://schema.org",
+            "@type" => "BreadcrumbList",
+            "itemListElement" => []
+        ];
+
+        foreach ($items as $item) {
+            $breadcrumbSchema["itemListElement"][] = [
+                "@type" => "ListItem",
+                "position" => $item['position'],
+                "name" => $item['name'],
+                "item" => $item['id']
+            ];
+        }
+?>
+<script title="Structured Data: schemaBreadcrumb" type="application/ld+json">
+<?= json_encode($breadcrumbSchema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . PHP_EOL; ?>
+</script>
+<?php
+    } // end breadcrumb
+?>
     <?php
 // Check if we are on the Contact Us page
     if ($current_page_base === 'contact_us') {
