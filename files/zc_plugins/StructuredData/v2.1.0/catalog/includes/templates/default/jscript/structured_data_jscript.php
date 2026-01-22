@@ -149,6 +149,18 @@ function sdata_printvar($a): void
     print_r($a);
     echo '</pre><br>';
 }
+/*
+ * Function to remove empty array values from schema array
+ */
+function sdata_clean_schema($value) {
+    if (is_array($value)) {
+        $value = array_map('sdata_clean_schema', $value);
+        $value = array_filter($value, fn($v) => $v !== '' && $v !== [] && $v !== null);
+    }
+    return $value;
+}
+
+
 
 // Initialise defaults to prevent php notices
 $category_name = '';
@@ -867,18 +879,7 @@ if (PLUGIN_SDATA_SCHEMA_ENABLE === 'true') {
         }
     }
 
-    /*
-     * CLEANUP: Remove empty fields recursively
-     */
-    $clean = function ($value) use (&$clean) {
-        if (is_array($value)) {
-            $value = array_map($clean, $value);
-            $value = array_filter($value, fn($v) => $v !== '' && $v !== [] && $v !== null);
-        }
-        return $value;
-    };
-
-    $schema = $clean($schema);
+    $schema = sdata_clean_schema($schema);
 ?>
 <script title="Structured Data: schemaOrganisation" type="application/ld+json">
 <?= json_encode($schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . PHP_EOL; ?>
@@ -941,45 +942,52 @@ if (PLUGIN_SDATA_SCHEMA_ENABLE === 'true') {
 </script>
 <?php
     } // end breadcrumb
-?>
-    <?php
-// Check if we are on the Contact Us page
+    
+    // Check if we are on the Contact Us page
     if ($current_page_base === 'contact_us') {
-        ?>
-        <script type="application/ld+json">
-            {
-              "@context": "https://schema.org",
-              "@type": "ContactPage",
-              "name": "<?php echo sdata_prepare_string(STORE_NAME); ?> Contact Us",
-              "description": "Contact information for <?php echo sdata_prepare_string(STORE_NAME); ?>",
-              "url": "<?= htmlspecialchars_decode(zen_href_link(FILENAME_CONTACT_US, '', 'SSL')); ?>",
-              "mainEntity": {
-                "@type": "Organization",
-                "name": "<?php echo sdata_prepare_string(STORE_NAME); ?>",
-                "url": "<?php echo HTTP_SERVER; ?>",
-                "contactPoint": {
-                  "@type": "ContactPoint",
-                  "telephone": "<?php echo sdata_prepare_string(STORE_TELEPHONE_CUSTSERVICE); ?>",
-<?php
-        if (!empty(PLUGIN_SDATA_AREA_SERVED)) {
-?>            
-                  "areaServed": "<?php echo PLUGIN_SDATA_AREA_SERVED; ?>",
-<?php
-        }
-        if (!empty(PLUGIN_SDATA_AVAILABLE_LANGUAGE)) {
-?>
-                  "availableLanguage": "<?php echo PLUGIN_SDATA_AVAILABLE_LANGUAGE; ?>"
-<?php
-        }
-?>
-                  "contactType": "customer service"
-                }
-              }
-            }
-        </script>
-    <?php } ?>
 
-    <?php
+        // Build ContactPoint
+        $contactPoint = [
+            "@type"       => "ContactPoint",
+            "telephone"   => sdata_prepare_string(STORE_TELEPHONE_CUSTSERVICE),
+            "contactType" => "customer service",
+        ];
+
+        if (!empty(PLUGIN_SDATA_AREA_SERVED)) {
+            $contactPoint["areaServed"] = PLUGIN_SDATA_AREA_SERVED;
+        }
+
+        if (!empty(PLUGIN_SDATA_AVAILABLE_LANGUAGE)) {
+            $contactPoint["availableLanguage"] = PLUGIN_SDATA_AVAILABLE_LANGUAGE;
+        }
+
+        // Build mainEntity Organization
+        $mainEntity = [
+            "@type" => "Organization",
+            "name"  => sdata_prepare_string(STORE_NAME),
+            "url"   => HTTP_SERVER,
+            "contactPoint" => $contactPoint
+        ];
+
+        // Build ContactPage schema
+        $contactSchema = [
+            "@context"    => "https://schema.org",
+            "@type"       => "ContactPage",
+            "name"        => sdata_prepare_string(STORE_NAME) . " Contact Us",
+            "description" => "Contact information for " . sdata_prepare_string(STORE_NAME),
+            "url"         => htmlspecialchars_decode(zen_href_link(FILENAME_CONTACT_US, '', 'SSL')),
+            "mainEntity"  => $mainEntity
+        ];
+
+        
+        $contactSchema = sdata_clean_schema($contactSchema);
+?>
+<script title="Structured Data: schemaContactPage" type="application/ld+json">
+<?= json_encode($contactSchema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . PHP_EOL; ?>
+</script>
+<?php
+    } // end contact us.
+
     // BOF ZenExpert: Product Listing schema for category pages
     if (!empty($listing_schema)) { ?>
         <script title="Structured Data: schemaItemList" type="application/ld+json">
@@ -1004,7 +1012,9 @@ if (PLUGIN_SDATA_SCHEMA_ENABLE === 'true') {
             ]
           }
         </script>
-    <?php }
+<?php 
+    
+    }
     // EOF ZenExpert: Product Listing schema for category pages
     ?>
     <?php if ($is_product_page) {//product page only ?>
