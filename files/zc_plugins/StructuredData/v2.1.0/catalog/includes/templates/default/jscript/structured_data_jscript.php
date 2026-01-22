@@ -567,27 +567,26 @@ if (empty($description)) {
     $description = '';
 }
 $description = sdata_prepare_string($description);
-//build sameAs list
-$sameAs_array = explode(', ', PLUGIN_SDATA_SAMEAS);
-array_push($sameAs_array, PLUGIN_SDATA_FOG_PAGE, PLUGIN_SDATA_TWITTER_PAGE, PLUGIN_SDATA_GOOGLE_PUBLISHER);
+// Build sameAs array
+$sameAs = [];
 
-// ZenExpert - note: Contact Us page should NOT be in sameAs list if it's not an external link so it's disabled here
-//$contact_us = $_GET['main_page'] !== 'contact_us' ? zen_href_link(FILENAME_CONTACT_US, '', 'SSL') : '';
-//if ($contact_us !== '') {
-//    $sameAs_array[] = $contact_us;
-//}//show contact_us on all pages except contact_us
-foreach ($sameAs_array as $key => $value) {//remove any empty keys where the constant was not set
-    if (empty($value)) {
-        unset($sameAs_array[$key]);
+// Add comma-separated list from PLUGIN_SDATA_SAMEAS
+if (PLUGIN_SDATA_SAMEAS !== '') {
+    $sameAs = array_map(
+        static fn($url) => trim($url, " \t\n\r\0\x0B\"'"),
+        explode(',', PLUGIN_SDATA_SAMEAS)
+    );
+}
+
+// Add individual social URLs
+foreach ([PLUGIN_SDATA_FOG_PAGE, PLUGIN_SDATA_TWITTER_PAGE, PLUGIN_SDATA_GOOGLE_PUBLISHER] as $url) {
+    if (!empty($url)) {
+        $sameAs[] = trim($url, " \t\n\r\0\x0B\"'");
     }
 }
-if (!empty($sameAs_array)) {
-    foreach ($sameAs_array as &$profile_page) {
-        $profile_page = '"' . $profile_page . '"';
-    }
-    unset($profile_page);
-}
-$sameAs = implode(",\n", $sameAs_array);
+
+// Remove duplicates + empty values
+$sameAs = array_values(array_filter(array_unique($sameAs)));
 
 //build acceptedPaymentMethod list
 $PaymentMethod_array = explode(', ', PLUGIN_SDATA_ACCEPTED_PAYMENT_METHODS);
@@ -742,47 +741,95 @@ if (!empty(PLUGIN_SDATA_RETURNS_POLICY_COUNTRY)) {
     $hasMerchantReturnPolicy = '';
 }
 ?>
-<?php if (PLUGIN_SDATA_SCHEMA_ENABLE === 'true') {
-    $organization_type = (defined('PLUGIN_SDATA_ORGANIZATION_TYPE') && PLUGIN_SDATA_ORGANIZATION_TYPE === 'LocalBusiness')
-        ? (defined('PLUGIN_SDATA_LOCAL_BUSINESS_TYPE') && PLUGIN_SDATA_LOCAL_BUSINESS_TYPE !== ''
-            ? PLUGIN_SDATA_LOCAL_BUSINESS_TYPE
-            : PLUGIN_SDATA_ORGANIZATION_TYPE)
-        : (defined('PLUGIN_SDATA_ORGANIZATION_TYPE') ? PLUGIN_SDATA_ORGANIZATION_TYPE : 'Organization');
-    ?>
-    <script title="Structured Data: schemaOrganisation" type="application/ld+json">
-        {
-             "@context": "https://schema.org",
-             "@type": "<?= $organization_type ?>",
-        <?php if (PLUGIN_SDATA_LEGAL_NAME !== '') { ?>
-       "legalName" : "<?= PLUGIN_SDATA_LEGAL_NAME ?>",<?= PHP_EOL ?>
-        <?php } ?>
-        "description": "<?= sdata_prepare_string(PLUGIN_SDATA_DESCRIPTION); ?>",
-        <?php if(PLUGIN_SDATA_ORGANIZATION_TYPE === 'LocalBusiness' && PLUGIN_SDATA_PROPERTY_IMAGE !== '') {
-            $photo = trim(PLUGIN_SDATA_PROPERTY_IMAGE);
-            // If multiple URLs separated by commas, convert to array and output JSON array.
-            if (str_contains($photo, ',')) {
-                $photos = array_map('trim', explode(',', $photo));
-                $image_json = json_encode($photos, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-                echo '     "image": ' . $image_json . ',' . PHP_EOL;
-            } else {
-                // Single URL
-                echo '     "image": "' . $photo . '",' . PHP_EOL;
-            }
-            ?>
-      "name": "<?= PLUGIN_SDATA_LOCAL_BUSINESS_NAME ?>",<?= PHP_EOL ?>
-      "telephone" : "<?= PLUGIN_SDATA_TELEPHONE ?>",<?= PHP_EOL ?>
-        <?php } ?>
-        "url": "<?= HTTP_SERVER; //root website ?>",
-     "logo": "<?= PLUGIN_SDATA_LOGO ?>",
-        <?php echo ((PLUGIN_SDATA_ORGANIZATION_TYPE === 'LocalBusiness' && PLUGIN_SDATA_PRICE_RANGE !== '') ? '"priceRange": "'. PLUGIN_SDATA_PRICE_RANGE .'",' : '');  ?><?= PHP_EOL ?>
-        "contactPoint" : [{
-              "@type" : "ContactPoint",
-          "telephone" : "<?= PLUGIN_SDATA_TELEPHONE ?>",
-      "contactType" : "customer service"<?php //a comma may not be necessary here as the following items are optional ?>
-  <?php if(defined('PLUGIN_SDATA_HOURS') && PLUGIN_SDATA_HOURS !== '') {
+<?php 
+if (PLUGIN_SDATA_SCHEMA_ENABLE === 'true') {
+    /*
+     * Organisation Schema
+     */
 
-            $hours_specs = [];
-            // Map short days to Schema URLs
+    $organization_type = 'Organization';
+
+    if (defined('PLUGIN_SDATA_ORGANIZATION_TYPE') && PLUGIN_SDATA_ORGANIZATION_TYPE !== '') {
+
+        // LocalBusiness or subtype
+        if (PLUGIN_SDATA_ORGANIZATION_TYPE === 'LocalBusiness') {
+            $organization_type =
+                (defined('PLUGIN_SDATA_LOCAL_BUSINESS_TYPE') && PLUGIN_SDATA_LOCAL_BUSINESS_TYPE !== '')
+                    ? PLUGIN_SDATA_LOCAL_BUSINESS_TYPE
+                    : 'LocalBusiness';
+        // Any other valid type
+        } else {
+            $organization_type = PLUGIN_SDATA_ORGANIZATION_TYPE;
+        }
+    }
+
+    /*
+     * Build base schema
+     */
+    $schema = [
+        '@context' => 'https://schema.org',
+        '@type'    => $organization_type,
+
+        // Core fields
+        'name'        => PLUGIN_SDATA_LOCAL_BUSINESS_NAME ?: PLUGIN_SDATA_LEGAL_NAME ?: STORE_NAME,
+        'legalName'   => PLUGIN_SDATA_LEGAL_NAME,
+        'description' => sdata_prepare_string(PLUGIN_SDATA_DESCRIPTION),
+        'url'         => HTTP_SERVER,
+        'logo'        => PLUGIN_SDATA_LOGO,
+        'email'       => PLUGIN_SDATA_EMAIL,
+        'telephone'   => PLUGIN_SDATA_TELEPHONE,
+        'faxNumber'   => PLUGIN_SDATA_FAX,
+
+        // Identifiers
+        'duns'        => PLUGIN_SDATA_DUNS,
+        'taxID'       => PLUGIN_SDATA_TAXID,
+        'vatID'       => PLUGIN_SDATA_VATID,
+
+        // Address
+        'address' => [
+            '@type'           => 'PostalAddress',
+            'streetAddress'   => PLUGIN_SDATA_STREET_ADDRESS,
+            'addressLocality' => PLUGIN_SDATA_LOCALITY,
+            'addressRegion'   => PLUGIN_SDATA_REGION,
+            'postalCode'      => PLUGIN_SDATA_POSTALCODE,
+            'addressCountry'  => PLUGIN_SDATA_COUNTRYNAME,
+        ],
+
+        // Contact point
+        'contactPoint' => [[
+            '@type'       => 'ContactPoint',
+            'telephone'   => PLUGIN_SDATA_TELEPHONE,
+            'contactType' => 'customer service',
+        ]],
+
+        // Optional arrays
+        'sameAs'            => $sameAs ,
+        'areaServed'        => (PLUGIN_SDATA_AREA_SERVED !== '' ? array_map('trim', explode(',', PLUGIN_SDATA_AREA_SERVED)) : []),
+        'availableLanguage' => (PLUGIN_SDATA_AVAILABLE_LANGUAGE !== '' ? array_map('trim', explode(',', PLUGIN_SDATA_AVAILABLE_LANGUAGE)) : []),
+    ];
+
+    /*
+     * LocalBusiness extras (NOT for OnlineBusiness or Organization)
+     */
+    if ($organization_type !== 'Organization' && $organization_type !== 'OnlineBusiness') {
+
+        // Images
+        if (PLUGIN_SDATA_PROPERTY_IMAGE !== '') {
+            $photo = trim(PLUGIN_SDATA_PROPERTY_IMAGE);
+            $schema['image'] = str_contains($photo, ',')
+                ? array_map('trim', explode(',', $photo))
+                : $photo;
+        }
+
+        // Price range
+        if (PLUGIN_SDATA_PRICE_RANGE !== '') {
+            $schema['priceRange'] = PLUGIN_SDATA_PRICE_RANGE;
+        }
+
+        /*
+         * Opening hours (LocalBusiness only)
+         */
+        if (defined('PLUGIN_SDATA_HOURS') && PLUGIN_SDATA_HOURS !== '') {
             $day_map = [
                 'Mon' => 'https://schema.org/Monday',
                 'Tue' => 'https://schema.org/Tuesday',
@@ -790,16 +837,19 @@ if (!empty(PLUGIN_SDATA_RETURNS_POLICY_COUNTRY)) {
                 'Thu' => 'https://schema.org/Thursday',
                 'Fri' => 'https://schema.org/Friday',
                 'Sat' => 'https://schema.org/Saturday',
-                'Sun' => 'https://schema.org/Sunday'
+                'Sun' => 'https://schema.org/Sunday',
             ];
 
+            $hours_specs = [];
             // break into groups (e.g., Weekdays | Weekends)
             $groups = explode('|', PLUGIN_SDATA_HOURS);
 
             foreach ($groups as $group) {
                 // Separate days from times (Mon,Tue;09:00-17:00)
                 $parts = explode(';', $group);
-                if (count($parts) !== 2) continue; // skip malformed
+                if (count($parts) !== 2) {
+                    continue; // skip malformed
+                }
 
                 $days_str = trim($parts[0]);
                 $times_str = trim($parts[1]);
@@ -813,13 +863,17 @@ if (!empty(PLUGIN_SDATA_RETURNS_POLICY_COUNTRY)) {
                         $schema_days[] = $day_map[$d];
                     }
                 }
-                if (empty($schema_days)) continue;
+                if (empty($schema_days)) {
+                    continue;
+                }
 
                 // process times (handles split shifts like 09:00-12:00,13:00-17:00)
                 $time_ranges = explode(',', $times_str);
                 foreach ($time_ranges as $range) {
                     $times = explode('-', $range);
-                    if (count($times) !== 2) continue;
+                    if (count($times) !== 2) {
+                        continue;
+                    }
                     $hours_specs[] = [
                         '@type' => 'OpeningHoursSpecification',
                         'dayOfWeek' => $schema_days,
@@ -829,31 +883,28 @@ if (!empty(PLUGIN_SDATA_RETURNS_POLICY_COUNTRY)) {
                 }
             }
 
-            // inject hours if they exist
             if (!empty($hours_specs)) {
-                echo ',' . PHP_EOL . '          "hoursAvailable": ' . json_encode($hours_specs, JSON_UNESCAPED_SLASHES);
+                $schema['contactPoint'][0]['hoursAvailable'] = $hours_specs;
             }
-        } ?>
-<?= (PLUGIN_SDATA_AREA_SERVED !== '' ? ",\n" . '       "areaServed" : "' . PLUGIN_SDATA_AREA_SERVED . '"' : '') //if not declared, assumed worldwide ?>
-<?= (PLUGIN_SDATA_AVAILABLE_LANGUAGE !== '' ? ",\n" . '"availableLanguage" : "' . PLUGIN_SDATA_AVAILABLE_LANGUAGE . '"' : '') //if not declared, english is assumed ?>
-<?= "\n                  }],\n" ?>
-<?php if ($sameAs !== '' ) { ?>      "sameAs" : [<?= $sameAs . PHP_EOL ?>
-                 ],<?= PHP_EOL ?><?php } ?>
-<?php if (PLUGIN_SDATA_DUNS !== '') { ?>        "duns" : "<?= PLUGIN_SDATA_DUNS ?>",<?= PHP_EOL ?><?php } ?>
-<?php if (PLUGIN_SDATA_TAXID !== '') { ?>       "taxID" : "<?= PLUGIN_SDATA_TAXID ?>",<?= PHP_EOL ?><?php } ?>
-<?php if (PLUGIN_SDATA_VATID !== '') { ?>       "vatID" : "<?= PLUGIN_SDATA_VATID ?>",<?= PHP_EOL ?><?php } ?>
-<?php if (PLUGIN_SDATA_EMAIL !== '') { ?>       "email" : "<?= PLUGIN_SDATA_EMAIL ?>",<?= PHP_EOL ?><?php } ?>
-<?php if (PLUGIN_SDATA_FAX !== '') { ?>     "faxNumber" : "<?= PLUGIN_SDATA_FAX ?>",<?= PHP_EOL ?><?php } ?>
-        "address": {
-              "@type": "PostalAddress",
-     "streetAddress" : "<?= PLUGIN_SDATA_STREET_ADDRESS ?>",
-  "addressLocality": "<?= PLUGIN_SDATA_LOCALITY ?>",
-    "addressRegion": "<?= PLUGIN_SDATA_REGION ?>",
-       "postalCode": "<?= PLUGIN_SDATA_POSTALCODE ?>",
-  "addressCountry" : "<?= PLUGIN_SDATA_COUNTRYNAME ?>"
-                 }
-}
-    </script>
+        }
+    }
+
+    /*
+     * CLEANUP: Remove empty fields recursively
+     */
+    $clean = function ($value) use (&$clean) {
+        if (is_array($value)) {
+            $value = array_map($clean, $value);
+            $value = array_filter($value, fn($v) => $v !== '' && $v !== [] && $v !== null);
+        }
+        return $value;
+    };
+
+    $schema = $clean($schema);
+?>
+<script title="Structured Data: schemaOrganisation" type="application/ld+json">
+<?= json_encode($schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . PHP_EOL; ?>
+</script>
     <?php if ($breadcrumb_count > 1) { ?>
         <script title="Structured Data: schemaBreadcrumb" type="application/ld+json">
             {
