@@ -989,34 +989,34 @@ if (PLUGIN_SDATA_SCHEMA_ENABLE === 'true') {
     } // end contact us.
 
     // BOF ZenExpert: Product Listing schema for category pages
-    if (!empty($listing_schema)) { ?>
-        <script title="Structured Data: schemaItemList" type="application/ld+json">
-            {
-              "@context": "https://schema.org",
-              "@type": "ItemList",
-              "itemListElement": [
-            <?php
-            $count = count($listing_schema);
-            foreach ($listing_schema as $key => $element) {
-                // Direct output of the pre-built array
-                echo json_encode($element, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    /*
+     * Category Page: ItemList Schema
+     */
 
-                // Add comma if it's not the last item
-                if ($key + 1 < $count) {
-                    echo ',' . PHP_EOL;
-                } else {
-                    echo PHP_EOL;
-                }
-            }
-            ?>
-            ]
-          }
-        </script>
-<?php 
-    
+    if (!empty($listing_schema)) {
+
+        // Build ItemList schema
+        $itemListSchema = [
+            "@context" => "https://schema.org",
+            "@type"    => "ItemList",
+            "itemListElement" => []
+        ];
+
+        foreach ($listing_schema as $element) {
+            // Each $element is already a valid ListItem array
+            $itemListSchema["itemListElement"][] = $element;
+        }
+
+        // Deep cleanup
+        $itemListSchema = sdata_clean_schema($itemListSchema);
+?>
+<script title="Structured Data: schemaItemList" type="application/ld+json">
+<?= json_encode($itemListSchema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . PHP_EOL; ?>
+</script>
+<?php
     }
-    // EOF ZenExpert: Product Listing schema for category pages
-    ?>
+// EOF ZenExpert: Product Listing schema for category pages
+?>
     <?php if ($is_product_page) {//product page only ?>
         <script title="Structured Data: schemaProduct" type="application/ld+json">
             {<?php //structured as per Google example for comparison:https://developers.google.com/search/docs/data-types/product ?>
