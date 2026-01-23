@@ -1265,104 +1265,173 @@ if (PLUGIN_SDATA_SCHEMA_ENABLE === 'true') {
 <?php
     } //eof Product Schema
 }//eof Schema enabled 
+
+if (PLUGIN_SDATA_FOG_ENABLE === 'true') {
 ?>
-<?php if (PLUGIN_SDATA_FOG_ENABLE === 'true') {?>
     <!-- Facebook structured data general-->
-    <?php if (PLUGIN_SDATA_FOG_APPID !== '') { ?>
-        <meta property="fb:app_id" content="<?= (int)PLUGIN_SDATA_FOG_APPID ?>">
-    <?php } ?>
-    <?php if (PLUGIN_SDATA_FOG_ADMINID !== '') { ?>
-        <meta property="fb:admins" content="<?= (int)PLUGIN_SDATA_FOG_ADMINID ?>">
-    <?php } ?>
+<?php
+// opeing php tags from this point forward must be at the begining of the line or the meta tag formatting will look wrong.
+    if (PLUGIN_SDATA_FOG_APPID !== '') { 
+?>
+    <meta property="fb:app_id" content="<?= (int)PLUGIN_SDATA_FOG_APPID ?>">
+<?php
+    } 
+?>
+<?php
+    if (PLUGIN_SDATA_FOG_ADMINID !== '') { 
+?>
+    <meta property="fb:admins" content="<?= (int)PLUGIN_SDATA_FOG_ADMINID ?>">
+<?php
+    } 
+?>
     <meta property="og:title" content="<?= $title ?>">
     <meta property="og:site_name" content="<?= STORE_NAME ?>">
-    <meta property="og:url" content="<?= $url ?>">
-    <?php if (!empty($locale)) { echo '<meta property="og:locale" content="' . $locale . '">';
+    <meta property="og:url" content="<?= $canonicalLink ?>">
+<?php
+    if (!empty($locale)) {
+?>
+    <meta property="og:locale" content="<?= $locale ?>">
+<?php    
         if (count($locales_array) > 0) {
-            foreach($locales_array as $key=>$value){ ?>
-                <meta property="og:locale:alternate" content="<?= $value ?>">
-            <?php }}} ?>
-    <?php $image = ($image_default ? $image_default_facebook : $image); ?>
-    <?php if ($debug_sd) {echo __LINE__ . ' $image_default=' . $image_default . '<br>';} ?>
+            foreach($locales_array as $key=>$value){ 
+?>
+    <meta property="og:locale:alternate" content="<?= $value ?>">
+<?php
+            }
+        }
+    }
+    $image = ($image_default ? $image_default_facebook : $image); 
+    if ($debug_sd) {
+        echo __LINE__ . ' $image_default=' . $image_default . '<br>';
+    }
+?>
     <meta property="og:image" content="<?= $image ?>">
     <meta property="og:image:url" content="<?= $image ?>">
-    <?php
+<?php
     if (is_readable(str_replace(HTTP_SERVER . DIR_WS_CATALOG, '', $image))) {
         $image_info = @getimagesize(str_replace(HTTP_SERVER . DIR_WS_CATALOG, '', $image));
 //log the problem for correction
         if ($image_info === false) {
             error_log(__FILE__ . ":getimagesize($image) returned FALSE: image is corrupt");
             $image = DIR_WS_IMAGES . PRODUCTS_IMAGE_NO_IMAGE;
-            $image_info = getimagesize(str_replace(HTTP_SERVER . DIR_WS_CATALOG, '', $image)); ?>
+            $image_info = getimagesize(str_replace(HTTP_SERVER . DIR_WS_CATALOG, '', $image));
+?>            
             <!-- ERROR: image is corrupt: see debug logs -->
-        <?php } ?>
-        <meta property="og:image:alt" content="<?= htmlentities($image_alt, ENT_QUOTES, CHARSET, false) ?>">
-        <meta property="og:image:type" content="<?= $image_info['mime'] ?>">
-        <meta property="og:image:width" content="<?= $image_info[0] ?>">
-        <meta property="og:image:height" content="<?= $image_info[1] ?>">
-    <?php } ?>
+<?php
+        }
+?>
+    <meta property="og:image:alt" content="<?= htmlentities($image_alt, ENT_QUOTES, CHARSET, false) ?>">
+    <meta property="og:image:type" content="<?= $image_info['mime'] ?>">
+    <meta property="og:image:width" content="<?= $image_info[0] ?>">
+    <meta property="og:image:height" content="<?= $image_info[1] ?>">
+<?php
+    } 
+?>
     <meta property="og:description" content="<?= htmlentities($description) ?>">
-    <?php if ($facebook_type !== 'product') { ?>
-        <meta property="og:type" content="<?= PLUGIN_SDATA_FOG_TYPE_SITE ?>">
-        <?php if (PLUGIN_SDATA_STREET_ADDRESS !== '') { ?>
-            <meta property="business:contact_data:street_address" content="<?= PLUGIN_SDATA_STREET_ADDRESS ?>">
-        <?php } ?>
-        <?php if (PLUGIN_SDATA_LOCALITY !== '') { ?>
-            <meta property="business:contact_data:locality" content="<?= PLUGIN_SDATA_LOCALITY ?>">
-        <?php } ?>
-        <?php if (PLUGIN_SDATA_REGION !== '') { ?>
-            <meta property="business:contact_data:region" content="<?= PLUGIN_SDATA_REGION ?>">
-        <?php } ?>
-        <?php if (PLUGIN_SDATA_POSTALCODE !== '') { ?>
-            <meta property="business:contact_data:postal_code" content="<?= PLUGIN_SDATA_POSTALCODE ?>">
-        <?php } ?>
-        <?php if (PLUGIN_SDATA_COUNTRYNAME !== '') { ?>
-            <meta property="business:contact_data:country_name" content="<?= PLUGIN_SDATA_COUNTRYNAME ?>">
-        <?php } ?>
-        <?php if (PLUGIN_SDATA_EMAIL !== '') { ?>
-            <meta property="business:contact_data:email" content="<?= PLUGIN_SDATA_EMAIL ?>">
-        <?php } ?>
-        <?php if (PLUGIN_SDATA_TELEPHONE !== '') { ?>
-            <meta property="business:contact_data:phone_number" content="<?= PLUGIN_SDATA_TELEPHONE ?>">
-        <?php } ?>
-        <?php if (PLUGIN_SDATA_FAX !== '') { ?>
-            <meta property="business:contact_data:fax_number" content="<?= PLUGIN_SDATA_FAX ?>">
-        <?php } ?>
-        <meta property="business:contact_data:website" content="<?= HTTP_SERVER ?>">
-        <!-- eof Facebook structured data general-->
-    <?php } else { ?>
-        <!-- Facebook structured data for product-->
-        <meta property="og:type" content="<?= trim(PLUGIN_SDATA_FOG_TYPE_PRODUCT) ?>">
-        <meta property="product:availability" content="<?php if ($product_base_stock > 0) { ?>instock<?php } ?><?php if ($product_base_stock < 1) { ?>pending<?php } ?>">
-        <meta property="product:brand" content="<?= $manufacturer_name ?>">
-        <meta property="product:category" content="<?= htmlentities($category_name) ?>">
-        <meta property="product:condition" content="<?= PLUGIN_SDATA_FOG_PRODUCT_CONDITION ?>">
-        <?php if ($product_base_mpn !== '') {
-            echo '<meta property="product:mfr_part_no" content="' . $product_base_mpn . '">' . PHP_EOL;
-        } ?>
-        <meta property="product:price:amount" content="<?= $product_base_displayed_price ?>">
-        <meta property="product:price:currency" content="<?= PLUGIN_SDATA_PRICE_CURRENCY ?>">
-        <meta property="product:product_link" content="<?= $url ?>">
-        <meta property="product:retailer" content="<?= PLUGIN_SDATA_FOG_APPID ?>">
-        <meta property="product:retailer_category" content="<?= htmlentities($category_name) ?>">
-        <meta property="product:retailer_part_no" content="<?= $product_base_sku ?>">
-        <!-- eof Facebook structured data -->
-    <?php } }//end facebook enabled  ?>
-<?php if (PLUGIN_SDATA_TWITTER_CARD_ENABLE === 'true') { ?>
+<?php
+    if ($facebook_type !== 'product') { 
+?>
+    <meta property="og:type" content="<?= PLUGIN_SDATA_FOG_TYPE_SITE ?>">
+<?php
+        if (PLUGIN_SDATA_STREET_ADDRESS !== '') { 
+?>
+    <meta property="business:contact_data:street_address" content="<?= PLUGIN_SDATA_STREET_ADDRESS ?>">
+<?php 
+        }
+        if (PLUGIN_SDATA_LOCALITY !== '') { 
+?>
+    <meta property="business:contact_data:locality" content="<?= PLUGIN_SDATA_LOCALITY ?>">
+<?php
+        } 
+        if (PLUGIN_SDATA_REGION !== '') {
+ ?>
+    <meta property="business:contact_data:region" content="<?= PLUGIN_SDATA_REGION ?>">
+<?php
+        } 
+        if (PLUGIN_SDATA_POSTALCODE !== '') {
+?>
+    <meta property="business:contact_data:postal_code" content="<?= PLUGIN_SDATA_POSTALCODE ?>">
+<?php
+        }
+        if (PLUGIN_SDATA_COUNTRYNAME !== '') {
+?>
+    <meta property="business:contact_data:country_name" content="<?= PLUGIN_SDATA_COUNTRYNAME ?>">
+<?php
+        }
+        if (PLUGIN_SDATA_EMAIL !== '') {
+?>
+    <meta property="business:contact_data:email" content="<?= PLUGIN_SDATA_EMAIL ?>">
+<?php
+        }
+        if (PLUGIN_SDATA_TELEPHONE !== '') {
+?>
+    <meta property="business:contact_data:phone_number" content="<?= PLUGIN_SDATA_TELEPHONE ?>">
+<?php
+        }
+        if (PLUGIN_SDATA_FAX !== '') {
+?>
+    <meta property="business:contact_data:fax_number" content="<?= PLUGIN_SDATA_FAX ?>">
+<?php
+        }
+?>
+    <meta property="business:contact_data:website" content="<?= HTTP_SERVER ?>">
+    <!-- eof Facebook structured data general-->
+<?php
+    } else {
+?>
+    <!-- Facebook structured data for product-->
+    <meta property="og:type" content="<?= trim(PLUGIN_SDATA_FOG_TYPE_PRODUCT) ?>">
+    <meta property="product:availability" content="<?= ($product_base_stock > 0) ? 'in stock' :
+        ((PLUGIN_SDATA_OOS_DEFAULT === 'BackOrder') ? 'available for order' :
+        ((PLUGIN_SDATA_OOS_DEFAULT === 'PreSales') ? 'preorder' :
+        'out of stock' ))?>">
+    <meta property="product:brand" content="<?= (isset($manufacturer_name) && trim($manufacturer_name) !== '')
+                    ? $manufacturer_name
+                    : (defined('STORE_NAME') ? STORE_NAME : '') ?>">
+    <meta property="product:category" content="<?= htmlentities($category_name) ?>">
+    <meta property="product:condition" content="<?= PLUGIN_SDATA_FOG_PRODUCT_CONDITION ?>">
+<?php
+        if ($product_base_mpn !== '') {
+?>
+    <meta property="product:mfr_part_no" content="' . $product_base_mpn . '">' . PHP_EOL;
+<?php
+        }
+?>
+    <meta property="product:price:amount" content="<?= $product_base_displayed_price ?>">
+    <meta property="product:price:currency" content="<?= PLUGIN_SDATA_PRICE_CURRENCY ?>">
+    <meta property="product:product_link" content="<?= $canonicalLink ?>">
+    <meta property="product:retailer" content="<?= !empty(PLUGIN_SDATA_FOG_APPID) ? PLUGIN_SDATA_FOG_APPID : HTTP_SERVER . DIR_WS_CATALOG ?>">
+    <meta property="product:retailer_category" content="<?= htmlentities($category_name) ?>">
+    <meta property="product:retailer_part_no" content="<?= $product_base_sku ?>">
+    <!-- eof Facebook structured data -->
+<?php
+    }
+} //end facebook enabled 
+?>
+<?php
+if (PLUGIN_SDATA_TWITTER_CARD_ENABLE === 'true') {
+?>
     <!-- Twitter Card markup -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:site" content="<?= PLUGIN_SDATA_TWITTER_USERNAME ?>">
     <meta name="twitter:title" content="<?= $title ?>">
     <meta name="twitter:description" content="<?= htmlentities($description) ?>">
-    <?php $image = ($image_default ? $image_default_twitter : $image); ?>
+<?php
+$image = ($image_default ? $image_default_twitter : $image);
+?>
     <meta name="twitter:image" content="<?= $image ?>">
     <meta name="twitter:image:alt" content="<?= htmlentities($image_alt, ENT_QUOTES, CHARSET, false) ?>">
-    <meta name="twitter:url" content="<?= htmlentities($url, ENT_COMPAT, CHARSET, false) ?>">
+    <meta name="twitter:url" content="<?= htmlentities($canonicalLink, ENT_COMPAT, CHARSET, false) ?>">
     <meta name="twitter:domain" content="<?= HTTP_SERVER ?>">
     <!-- eof Twitter Card markup -->
-<?php } //end of Twitter enabled ?>
+<?php
+} //end of Twitter enabled
+?>
 <?php //google+ markup
-if (PLUGIN_SDATA_GOOGLE_PUBLISHER !== '') { ?>
+if (PLUGIN_SDATA_GOOGLE_PUBLISHER !== '') {
+?>
     <!-- Google+-->
     <link href="<?= PLUGIN_SDATA_GOOGLE_PUBLISHER ?>" rel="publisher">
-    <!-- eof Google+--><?php } //eof Google+ ?>
+    <!-- eof Google+-->
+<?php
+} //eof Google+ 
