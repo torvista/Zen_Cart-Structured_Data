@@ -65,7 +65,11 @@ $facebookAvailability = [
 ];
 
 // Product Condition options
-$itemCondition = ['new' => 'NewCondition', 'used' => 'UsedCondition', 'refurbished' => 'RefurbishedCondition'];
+$itemCondition = [
+    'new' => 'NewCondition',
+    'used' => 'UsedCondition',
+    'refurbished' => 'RefurbishedCondition',
+];
 
 // Merchant Return Policy options
 $returnPolicyCategory = [
@@ -591,7 +595,7 @@ foreach ([PLUGIN_SDATA_FOG_PAGE, PLUGIN_SDATA_TWITTER_PAGE, PLUGIN_SDATA_GOOGLE_
 // Remove duplicates + empty values
 $sameAs = array_values(array_filter(array_unique($sameAs)));
 
-// Build acceptedPaymentMethod list  
+// Build acceptedPaymentMethod list
 $PaymentMethods = [];
 
 $PaymentMethod_array = explode(', ', PLUGIN_SDATA_ACCEPTED_PAYMENT_METHODS);
@@ -745,7 +749,7 @@ if (!empty(PLUGIN_SDATA_RETURNS_POLICY_COUNTRY)) {
     ];
 }
 ?>
-<?php 
+<?php
 if (PLUGIN_SDATA_SCHEMA_ENABLE === 'true') {
     /*
      * Organisation Schema
@@ -772,43 +776,43 @@ if (PLUGIN_SDATA_SCHEMA_ENABLE === 'true') {
      */
     $schema = [
         '@context' => 'https://schema.org',
-        '@type'    => $organization_type,
+        '@type' => $organization_type,
 
         // Core fields
-        'name'        => PLUGIN_SDATA_LOCAL_BUSINESS_NAME ?: PLUGIN_SDATA_LEGAL_NAME ?: STORE_NAME,
-        'legalName'   => PLUGIN_SDATA_LEGAL_NAME,
+        'name' => PLUGIN_SDATA_LOCAL_BUSINESS_NAME ?: PLUGIN_SDATA_LEGAL_NAME ?: STORE_NAME,
+        'legalName' => PLUGIN_SDATA_LEGAL_NAME,
         'description' => sdata_prepare_string(PLUGIN_SDATA_DESCRIPTION),
-        'url'         => HTTP_SERVER,
-        'logo'        => PLUGIN_SDATA_LOGO,
-        'email'       => PLUGIN_SDATA_EMAIL,
-        'telephone'   => PLUGIN_SDATA_TELEPHONE,
-        'faxNumber'   => PLUGIN_SDATA_FAX,
+        'url' => HTTP_SERVER,
+        'logo' => PLUGIN_SDATA_LOGO,
+        'email' => PLUGIN_SDATA_EMAIL,
+        'telephone' => PLUGIN_SDATA_TELEPHONE,
+        'faxNumber' => PLUGIN_SDATA_FAX,
 
         // Identifiers
-        'duns'        => PLUGIN_SDATA_DUNS,
-        'taxID'       => PLUGIN_SDATA_TAXID,
-        'vatID'       => PLUGIN_SDATA_VATID,
+        'duns' => PLUGIN_SDATA_DUNS,
+        'taxID' => PLUGIN_SDATA_TAXID,
+        'vatID' => PLUGIN_SDATA_VATID,
 
         // Address
         'address' => [
-            '@type'           => 'PostalAddress',
-            'streetAddress'   => PLUGIN_SDATA_STREET_ADDRESS,
+            '@type' => 'PostalAddress',
+            'streetAddress' => PLUGIN_SDATA_STREET_ADDRESS,
             'addressLocality' => PLUGIN_SDATA_LOCALITY,
-            'addressRegion'   => PLUGIN_SDATA_REGION,
-            'postalCode'      => PLUGIN_SDATA_POSTALCODE,
-            'addressCountry'  => PLUGIN_SDATA_COUNTRYNAME,
+            'addressRegion' => PLUGIN_SDATA_REGION,
+            'postalCode' => PLUGIN_SDATA_POSTALCODE,
+            'addressCountry' => PLUGIN_SDATA_COUNTRYNAME,
         ],
 
         // Contact point
         'contactPoint' => [[
-            '@type'       => 'ContactPoint',
-            'telephone'   => PLUGIN_SDATA_TELEPHONE,
+            '@type' => 'ContactPoint',
+            'telephone' => PLUGIN_SDATA_TELEPHONE,
             'contactType' => 'customer service',
         ]],
 
         // Optional arrays
-        'sameAs'            => $sameAs ,
-        'areaServed'        => (PLUGIN_SDATA_AREA_SERVED !== '' ? array_map('trim', explode(',', PLUGIN_SDATA_AREA_SERVED)) : []),
+        'sameAs' => $sameAs ,
+        'areaServed' => (PLUGIN_SDATA_AREA_SERVED !== '' ? array_map('trim', explode(',', PLUGIN_SDATA_AREA_SERVED)) : []),
         'availableLanguage' => (PLUGIN_SDATA_AVAILABLE_LANGUAGE !== '' ? array_map('trim', explode(',', PLUGIN_SDATA_AVAILABLE_LANGUAGE)) : []),
     ];
 
@@ -912,11 +916,11 @@ if (PLUGIN_SDATA_SCHEMA_ENABLE === 'true') {
     foreach ($trail as $i => $item) {
         $items[] = [
             'position' => $i + 1,
-            'id'       => htmlspecialchars_decode($item['link']),
-            'name'     => $item['title']
+            'id' => htmlspecialchars_decode($item['link']),
+            'name' => $item['title']
         ];
     }
-    
+
     $breadcrumb_count = count($items);
 
 
@@ -956,14 +960,14 @@ if (PLUGIN_SDATA_SCHEMA_ENABLE === 'true') {
 </script>
 <?php
     } // end breadcrumb
-    
+
     // Check if we are on the Contact Us page
     if ($current_page_base === 'contact_us') {
 
         // Build ContactPoint
         $contactPoint = [
-            '@type'       => 'ContactPoint',
-            'telephone'   => sdata_prepare_string(STORE_TELEPHONE_CUSTSERVICE),
+            '@type' => 'ContactPoint',
+            'telephone' => sdata_prepare_string(STORE_TELEPHONE_CUSTSERVICE),
             'contactType' => 'customer service',
         ];
 
@@ -978,22 +982,22 @@ if (PLUGIN_SDATA_SCHEMA_ENABLE === 'true') {
         // Build mainEntity Organization
         $mainEntity = [
             '@type' => 'Organization',
-            'name'  => sdata_prepare_string(STORE_NAME),
-            'url'   => HTTP_SERVER,
+            'name' => sdata_prepare_string(STORE_NAME),
+            'url' => HTTP_SERVER,
             'contactPoint' => $contactPoint
         ];
 
         // Build ContactPage schema
         $contactSchema = [
-            '@context'    => 'https://schema.org',
-            '@type'       => 'ContactPage',
-            'name'        => sdata_prepare_string(STORE_NAME) . ' Contact Us',
+            '@context' => 'https://schema.org',
+            '@type' => 'ContactPage',
+            'name' => sdata_prepare_string(STORE_NAME) . ' Contact Us',
             'description' => 'Contact information for ' . sdata_prepare_string(STORE_NAME),
-            'url'         => htmlspecialchars_decode(zen_href_link(FILENAME_CONTACT_US, '', 'SSL')),
-            'mainEntity'  => $mainEntity
+            'url' => htmlspecialchars_decode(zen_href_link(FILENAME_CONTACT_US, '', 'SSL')),
+            'mainEntity' => $mainEntity
         ];
 
-        
+
         $contactSchema = sdata_clean_schema($contactSchema);
 ?>
 <script title="Structured Data: schemaContactPage" type="application/ld+json">
@@ -1012,7 +1016,7 @@ if (PLUGIN_SDATA_SCHEMA_ENABLE === 'true') {
         // Build ItemList schema
         $itemListSchema = [
             '@context' => 'https://schema.org',
-            '@type'    => 'ItemList',
+            '@type' => 'ItemList',
             'itemListElement' => []
         ];
 
@@ -1038,25 +1042,25 @@ if (PLUGIN_SDATA_SCHEMA_ENABLE === 'true') {
 
         // Base Product schema
         $productSchema = [
-            '@context'    => 'https://schema.org',
-            '@type'       => 'Product',
-            'name'        => sdata_truncate($product_name, PLUGIN_SDATA_MAX_NAME),
-            'url'         => htmlspecialchars_decode($canonicalLink),
-            'image'       => $image,
+            '@context' => 'https://schema.org',
+            '@type' => 'Product',
+            'name' => sdata_truncate($product_name, PLUGIN_SDATA_MAX_NAME),
+            'url' => htmlspecialchars_decode($canonicalLink),
+            'image' => $image,
             'description' => sdata_truncate($description, PLUGIN_SDATA_MAX_DESCRIPTION),
-            'sku'         => $product_base_sku,
-            'weight'      => [
+            'sku' => $product_base_sku,
+            'weight' => [
                 '@type' => 'QuantitativeValue',
                 'value' => $weight,
                 'unitCode' => ((SHIPPING_WEIGHT_UNITS === 'kgs') ? 'KGM' : 'LBR'),
-                ],
-            'brand'       => [
+            ],
+            'brand' => [
                 '@type' => 'Brand',
-                'name'  => (isset($manufacturer_name) && trim($manufacturer_name) !== '')
+                'name' => (isset($manufacturer_name) && trim($manufacturer_name) !== '')
                     ? $manufacturer_name
                     : (defined('STORE_NAME') ? STORE_NAME : ''),
             ],
-            'category'    => $category_name,
+            'category' => $category_name,
         ];
 
         // Optional identifiers
@@ -1098,21 +1102,21 @@ if (PLUGIN_SDATA_SCHEMA_ENABLE === 'true') {
                     foreach ($product_attributes as $index => $product_attribute) {
 
                         $offer = [
-                            '@type'         => 'Offer',
-                            'price'         => number_format((float)$product_attribute['price'], $decimal_places, '.', ''),
-                            'weight'        => [
+                            '@type' => 'Offer',
+                            'price' => number_format((float)$product_attribute['price'], $decimal_places, '.', ''),
+                            'weight' => [
                                 '@type' => 'QuantitativeValue',
                                 'value' => ($weight + $product_attribute['weight'] > 0
                                                 ? $weight + $product_attribute['weight']
                                                 : $weight),
                                 'unitCode' => ((SHIPPING_WEIGHT_UNITS === 'kgs') ? 'KGM' : 'LBR'),
-                                ], 
+                            ],
                             'priceCurrency' => PLUGIN_SDATA_PRICE_CURRENCY,
-                            'availability'  => $product_attribute['stock'] > 0
+                            'availability' => $product_attribute['stock'] > 0
                                 ? $itemAvailability['InStock']
                                 : $oosItemAvailability,
                             'priceValidUntil' => date('Y') . '-12-31',
-                            'url'           => htmlspecialchars_decode($canonicalLink),
+                            'url' => htmlspecialchars_decode($canonicalLink),
                         ];
 
                         // Optional: merchant return policy (previously injected as raw JSON)
@@ -1147,12 +1151,12 @@ if (PLUGIN_SDATA_SCHEMA_ENABLE === 'true') {
                     $productSchema['__comment'] = 'attribute stock handling default:' . $attribute_stock_handler;
 
                     $offer = [
-                        'url'            => htmlspecialchars_decode($canonicalLink),
-                        'priceCurrency'  => PLUGIN_SDATA_PRICE_CURRENCY,
+                        'url' => htmlspecialchars_decode($canonicalLink),
+                        'priceCurrency' => PLUGIN_SDATA_PRICE_CURRENCY,
                         'priceValidUntil'=> date('Y') . '-12-31',
-                        'itemCondition'  => 'https://schema.org/' . $itemCondition[PLUGIN_SDATA_FOG_PRODUCT_CONDITION],
-                        'availability'   => ($product_base_stock > 0 ? $itemAvailability['InStock'] : $oosItemAvailability),
-                        'seller'         => [
+                        'itemCondition' => 'https://schema.org/' . $itemCondition[PLUGIN_SDATA_FOG_PRODUCT_CONDITION],
+                        'availability' => ($product_base_stock > 0 ? $itemAvailability['InStock'] : $oosItemAvailability),
+                        'seller' => [
                             '@type' => 'Organization',
                             'name' => STORE_NAME,
                         ],
@@ -1182,8 +1186,8 @@ if (PLUGIN_SDATA_SCHEMA_ENABLE === 'true') {
                         : (int)PLUGIN_SDATA_DELIVERYLEADTIME_OOS);
                     if (!empty($leadTime)) {
                         $offer['deliveryLeadTime'] = [
-                            '@type'    => 'QuantitativeValue',
-                            'value'    => $leadTime,
+                            '@type' => 'QuantitativeValue',
+                            'value' => $leadTime,
                             'unitCode' => 'DAY',
                         ];
                     }
@@ -1201,14 +1205,14 @@ if (PLUGIN_SDATA_SCHEMA_ENABLE === 'true') {
         } else {
             // Simple product (no attributes)
             $offer = [
-                '@type'          => 'Offer',
-                'price'          => $product_base_displayed_price,
-                'url'            => htmlspecialchars_decode($canonicalLink),
-                'priceCurrency'  => PLUGIN_SDATA_PRICE_CURRENCY,
+                '@type' => 'Offer',
+                'price' => $product_base_displayed_price,
+                'url' => htmlspecialchars_decode($canonicalLink),
+                'priceCurrency' => PLUGIN_SDATA_PRICE_CURRENCY,
                 'priceValidUntil'=> date('Y') . '-12-31',
-                'itemCondition'  => 'https://schema.org/' . $itemCondition[PLUGIN_SDATA_FOG_PRODUCT_CONDITION],
-                'availability'   => ($product_base_stock > 0 ? $itemAvailability['InStock'] : $oosItemAvailability),
-                'seller'         => [
+                'itemCondition' => 'https://schema.org/' . $itemCondition[PLUGIN_SDATA_FOG_PRODUCT_CONDITION],
+                'availability' => ($product_base_stock > 0 ? $itemAvailability['InStock'] : $oosItemAvailability),
+                'seller' => [
                         '@type' => 'Organization',
                         'name' => STORE_NAME,
                     ],
@@ -1228,8 +1232,8 @@ if (PLUGIN_SDATA_SCHEMA_ENABLE === 'true') {
                 : (int)PLUGIN_SDATA_DELIVERYLEADTIME_OOS);
             if (!empty($leadTime)) {
                 $offer['deliveryLeadTime'] = [
-                    '@type'    => 'QuantitativeValue',
-                    'value'    => $leadTime,
+                    '@type' => 'QuantitativeValue',
+                    'value' => $leadTime,
                     'unitCode' => 'DAY',
                 ];
             }
@@ -1239,7 +1243,7 @@ if (PLUGIN_SDATA_SCHEMA_ENABLE === 'true') {
             }
 
             $offer['acceptedPaymentMethod']  = $PaymentMethods;
-           
+
             $productSchema['offers'] = $offer;
         }
 
@@ -1249,7 +1253,7 @@ if (PLUGIN_SDATA_SCHEMA_ENABLE === 'true') {
 
         if ($reviewCount > 0) {
             $productSchema['aggregateRating'] = [
-                '@type'       => 'AggregateRating',
+                '@type' => 'AggregateRating',
                 'ratingValue' => $ratingValue,
                 'reviewCount' => $reviewCount,
             ];
@@ -1261,12 +1265,12 @@ if (PLUGIN_SDATA_SCHEMA_ENABLE === 'true') {
                         '@type' => 'Review',
                         'author' => [
                             '@type' => 'Person',
-                            'name'  => strtok($review['customersName'], ' '),
+                            'name' => strtok($review['customersName'], ' '),
                         ],
-                        'reviewBody'   => ($review['reviewsText'] ?: 'Reviewer did not leave a written comment.'),
+                        'reviewBody' => ($review['reviewsText'] ?: 'Reviewer did not leave a written comment.'),
                         'datePublished'=> substr($review['dateAdded'], 0, 10),
                         'reviewRating' => [
-                            '@type'      => 'Rating',
+                            '@type' => 'Rating',
                             'ratingValue'=> $review['reviewsRating'],
                         ],
                     ];
@@ -1284,25 +1288,25 @@ if (PLUGIN_SDATA_SCHEMA_ENABLE === 'true') {
 </script>
 <?php
     } //eof Product Schema
-}//eof Schema enabled 
+}//eof Schema enabled
 
 if (PLUGIN_SDATA_FOG_ENABLE === 'true') {
 ?>
     <!-- Facebook structured data general-->
 <?php
 // opeing php tags from this point forward must be at the begining of the line or the meta tag formatting will look wrong.
-    if (PLUGIN_SDATA_FOG_APPID !== '') { 
+    if (PLUGIN_SDATA_FOG_APPID !== '') {
 ?>
     <meta property="fb:app_id" content="<?= (int)PLUGIN_SDATA_FOG_APPID ?>">
 <?php
-    } 
+    }
 ?>
 <?php
-    if (PLUGIN_SDATA_FOG_ADMINID !== '') { 
+    if (PLUGIN_SDATA_FOG_ADMINID !== '') {
 ?>
     <meta property="fb:admins" content="<?= (int)PLUGIN_SDATA_FOG_ADMINID ?>">
 <?php
-    } 
+    }
 ?>
     <meta property="og:title" content="<?= $title ?>">
     <meta property="og:site_name" content="<?= STORE_NAME ?>">
@@ -1311,16 +1315,16 @@ if (PLUGIN_SDATA_FOG_ENABLE === 'true') {
     if (!empty($locale)) {
 ?>
     <meta property="og:locale" content="<?= $locale ?>">
-<?php    
+<?php
         if (count($locales_array) > 0) {
-            foreach($locales_array as $key=>$value){ 
+            foreach($locales_array as $key=>$value){
 ?>
     <meta property="og:locale:alternate" content="<?= $value ?>">
 <?php
             }
         }
     }
-    $image = ($image_default ? $image_default_facebook : $image); 
+    $image = ($image_default ? $image_default_facebook : $image);
     if ($debug_sd) {
         echo __LINE__ . ' $image_default=' . $image_default . '<br>';
     }
@@ -1335,7 +1339,7 @@ if (PLUGIN_SDATA_FOG_ENABLE === 'true') {
             error_log(__FILE__ . ":getimagesize($image) returned FALSE: image is corrupt");
             $image = DIR_WS_IMAGES . PRODUCTS_IMAGE_NO_IMAGE;
             $image_info = getimagesize(str_replace(HTTP_SERVER . DIR_WS_CATALOG, '', $image));
-?>            
+?>
             <!-- ERROR: image is corrupt: see debug logs -->
 <?php
         }
@@ -1345,29 +1349,29 @@ if (PLUGIN_SDATA_FOG_ENABLE === 'true') {
     <meta property="og:image:width" content="<?= $image_info[0] ?>">
     <meta property="og:image:height" content="<?= $image_info[1] ?>">
 <?php
-    } 
+    }
 ?>
     <meta property="og:description" content="<?= htmlentities($description) ?>">
 <?php
-    if ($facebook_type !== 'product') { 
+    if ($facebook_type !== 'product') {
 ?>
     <meta property="og:type" content="<?= PLUGIN_SDATA_FOG_TYPE_SITE ?>">
 <?php
-        if (PLUGIN_SDATA_STREET_ADDRESS !== '') { 
+        if (PLUGIN_SDATA_STREET_ADDRESS !== '') {
 ?>
     <meta property="business:contact_data:street_address" content="<?= PLUGIN_SDATA_STREET_ADDRESS ?>">
-<?php 
+<?php
         }
-        if (PLUGIN_SDATA_LOCALITY !== '') { 
+        if (PLUGIN_SDATA_LOCALITY !== '') {
 ?>
     <meta property="business:contact_data:locality" content="<?= PLUGIN_SDATA_LOCALITY ?>">
 <?php
-        } 
+        }
         if (PLUGIN_SDATA_REGION !== '') {
  ?>
     <meta property="business:contact_data:region" content="<?= PLUGIN_SDATA_REGION ?>">
 <?php
-        } 
+        }
         if (PLUGIN_SDATA_POSTALCODE !== '') {
 ?>
     <meta property="business:contact_data:postal_code" content="<?= PLUGIN_SDATA_POSTALCODE ?>">
@@ -1423,7 +1427,7 @@ if (PLUGIN_SDATA_FOG_ENABLE === 'true') {
     <!-- eof Facebook structured data -->
 <?php
     }
-} //end facebook enabled 
+} //end facebook enabled
 ?>
 <?php
 if (PLUGIN_SDATA_TWITTER_CARD_ENABLE === 'true') {
@@ -1451,4 +1455,4 @@ if (PLUGIN_SDATA_GOOGLE_PUBLISHER !== '') {
     <link href="<?= PLUGIN_SDATA_GOOGLE_PUBLISHER ?>" rel="publisher">
     <!-- eof Google+-->
 <?php
-} //eof Google+ 
+} //eof Google+
