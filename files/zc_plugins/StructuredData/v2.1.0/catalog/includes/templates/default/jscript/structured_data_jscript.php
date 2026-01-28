@@ -41,7 +41,7 @@ $facebook_type = 'business.business';
 // ItemAvailability options
 $itemAvailability = [
     'BackOrder' => 'https://schema.org/BackOrder',                     // The item is on back order. BackOrder needs a date for when it will become available
-    'Discontinued' => ' https://schema.org/Discontinued',              // The item has been discontinued.
+    'Discontinued' => 'https://schema.org/Discontinued',              // The item has been discontinued.
     'InStock' => 'https://schema.org/InStock',                         // The item is in stock.
     'InStoreOnly' => 'https://schema.org/InStoreOnly',                 // The item is only available for purchase in store.
     'LimitedAvailability' => 'https://schema.org/LimitedAvailability', // The item has limited availability.
@@ -49,7 +49,19 @@ $itemAvailability = [
     'OutOfStock' => 'https://schema.org/OutOfStock',                   // The item is currently out of stock.
     'PreOrder' => 'https://schema.org/PreOrder',                       // The item is available for pre-order: buying in advance of a NEW product being released for sale. PreOrder needs a date for when a product will be released
     'PreSale' => 'https://schema.org/PreSale',                         // The item is available for ordering and delivery NOW before it is released for general availability.
-    'SoldOut' => 'https://schema.org/SoldOut'                          // The item has been sold out.
+    'SoldOut' => 'https://schema.org/SoldOut',                          // The item has been sold out.
+];
+$facebookAvailability = [
+    'BackOrder' => 'pending',
+    'Discontinued' => 'discontinued',
+    'InStock' => 'instock',
+    'InStoreOnly' => 'instock',
+    'LimitedAvailability' => 'instock',
+    'OnlineOnly' => 'instock',
+    'OutOfStock' => 'oos',
+    'PreOrder' => 'pending',
+    'PreSale' => 'pending',
+    'SoldOut' => 'oos',
 ];
 
 // Product Condition options
@@ -1033,7 +1045,11 @@ if (PLUGIN_SDATA_SCHEMA_ENABLE === 'true') {
             "image"       => $image,
             "description" => sdata_truncate($description, PLUGIN_SDATA_MAX_DESCRIPTION),
             "sku"         => $product_base_sku,
-            "weight"      => $weight . TEXT_PRODUCT_WEIGHT_UNIT,
+            "weight"      => [
+                "@type" => "QuantitativeValue",
+                "value" => $weight,
+                "unitCode" => ((SHIPPING_WEIGHT_UNITS === "kgs") ? "KGM" : "LBR"),
+                ],
             "brand"       => [
                 "@type" => "Brand",
                 "name"  => (isset($manufacturer_name) && trim($manufacturer_name) !== '')
@@ -1084,9 +1100,13 @@ if (PLUGIN_SDATA_SCHEMA_ENABLE === 'true') {
                         $offer = [
                             "@type"         => "Offer",
                             "price"         => number_format((float)$product_attribute['price'], $decimal_places, '.', ''),
-                            "weight"        => ($weight + $product_attribute['weight'] > 0
-                                ? $weight + $product_attribute['weight']
-                                : $weight) . TEXT_PRODUCT_WEIGHT_UNIT,
+                            "weight"        => [
+                                "@type" => "QuantitativeValue",
+                                "value" => ($weight + $product_attribute['weight'] > 0
+                                                ? $weight + $product_attribute['weight']
+                                                : $weight),
+                                "unitCode" => ((SHIPPING_WEIGHT_UNITS === "kgs") ? "KGM" : "LBR"),
+                                ], 
                             "priceCurrency" => PLUGIN_SDATA_PRICE_CURRENCY,
                             "availability"  => $product_attribute['stock'] > 0
                                 ? $itemAvailability['InStock']
@@ -1132,7 +1152,10 @@ if (PLUGIN_SDATA_SCHEMA_ENABLE === 'true') {
                         "priceValidUntil"=> date('Y') . '-12-31',
                         "itemCondition"  => "https://schema.org/" . $itemCondition[PLUGIN_SDATA_FOG_PRODUCT_CONDITION],
                         "availability"   => ($product_base_stock > 0 ? $itemAvailability['InStock'] : $oosItemAvailability),
-                        "seller"         => STORE_NAME,
+                        "seller"         => [
+                            "@type" => "Organization",
+                            "name" => STORE_NAME,
+                        ],
                     ];
 
                     // Optional: merchant return policy
@@ -1169,10 +1192,7 @@ if (PLUGIN_SDATA_SCHEMA_ENABLE === 'true') {
                         $offer["eligibleRegion"] = PLUGIN_SDATA_ELIGIBLE_REGION;
                     }
 
-                    $offer["acceptedPaymentMethod"] = [
-                        "@type" => "PaymentMethod",
-                        "name"  => $PaymentMethods, // assuming this is already an array of names
-                    ];
+                    $offer["acceptedPaymentMethod"] =  $PaymentMethods;
 
                     $productSchema["offers"] = $offer;
                     break;
@@ -1188,7 +1208,10 @@ if (PLUGIN_SDATA_SCHEMA_ENABLE === 'true') {
                 "priceValidUntil"=> date('Y') . '-12-31',
                 "itemCondition"  => "https://schema.org/" . $itemCondition[PLUGIN_SDATA_FOG_PRODUCT_CONDITION],
                 "availability"   => ($product_base_stock > 0 ? $itemAvailability['InStock'] : $oosItemAvailability),
-                "seller"         => STORE_NAME,
+                "seller"         => [
+                        "@type" => "Organization",
+                        "name" => STORE_NAME,
+                    ],
             ];
 
             // Optional: merchant return policy
@@ -1215,11 +1238,8 @@ if (PLUGIN_SDATA_SCHEMA_ENABLE === 'true') {
                 $offer["eligibleRegion"] = PLUGIN_SDATA_ELIGIBLE_REGION;
             }
 
-            $offer["acceptedPaymentMethod"] = [
-                "@type" => "PaymentMethod",
-                "name"  => $PaymentMethods, // assuming this is already an array of names
-            ];
-
+            $offer["acceptedPaymentMethod"]  = $PaymentMethods;
+           
             $productSchema["offers"] = $offer;
         }
 
@@ -1381,10 +1401,7 @@ if (PLUGIN_SDATA_FOG_ENABLE === 'true') {
 ?>
     <!-- Facebook structured data for product-->
     <meta property="og:type" content="<?= trim(PLUGIN_SDATA_FOG_TYPE_PRODUCT) ?>">
-    <meta property="product:availability" content="<?= ($product_base_stock > 0) ? 'in stock' :
-        ((PLUGIN_SDATA_OOS_DEFAULT === 'BackOrder') ? 'available for order' :
-        ((PLUGIN_SDATA_OOS_DEFAULT === 'PreSales') ? 'preorder' :
-        'out of stock' ))?>">
+    <meta property="product:availability" content="<?= (($product_base_stock > 0) ? 'instock' : $facebookAvailability[PLUGIN_SDATA_OOS_DEFAULT]) ?>">
     <meta property="product:brand" content="<?= (isset($manufacturer_name) && trim($manufacturer_name) !== '')
                     ? $manufacturer_name
                     : (defined('STORE_NAME') ? STORE_NAME : '') ?>">
