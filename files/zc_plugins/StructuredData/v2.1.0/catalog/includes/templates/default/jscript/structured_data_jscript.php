@@ -682,10 +682,10 @@ $hasMerchantReturnPolicy = [];
 
 if (!empty(PLUGIN_SDATA_RETURNS_POLICY_COUNTRY)) {
     $policyData = [
-        "@type" => "MerchantReturnPolicy",
-        "applicableCountry" => PLUGIN_SDATA_RETURNS_APPLICABLE_COUNTRY,
-        "returnPolicyCategory" => $returnPolicyCategory[PLUGIN_SDATA_RETURNS_POLICY],
-        "returnMethod" => $returnMethod[PLUGIN_SDATA_RETURNS_METHOD]
+        '@type' => 'MerchantReturnPolicy',
+        'applicableCountry' => PLUGIN_SDATA_RETURNS_APPLICABLE_COUNTRY,
+        'returnPolicyCategory' => $returnPolicyCategory[PLUGIN_SDATA_RETURNS_POLICY],
+        'returnMethod' => $returnMethod[PLUGIN_SDATA_RETURNS_METHOD]
     ];
 
     if (PLUGIN_SDATA_RETURNS_POLICY === 'Finite') {
@@ -716,32 +716,32 @@ if (!empty(PLUGIN_SDATA_RETURNS_POLICY_COUNTRY)) {
                 $percent = (float) str_replace('%', '', $rFeeVal) / 100;
 
                 $policyData['restockingFee'] = [
-                    "@type" => "MonetaryAmount",
-                    "currency" => $rCurrency,
-                    "value" => number_format($product_base_displayed_price * $percent, $decimal_places, '.', '')
+                    '@type' => 'MonetaryAmount',
+                    'currency' => $rCurrency,
+                    'value' => number_format($product_base_displayed_price * $percent, $decimal_places, '.', '')
                 ];
             }
         } else {
             // It is a fixed amount (e.g. "10.00")
             $policyData['description'] = "A restocking fee of {$rCurrency} {$rFeeVal} applies.";
             $policyData['restockingFee'] = [
-                "@type" => "MonetaryAmount",
-                "currency" => $rCurrency,
-                "value" => number_format((float) $rFeeVal, $decimal_places, '.', '')
+                '@type' => 'MonetaryAmount',
+                'currency' => $rCurrency,
+                'value' => number_format((float) $rFeeVal, $decimal_places, '.', '')
             ];
         }
 
     // Handle "ReturnShippingFees" (Fixed shipping cost)
     } elseif ($rType === 'ReturnShippingFees' && (float) $rFeeVal > 0) {
         $policyData['returnShippingFeesAmount'] = [
-            "@type" => "MonetaryAmount",
-            "currency" => $rCurrency,
-            "value" => number_format((float) $rFeeVal, $decimal_places, '.', '')
+            '@type' => 'MonetaryAmount',
+            'currency' => $rCurrency,
+            'value' => number_format((float) $rFeeVal, $decimal_places, '.', '')
         ];
     }
 
     $hasMerchantReturnPolicy = [
-        "hasMerchantReturnPolicy" => $policyData
+        'hasMerchantReturnPolicy' => $policyData
     ];
 }
 ?>
@@ -937,17 +937,17 @@ if (PLUGIN_SDATA_SCHEMA_ENABLE === 'true') {
     if ($breadcrumb_count > 1) {
 
         $breadcrumbSchema = [
-            "@context" => "https://schema.org",
-            "@type" => "BreadcrumbList",
-            "itemListElement" => []
+            '@context' => 'https://schema.org',
+            '@type' => 'BreadcrumbList',
+            'itemListElement' => []
         ];
 
         foreach ($items as $item) {
-            $breadcrumbSchema["itemListElement"][] = [
-                "@type" => "ListItem",
-                "position" => $item['position'],
-                "name" => $item['name'],
-                "item" => $item['id']
+            $breadcrumbSchema['itemListElement'][] = [
+                '@type' => 'ListItem',
+                'position' => $item['position'],
+                'name' => $item['name'],
+                'item' => $item['id']
             ];
         }
 ?>
@@ -962,35 +962,35 @@ if (PLUGIN_SDATA_SCHEMA_ENABLE === 'true') {
 
         // Build ContactPoint
         $contactPoint = [
-            "@type"       => "ContactPoint",
-            "telephone"   => sdata_prepare_string(STORE_TELEPHONE_CUSTSERVICE),
-            "contactType" => "customer service",
+            '@type'       => 'ContactPoint',
+            'telephone'   => sdata_prepare_string(STORE_TELEPHONE_CUSTSERVICE),
+            'contactType' => 'customer service',
         ];
 
         if (!empty(PLUGIN_SDATA_AREA_SERVED)) {
-            $contactPoint["areaServed"] = PLUGIN_SDATA_AREA_SERVED;
+            $contactPoint['areaServed'] = PLUGIN_SDATA_AREA_SERVED;
         }
 
         if (!empty(PLUGIN_SDATA_AVAILABLE_LANGUAGE)) {
-            $contactPoint["availableLanguage"] = PLUGIN_SDATA_AVAILABLE_LANGUAGE;
+            $contactPoint['availableLanguage'] = PLUGIN_SDATA_AVAILABLE_LANGUAGE;
         }
 
         // Build mainEntity Organization
         $mainEntity = [
-            "@type" => "Organization",
-            "name"  => sdata_prepare_string(STORE_NAME),
-            "url"   => HTTP_SERVER,
-            "contactPoint" => $contactPoint
+            '@type' => 'Organization',
+            'name'  => sdata_prepare_string(STORE_NAME),
+            'url'   => HTTP_SERVER,
+            'contactPoint' => $contactPoint
         ];
 
         // Build ContactPage schema
         $contactSchema = [
-            "@context"    => "https://schema.org",
-            "@type"       => "ContactPage",
-            "name"        => sdata_prepare_string(STORE_NAME) . " Contact Us",
-            "description" => "Contact information for " . sdata_prepare_string(STORE_NAME),
-            "url"         => htmlspecialchars_decode(zen_href_link(FILENAME_CONTACT_US, '', 'SSL')),
-            "mainEntity"  => $mainEntity
+            '@context'    => 'https://schema.org',
+            '@type'       => 'ContactPage',
+            'name'        => sdata_prepare_string(STORE_NAME) . ' Contact Us',
+            'description' => 'Contact information for ' . sdata_prepare_string(STORE_NAME),
+            'url'         => htmlspecialchars_decode(zen_href_link(FILENAME_CONTACT_US, '', 'SSL')),
+            'mainEntity'  => $mainEntity
         ];
 
         
@@ -1011,14 +1011,14 @@ if (PLUGIN_SDATA_SCHEMA_ENABLE === 'true') {
 
         // Build ItemList schema
         $itemListSchema = [
-            "@context" => "https://schema.org",
-            "@type"    => "ItemList",
-            "itemListElement" => []
+            '@context' => 'https://schema.org',
+            '@type'    => 'ItemList',
+            'itemListElement' => []
         ];
 
         foreach ($listing_schema as $element) {
             // Each $element is already a valid ListItem array
-            $itemListSchema["itemListElement"][] = $element;
+            $itemListSchema['itemListElement'][] = $element;
         }
 
         // Remove empty schema entries
@@ -1038,42 +1038,42 @@ if (PLUGIN_SDATA_SCHEMA_ENABLE === 'true') {
 
         // Base Product schema
         $productSchema = [
-            "@context"    => "https://schema.org",
-            "@type"       => "Product",
-            "name"        => sdata_truncate($product_name, PLUGIN_SDATA_MAX_NAME),
-            "url"         => htmlspecialchars_decode($canonicalLink),
-            "image"       => $image,
-            "description" => sdata_truncate($description, PLUGIN_SDATA_MAX_DESCRIPTION),
-            "sku"         => $product_base_sku,
-            "weight"      => [
-                "@type" => "QuantitativeValue",
-                "value" => $weight,
-                "unitCode" => ((SHIPPING_WEIGHT_UNITS === "kgs") ? "KGM" : "LBR"),
+            '@context'    => 'https://schema.org',
+            '@type'       => 'Product',
+            'name'        => sdata_truncate($product_name, PLUGIN_SDATA_MAX_NAME),
+            'url'         => htmlspecialchars_decode($canonicalLink),
+            'image'       => $image,
+            'description' => sdata_truncate($description, PLUGIN_SDATA_MAX_DESCRIPTION),
+            'sku'         => $product_base_sku,
+            'weight'      => [
+                '@type' => 'QuantitativeValue',
+                'value' => $weight,
+                'unitCode' => ((SHIPPING_WEIGHT_UNITS === 'kgs') ? 'KGM' : 'LBR'),
                 ],
-            "brand"       => [
-                "@type" => "Brand",
-                "name"  => (isset($manufacturer_name) && trim($manufacturer_name) !== '')
+            'brand'       => [
+                '@type' => 'Brand',
+                'name'  => (isset($manufacturer_name) && trim($manufacturer_name) !== '')
                     ? $manufacturer_name
                     : (defined('STORE_NAME') ? STORE_NAME : ''),
             ],
-            "category"    => $category_name,
+            'category'    => $category_name,
         ];
 
         // Optional identifiers
         if ($product_base_mpn !== '') {
-            $productSchema["mpn"] = $product_base_mpn;
+            $productSchema['mpn'] = $product_base_mpn;
         }
         if ($product_base_gtin !== '') {
-            $productSchema["gtin"] = $product_base_gtin;
+            $productSchema['gtin'] = $product_base_gtin;
         }
         if ($product_base_productID !== '') {
-            $productSchema["productID"] = $product_base_productID;
+            $productSchema['productID'] = $product_base_productID;
         }
 
         // Google product category (both variants kept)
         if ($product_base_gpc !== 0) {
-            $productSchema["googleProductCategory"]  = (string)$product_base_gpc;
-            $productSchema["google_product_category"] = (string)$product_base_gpc;
+            $productSchema['googleProductCategory']  = (string)$product_base_gpc;
+            $productSchema['google_product_category'] = (string)$product_base_gpc;
         }
 
         /*
@@ -1090,7 +1090,7 @@ if (PLUGIN_SDATA_SCHEMA_ENABLE === 'true') {
 
                 case 'posm':
                     // POSM: multiple offers, one per attribute
-                    $productSchema["__comment"] = "attribute stock handling:" . $attribute_stock_handler;
+                    $productSchema['__comment'] = 'attribute stock handling:' . $attribute_stock_handler;
 
                     $offers = [];
 
@@ -1098,21 +1098,21 @@ if (PLUGIN_SDATA_SCHEMA_ENABLE === 'true') {
                     foreach ($product_attributes as $index => $product_attribute) {
 
                         $offer = [
-                            "@type"         => "Offer",
-                            "price"         => number_format((float)$product_attribute['price'], $decimal_places, '.', ''),
-                            "weight"        => [
-                                "@type" => "QuantitativeValue",
-                                "value" => ($weight + $product_attribute['weight'] > 0
+                            '@type'         => 'Offer',
+                            'price'         => number_format((float)$product_attribute['price'], $decimal_places, '.', ''),
+                            'weight'        => [
+                                '@type' => 'QuantitativeValue',
+                                'value' => ($weight + $product_attribute['weight'] > 0
                                                 ? $weight + $product_attribute['weight']
                                                 : $weight),
-                                "unitCode" => ((SHIPPING_WEIGHT_UNITS === "kgs") ? "KGM" : "LBR"),
+                                'unitCode' => ((SHIPPING_WEIGHT_UNITS === 'kgs') ? 'KGM' : 'LBR'),
                                 ], 
-                            "priceCurrency" => PLUGIN_SDATA_PRICE_CURRENCY,
-                            "availability"  => $product_attribute['stock'] > 0
+                            'priceCurrency' => PLUGIN_SDATA_PRICE_CURRENCY,
+                            'availability'  => $product_attribute['stock'] > 0
                                 ? $itemAvailability['InStock']
                                 : $oosItemAvailability,
-                            "priceValidUntil" => date('Y') . '-12-31',
-                            "url"           => htmlspecialchars_decode($canonicalLink),
+                            'priceValidUntil' => date('Y') . '-12-31',
+                            'url'           => htmlspecialchars_decode($canonicalLink),
                         ];
 
                         // Optional: merchant return policy (previously injected as raw JSON)
@@ -1123,38 +1123,38 @@ if (PLUGIN_SDATA_SCHEMA_ENABLE === 'true') {
                         }
 
                         if (!empty($product_attribute['sku'])) {
-                            $offer["sku"] = $product_attribute['sku'];
+                            $offer['sku'] = $product_attribute['sku'];
                         }
                         if (!empty($product_attribute['mpn'])) {
-                            $offer["mpn"] = $product_attribute['mpn'];
+                            $offer['mpn'] = $product_attribute['mpn'];
                         }
                         if (!empty($product_attribute['gtin'])) {
-                            $offer["gtin"] = $product_attribute['gtin'];
+                            $offer['gtin'] = $product_attribute['gtin'];
                         }
 
                         if ($product_attribute['stock'] < 1 && $backPreOrderDate !== '') {
-                            $offer["availability_date"] = $backPreOrderDate;
+                            $offer['availability_date'] = $backPreOrderDate;
                         }
 
                         $offers[] = $offer;
                     }
 
-                    $productSchema["offers"] = $offers;
+                    $productSchema['offers'] = $offers;
                     break;
 
                 default:
                     // Default Zen Cart attribute pricing
-                    $productSchema["__comment"] = "attribute stock handling default:" . $attribute_stock_handler;
+                    $productSchema['__comment'] = 'attribute stock handling default:' . $attribute_stock_handler;
 
                     $offer = [
-                        "url"            => htmlspecialchars_decode($canonicalLink),
-                        "priceCurrency"  => PLUGIN_SDATA_PRICE_CURRENCY,
-                        "priceValidUntil"=> date('Y') . '-12-31',
-                        "itemCondition"  => "https://schema.org/" . $itemCondition[PLUGIN_SDATA_FOG_PRODUCT_CONDITION],
-                        "availability"   => ($product_base_stock > 0 ? $itemAvailability['InStock'] : $oosItemAvailability),
-                        "seller"         => [
-                            "@type" => "Organization",
-                            "name" => STORE_NAME,
+                        'url'            => htmlspecialchars_decode($canonicalLink),
+                        'priceCurrency'  => PLUGIN_SDATA_PRICE_CURRENCY,
+                        'priceValidUntil'=> date('Y') . '-12-31',
+                        'itemCondition'  => 'https://schema.org/' . $itemCondition[PLUGIN_SDATA_FOG_PRODUCT_CONDITION],
+                        'availability'   => ($product_base_stock > 0 ? $itemAvailability['InStock'] : $oosItemAvailability),
+                        'seller'         => [
+                            '@type' => 'Organization',
+                            'name' => STORE_NAME,
                         ],
                     ];
 
@@ -1164,53 +1164,53 @@ if (PLUGIN_SDATA_SCHEMA_ENABLE === 'true') {
                     }
 
                     if ($attribute_lowPrice === $attribute_highPrice) {
-                        $offer["@type"] = "Offer";
-                        $offer["price"] = $attribute_lowPrice;
+                        $offer['@type'] = 'Offer';
+                        $offer['price'] = $attribute_lowPrice;
                     } else {
-                        $offer["@type"]    = "AggregateOffer";
-                        $offer["lowPrice"] = $attribute_lowPrice;
-                        $offer["highPrice"] = $attribute_highPrice;
-                        $offer["offerCount"] = $offerCount;
+                        $offer['@type']    = 'AggregateOffer';
+                        $offer['lowPrice'] = $attribute_lowPrice;
+                        $offer['highPrice'] = $attribute_highPrice;
+                        $offer['offerCount'] = $offerCount;
                     }
 
                     if ($backPreOrderDate !== '') {
-                        $offer["availability_date"] = $backPreOrderDate;
+                        $offer['availability_date'] = $backPreOrderDate;
                     }
 
                     $leadTime = ($product_base_stock > 0
                         ? (int)PLUGIN_SDATA_DELIVERYLEADTIME
                         : (int)PLUGIN_SDATA_DELIVERYLEADTIME_OOS);
                     if (!empty($leadTime)) {
-                        $offer["deliveryLeadTime"] = [
-                            "@type"    => "QuantitativeValue",
-                            "value"    => $leadTime,
-                            "unitCode" => "DAY",
+                        $offer['deliveryLeadTime'] = [
+                            '@type'    => 'QuantitativeValue',
+                            'value'    => $leadTime,
+                            'unitCode' => 'DAY',
                         ];
                     }
 
                     if (PLUGIN_SDATA_ELIGIBLE_REGION !== '') {
-                        $offer["eligibleRegion"] = PLUGIN_SDATA_ELIGIBLE_REGION;
+                        $offer['eligibleRegion'] = PLUGIN_SDATA_ELIGIBLE_REGION;
                     }
 
-                    $offer["acceptedPaymentMethod"] =  $PaymentMethods;
+                    $offer['acceptedPaymentMethod'] =  $PaymentMethods;
 
-                    $productSchema["offers"] = $offer;
+                    $productSchema['offers'] = $offer;
                     break;
             }
 
         } else {
             // Simple product (no attributes)
             $offer = [
-                "@type"          => "Offer",
-                "price"          => $product_base_displayed_price,
-                "url"            => htmlspecialchars_decode($canonicalLink),
-                "priceCurrency"  => PLUGIN_SDATA_PRICE_CURRENCY,
-                "priceValidUntil"=> date('Y') . '-12-31',
-                "itemCondition"  => "https://schema.org/" . $itemCondition[PLUGIN_SDATA_FOG_PRODUCT_CONDITION],
-                "availability"   => ($product_base_stock > 0 ? $itemAvailability['InStock'] : $oosItemAvailability),
-                "seller"         => [
-                        "@type" => "Organization",
-                        "name" => STORE_NAME,
+                '@type'          => 'Offer',
+                'price'          => $product_base_displayed_price,
+                'url'            => htmlspecialchars_decode($canonicalLink),
+                'priceCurrency'  => PLUGIN_SDATA_PRICE_CURRENCY,
+                'priceValidUntil'=> date('Y') . '-12-31',
+                'itemCondition'  => 'https://schema.org/' . $itemCondition[PLUGIN_SDATA_FOG_PRODUCT_CONDITION],
+                'availability'   => ($product_base_stock > 0 ? $itemAvailability['InStock'] : $oosItemAvailability),
+                'seller'         => [
+                        '@type' => 'Organization',
+                        'name' => STORE_NAME,
                     ],
             ];
 
@@ -1220,27 +1220,27 @@ if (PLUGIN_SDATA_SCHEMA_ENABLE === 'true') {
             }
 
             if ($backPreOrderDate !== '') {
-                $offer["availability_date"] = $backPreOrderDate;
+                $offer['availability_date'] = $backPreOrderDate;
             }
 
             $leadTime = ($product_base_stock > 0
                 ? (int)PLUGIN_SDATA_DELIVERYLEADTIME
                 : (int)PLUGIN_SDATA_DELIVERYLEADTIME_OOS);
             if (!empty($leadTime)) {
-                $offer["deliveryLeadTime"] = [
-                    "@type"    => "QuantitativeValue",
-                    "value"    => $leadTime,
-                    "unitCode" => "DAY",
+                $offer['deliveryLeadTime'] = [
+                    '@type'    => 'QuantitativeValue',
+                    'value'    => $leadTime,
+                    'unitCode' => 'DAY',
                 ];
             }
 
             if (PLUGIN_SDATA_ELIGIBLE_REGION !== '') {
-                $offer["eligibleRegion"] = PLUGIN_SDATA_ELIGIBLE_REGION;
+                $offer['eligibleRegion'] = PLUGIN_SDATA_ELIGIBLE_REGION;
             }
 
-            $offer["acceptedPaymentMethod"]  = $PaymentMethods;
+            $offer['acceptedPaymentMethod']  = $PaymentMethods;
            
-            $productSchema["offers"] = $offer;
+            $productSchema['offers'] = $offer;
         }
 
         /*
@@ -1248,32 +1248,32 @@ if (PLUGIN_SDATA_SCHEMA_ENABLE === 'true') {
          */
 
         if ($reviewCount > 0) {
-            $productSchema["aggregateRating"] = [
-                "@type"       => "AggregateRating",
-                "ratingValue" => $ratingValue,
-                "reviewCount" => $reviewCount,
+            $productSchema['aggregateRating'] = [
+                '@type'       => 'AggregateRating',
+                'ratingValue' => $ratingValue,
+                'reviewCount' => $reviewCount,
             ];
 
             $reviews = [];
             if (!empty($reviewsArr)) {
                 foreach ($reviewsArr as $review) {
                     $reviews[] = [
-                        "@type" => "Review",
-                        "author" => [
-                            "@type" => "Person",
-                            "name"  => strtok($review['customersName'], ' '),
+                        '@type' => 'Review',
+                        'author' => [
+                            '@type' => 'Person',
+                            'name'  => strtok($review['customersName'], ' '),
                         ],
-                        "reviewBody"   => ($review['reviewsText'] ?: 'Reviewer did not leave a written comment.'),
-                        "datePublished"=> substr($review['dateAdded'], 0, 10),
-                        "reviewRating" => [
-                            "@type"      => "Rating",
-                            "ratingValue"=> $review['reviewsRating'],
+                        'reviewBody'   => ($review['reviewsText'] ?: 'Reviewer did not leave a written comment.'),
+                        'datePublished'=> substr($review['dateAdded'], 0, 10),
+                        'reviewRating' => [
+                            '@type'      => 'Rating',
+                            'ratingValue'=> $review['reviewsRating'],
                         ],
                     ];
                 }
             }
 
-            $productSchema["review"] = $reviews;
+            $productSchema['review'] = $reviews;
         }
 
         // Remove empty echema entries
