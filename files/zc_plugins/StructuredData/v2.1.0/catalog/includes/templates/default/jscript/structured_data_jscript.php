@@ -1,16 +1,16 @@
 <?php
-// DO NOT LET YOUR IDE RE-FORMAT THE CODE: it is structured so the html SOURCE is readable/the parentheses line up.
+// DO NOT LET YOUR IDE RE-FORMAT THE CODE: it is structured so the HTML SOURCE is readable/the parentheses line up.
 declare(strict_types=1);
 
 /**
- * This file MUST be loaded in html <head> since it generates meta tags.
+ * This file MUST be loaded in HTML <head> since it generates meta tags.
  *
  * @author: torvista
  * @link: https://github.com/torvista/Zen_Cart-Structured_Data
  * @license https://www.zen-cart.com/license/2_0.txt GNU Public License V2.0
- * @version structured_data_jscript.php ZenExpert 20 Dec 2025
- * @version markbrittain 18 Jan 2026
+ * @version structured_data_jscript.php markbrittain 29 Jan 2026
  */
+
 /** directives for phpStorm code inspector
  * @var breadcrumb $breadcrumb
  * @var $canonicalLink
@@ -104,7 +104,7 @@ function json_encode_sdata(string $string = ''): string
  */
 function sdata_prepare_string($string): string
 {
-    $string = html_entity_decode(trim($string), ENT_COMPAT, CHARSET);//convert html entities to characters
+    $string = html_entity_decode(trim($string), ENT_COMPAT, CHARSET);//convert HTML entities to characters
     $string = str_replace('</p>', '</p> ', $string); // add a space to separate text when tags are removed
     $string = str_replace('<br>', '<br> ', $string); // add a space to separate text when tags are removed
     $string = strip_tags($string);//remove html tags
@@ -127,7 +127,7 @@ function sdata_truncate($string, $max_length): string
         $string_json_truncated = trim($string_json, '"');
         //truncate to $max_length, allowing for space to add ellipsis
         $string_json_truncated = substr($string_json_truncated, 0, $max_length - 3);
-        //find last backslash from json encoding
+        //find last backslash from JSON encoding
         $position_last_backslash = strrpos($string_json_truncated, '\\');
         //check for bisected encoding e.g.\u00f3 cropped to less than 6 chars
         if ($position_last_backslash !== false && (strlen($string_json_truncated) - ($position_last_backslash + 1) < 6)) {
@@ -165,10 +165,14 @@ function sdata_printvar($a): void
     print_r($a);
     echo '</pre><br>';
 }
-/*
- * Function to remove empty array values from schema array
+
+/**
+ *  Function to remove empty array values from schema array
+ *
+ * @param $value
+ * @return array|mixed
  */
-function sdata_clean_schema($value) {
+function sdata_clean_schema($value):mixed {
     if (is_array($value)) {
         $value = array_map('sdata_clean_schema', $value);
         $value = array_filter($value, fn($v) => $v !== '' && $v !== [] && $v !== null);
@@ -176,7 +180,7 @@ function sdata_clean_schema($value) {
     return $value;
 }
 
-// Initialise defaults to prevent php notices
+// Initialize defaults to prevent php notices
 $category_name = '';
 $description = '';
 $image = '';
@@ -256,10 +260,10 @@ if ($is_product_page && (isset($product_info) && is_object($product_info))) {
 
     // Google Product Category
     // A field for Google Product Category needs to be added to the product table unless all products are under the same category.
-    // Initialise with the default category
+    // Initialize with the default category
     $product_base_gpc = (int)PLUGIN_SDATA_GOOGLE_PRODUCT_CATEGORY;
 
-    // GTIN: a standardised international code UPC / GTIN-12 / EAN / JAN / ISBN / ITF-14. It may be subsequently updated by attribute data.
+    // GTIN: a standardized international code UPC / GTIN-12 / EAN / JAN / ISBN / ITF-14. It may be subsequently updated by attribute data.
     // A field for GTIN needs to be added to the product table.
     $product_base_gtin = '';
 
@@ -529,7 +533,7 @@ if ($is_product_page && (isset($product_info) && is_object($product_info))) {
 
     $cPath_array = explode('_', $_GET['cPath']);
     $category_id = end($cPath_array);
-    reset($cPath_array);
+
     $category_name = zen_get_category_name($category_id, (int)$_SESSION['languages_id']); // ZC158 does not need language parameter
     if (!empty($category_name)) { //a valid category
         $category_image = zen_get_categories_image($category_id);
@@ -539,7 +543,7 @@ if ($is_product_page && (isset($product_info) && is_object($product_info))) {
             echo __LINE__ . ' gettype $category_image=' . gettype($category_image) . '<br>';
         }
 
-        if ($category_image === '' || $category_image === null) {
+        if (empty($category_image)) {
             $image_default = true;
         } else {
             $image = HTTP_SERVER . DIR_WS_CATALOG . DIR_WS_IMAGES . zen_get_categories_image($category_id);
@@ -713,7 +717,7 @@ if (!empty(PLUGIN_SDATA_RETURNS_POLICY_COUNTRY)) {
         // Check for percentage
         if (str_contains($rFeeVal, '%')) {
             // It is a percentage (e.g. "20%")
-            $policyData['description'] = "A restocking fee of {$rFeeVal} applies to returned items.";
+            $policyData['description'] = "A restocking fee of $rFeeVal applies to returned items.";
 
             // Calculate actual value if we have a product price
             if (isset($product_base_displayed_price) && is_numeric($product_base_displayed_price)) {
@@ -727,7 +731,7 @@ if (!empty(PLUGIN_SDATA_RETURNS_POLICY_COUNTRY)) {
             }
         } else {
             // It is a fixed amount (e.g. "10.00")
-            $policyData['description'] = "A restocking fee of {$rCurrency} {$rFeeVal} applies.";
+            $policyData['description'] = "A restocking fee of $rCurrency $rFeeVal applies.";
             $policyData['restockingFee'] = [
                 '@type' => 'MonetaryAmount',
                 'currency' => $rCurrency,
@@ -910,7 +914,7 @@ if (PLUGIN_SDATA_SCHEMA_ENABLE === 'true') {
     // Get breadcrumb trail
     $trail = $breadcrumb->getTrail();
 
-    // Build normalised breadcrumb list
+    // Build normalized breadcrumb list
     $items = [];
 
     foreach ($trail as $i => $item) {
@@ -1280,7 +1284,7 @@ if (PLUGIN_SDATA_SCHEMA_ENABLE === 'true') {
             $productSchema['review'] = $reviews;
         }
 
-        // Remove empty echema entries
+        // Remove empty schema entries
         $productSchema = sdata_clean_schema($productSchema);
 ?>
 <script title="Structured Data: schemaProduct" type="application/ld+json">
@@ -1294,7 +1298,7 @@ if (PLUGIN_SDATA_FOG_ENABLE === 'true') {
 ?>
     <!-- Facebook structured data general-->
 <?php
-// opeing php tags from this point forward must be at the begining of the line or the meta tag formatting will look wrong.
+// opening php tags from this point forward must be at the beginning of the line or the meta tag formatting will look wrong.
     if (PLUGIN_SDATA_FOG_APPID !== '') {
 ?>
     <meta property="fb:app_id" content="<?= (int)PLUGIN_SDATA_FOG_APPID ?>">
