@@ -1414,7 +1414,7 @@ if (PLUGIN_SDATA_FOG_ENABLE === 'true') {
 <?php
         if ($product_base_mpn !== '') {
 ?>
-    <meta property="product:mfr_part_no" content="' . $product_base_mpn . '">' . PHP_EOL;
+    <meta property="product:mfr_part_no" content="<?= $product_base_mpn ?>">
 <?php
         }
 ?>
