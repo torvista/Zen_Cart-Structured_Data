@@ -41,7 +41,7 @@ $facebook_type = 'business.business';
 // ItemAvailability options
 $itemAvailability = [
     'BackOrder' => 'https://schema.org/BackOrder',                     // The item is on back order. BackOrder needs a date for when it will become available
-    'Discontinued' => ' https://schema.org/Discontinued',              // The item has been discontinued.
+    'Discontinued' => 'https://schema.org/Discontinued',              // The item has been discontinued.
     'InStock' => 'https://schema.org/InStock',                         // The item is in stock.
     'InStoreOnly' => 'https://schema.org/InStoreOnly',                 // The item is only available for purchase in store.
     'LimitedAvailability' => 'https://schema.org/LimitedAvailability', // The item has limited availability.
@@ -49,11 +49,27 @@ $itemAvailability = [
     'OutOfStock' => 'https://schema.org/OutOfStock',                   // The item is currently out of stock.
     'PreOrder' => 'https://schema.org/PreOrder',                       // The item is available for pre-order: buying in advance of a NEW product being released for sale. PreOrder needs a date for when a product will be released
     'PreSale' => 'https://schema.org/PreSale',                         // The item is available for ordering and delivery NOW before it is released for general availability.
-    'SoldOut' => 'https://schema.org/SoldOut'                          // The item has been sold out.
+    'SoldOut' => 'https://schema.org/SoldOut',                          // The item has been sold out.
+];
+$facebookAvailability = [
+    'BackOrder' => 'pending',
+    'Discontinued' => 'discontinued',
+    'InStock' => 'instock',
+    'InStoreOnly' => 'instock',
+    'LimitedAvailability' => 'instock',
+    'OnlineOnly' => 'instock',
+    'OutOfStock' => 'oos',
+    'PreOrder' => 'pending',
+    'PreSale' => 'pending',
+    'SoldOut' => 'oos',
 ];
 
 // Product Condition options
-$itemCondition = ['new' => 'NewCondition', 'used' => 'UsedCondition', 'refurbished' => 'RefurbishedCondition'];
+$itemCondition = [
+    'new' => 'NewCondition',
+    'used' => 'UsedCondition',
+    'refurbished' => 'RefurbishedCondition',
+];
 
 // Merchant Return Policy options
 $returnPolicyCategory = [
@@ -149,10 +165,18 @@ function sdata_printvar($a): void
     print_r($a);
     echo '</pre><br>';
 }
+/*
+ * Function to remove empty array values from schema array
+ */
+function sdata_clean_schema($value) {
+    if (is_array($value)) {
+        $value = array_map('sdata_clean_schema', $value);
+        $value = array_filter($value, fn($v) => $v !== '' && $v !== [] && $v !== null);
+    }
+    return $value;
+}
 
 // Initialise defaults to prevent php notices
-$breadcrumb_count = 0;
-$breadcrumb_schema = [];
 $category_name = '';
 $description = '';
 $image = '';
@@ -168,27 +192,9 @@ $product_id = 0;
 $reviewsArr = empty($reviewsArray) ? [] : $reviewsArray;
 $title = '';
 
-// breadcrumbs
-$breadcrumb_schema = $breadcrumb->getTrail();
-for ($i = 0, $size = count($breadcrumb_schema); $i < $size; ++$i) {
-    $breadcrumb_schema[$i]['position'] = $i + 1;
-    $breadcrumb_schema[$i]['id'] = htmlspecialchars_decode($breadcrumb_schema[$i]['link']);
-    unset ($breadcrumb_schema[$i]['link']);
-    $breadcrumb_schema[$i]['name'] = $breadcrumb_schema[$i]['title'];
-    unset ($breadcrumb_schema[$i]['title']);
-    $breadcrumb_count++;
-}
-// Some templates (bootstrap) Have the last page in the breadcrumb twice. So remove the last one
-if ($breadcrumb_count > 1 && $breadcrumb_schema[$breadcrumb_count - 1]['id'] === $breadcrumb_schema[$breadcrumb_count - 2]['id']) {
-    $breadcrumb_count--;
-    unset($breadcrumb_schema[$breadcrumb_count]);
-}
-
 $url = $canonicalLink;
-// As breadcrumb does not always add the final page url (zen cart default). Check if link is empty and if it is add the canonical link
-if (empty($breadcrumb_schema[$breadcrumb_count - 1]['id'])) {
-    $breadcrumb_schema[$breadcrumb_count - 1]['id'] = htmlspecialchars_decode($url);
-}
+global $currencies;
+$decimal_places = $currencies->currencies[PLUGIN_SDATA_PRICE_CURRENCY]['decimal_places'];
 
 // Images
 if (PLUGIN_SDATA_FOG_DEFAULT_IMAGE !== '') {
@@ -567,35 +573,35 @@ if (empty($description)) {
     $description = '';
 }
 $description = sdata_prepare_string($description);
-//build sameAs list
-$sameAs_array = explode(', ', PLUGIN_SDATA_SAMEAS);
-array_push($sameAs_array, PLUGIN_SDATA_FOG_PAGE, PLUGIN_SDATA_TWITTER_PAGE, PLUGIN_SDATA_GOOGLE_PUBLISHER);
+// Build sameAs array
+// ZenExpert - note: Contact Us page should NOT be in sameAs list if it's not an external link
+$sameAs = [];
 
-// ZenExpert - note: Contact Us page should NOT be in sameAs list if it's not an external link so it's disabled here
-//$contact_us = $_GET['main_page'] !== 'contact_us' ? zen_href_link(FILENAME_CONTACT_US, '', 'SSL') : '';
-//if ($contact_us !== '') {
-//    $sameAs_array[] = $contact_us;
-//}//show contact_us on all pages except contact_us
-foreach ($sameAs_array as $key => $value) {//remove any empty keys where the constant was not set
-    if (empty($value)) {
-        unset($sameAs_array[$key]);
+// Add comma-separated list from PLUGIN_SDATA_SAMEAS
+if (PLUGIN_SDATA_SAMEAS !== '') {
+    $sameAs = array_map(
+        static fn($url) => trim($url, " \t\n\r\0\x0B\"'"),
+        explode(',', PLUGIN_SDATA_SAMEAS)
+    );
+}
+
+// Add individual social URLs
+foreach ([PLUGIN_SDATA_FOG_PAGE, PLUGIN_SDATA_TWITTER_PAGE, PLUGIN_SDATA_GOOGLE_PUBLISHER] as $url) {
+    if (!empty($url)) {
+        $sameAs[] = trim($url, " \t\n\r\0\x0B\"'");
     }
 }
-if (!empty($sameAs_array)) {
-    foreach ($sameAs_array as &$profile_page) {
-        $profile_page = '"' . $profile_page . '"';
-    }
-    unset($profile_page);
-}
-$sameAs = implode(",\n", $sameAs_array);
 
-//build acceptedPaymentMethod list
+// Remove duplicates + empty values
+$sameAs = array_values(array_filter(array_unique($sameAs)));
+
+// Build acceptedPaymentMethod list
+$PaymentMethods = [];
+
 $PaymentMethod_array = explode(', ', PLUGIN_SDATA_ACCEPTED_PAYMENT_METHODS);
-foreach ($PaymentMethod_array as &$payment_method) {
-    $payment_method = '"https://purl.org/goodrelations/v1#' . trim($payment_method) . '"';
+foreach ($PaymentMethod_array as $payment_method) {
+    $PaymentMethods[] = "https://purl.org/goodrelations/v1#" . trim($payment_method);
 }
-unset($payment_method);
-$PaymentMethods = implode(",\n", $PaymentMethod_array);
 
 //build Facebook locales
 $locales_array = explode(',', PLUGIN_SDATA_FOG_LOCALES);
@@ -676,16 +682,18 @@ if ($is_product_page) {
 
 //Merchant Return Policy
 //common code block used in attribute-handling option and simple product
+$hasMerchantReturnPolicy = [];
+
 if (!empty(PLUGIN_SDATA_RETURNS_POLICY_COUNTRY)) {
     $policyData = [
-        "@type" => "MerchantReturnPolicy",
-        "applicableCountry" => PLUGIN_SDATA_RETURNS_APPLICABLE_COUNTRY,
-        "returnPolicyCategory" => $returnPolicyCategory[PLUGIN_SDATA_RETURNS_POLICY],
-        "returnMethod" => $returnMethod[PLUGIN_SDATA_RETURNS_METHOD]
+        '@type' => 'MerchantReturnPolicy',
+        'applicableCountry' => PLUGIN_SDATA_RETURNS_APPLICABLE_COUNTRY,
+        'returnPolicyCategory' => $returnPolicyCategory[PLUGIN_SDATA_RETURNS_POLICY],
+        'returnMethod' => $returnMethod[PLUGIN_SDATA_RETURNS_METHOD]
     ];
 
     if (PLUGIN_SDATA_RETURNS_POLICY === 'Finite') {
-        $policyData['merchantReturnDays'] = (int)PLUGIN_SDATA_RETURNS_DAYS;
+        $policyData['merchantReturnDays'] = (int) PLUGIN_SDATA_RETURNS_DAYS;
     }
 
     $rType = defined('PLUGIN_SDATA_RETURNS_TYPE') ? PLUGIN_SDATA_RETURNS_TYPE : 'FreeReturn';
@@ -705,84 +713,131 @@ if (!empty(PLUGIN_SDATA_RETURNS_POLICY_COUNTRY)) {
         // Check for percentage
         if (str_contains($rFeeVal, '%')) {
             // It is a percentage (e.g. "20%")
-            $policyData['description'] = "A restocking fee of " . $rFeeVal . " applies to returned items.";
+            $policyData['description'] = "A restocking fee of {$rFeeVal} applies to returned items.";
 
             // Calculate actual value if we have a product price
             if (isset($product_base_displayed_price) && is_numeric($product_base_displayed_price)) {
-                $percent = (float)str_replace('%', '', $rFeeVal) / 100;
+                $percent = (float) str_replace('%', '', $rFeeVal) / 100;
+
                 $policyData['restockingFee'] = [
-                    "@type" => "MonetaryAmount",
-                    "currency" => $rCurrency,
-                    "value" => number_format($product_base_displayed_price * $percent, 2, '.', '')
+                    '@type' => 'MonetaryAmount',
+                    'currency' => $rCurrency,
+                    'value' => number_format($product_base_displayed_price * $percent, $decimal_places, '.', '')
                 ];
             }
         } else {
             // It is a fixed amount (e.g. "10.00")
-            $policyData['description'] = "A restocking fee of " . $rCurrency . " " . $rFeeVal . " applies.";
+            $policyData['description'] = "A restocking fee of {$rCurrency} {$rFeeVal} applies.";
             $policyData['restockingFee'] = [
-                "@type" => "MonetaryAmount",
-                "currency" => $rCurrency,
-                "value" => number_format((float)$rFeeVal, 2, '.', '')
+                '@type' => 'MonetaryAmount',
+                'currency' => $rCurrency,
+                'value' => number_format((float) $rFeeVal, $decimal_places, '.', '')
             ];
         }
 
-        // Handle "ReturnShippingFees" (Fixed shipping cost)
-    } elseif ($rType === 'ReturnShippingFees' && (float)$rFeeVal > 0) {
+    // Handle "ReturnShippingFees" (Fixed shipping cost)
+    } elseif ($rType === 'ReturnShippingFees' && (float) $rFeeVal > 0) {
         $policyData['returnShippingFeesAmount'] = [
-            "@type" => "MonetaryAmount",
-            "currency" => $rCurrency,
-            "value" => number_format((float)$rFeeVal, 2, '.', '')
+            '@type' => 'MonetaryAmount',
+            'currency' => $rCurrency,
+            'value' => number_format((float) $rFeeVal, $decimal_places, '.', '')
         ];
     }
 
-    $jsonString = json_encode($policyData, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-    $hasMerchantReturnPolicy = '"hasMerchantReturnPolicy": ' . $jsonString . ',' . PHP_EOL;
-
-} else {
-    $hasMerchantReturnPolicy = '';
+    $hasMerchantReturnPolicy = [
+        'hasMerchantReturnPolicy' => $policyData
+    ];
 }
 ?>
-<?php if (PLUGIN_SDATA_SCHEMA_ENABLE === 'true') {
-    $organization_type = (defined('PLUGIN_SDATA_ORGANIZATION_TYPE') && PLUGIN_SDATA_ORGANIZATION_TYPE === 'LocalBusiness')
-        ? (defined('PLUGIN_SDATA_LOCAL_BUSINESS_TYPE') && PLUGIN_SDATA_LOCAL_BUSINESS_TYPE !== ''
-            ? PLUGIN_SDATA_LOCAL_BUSINESS_TYPE
-            : PLUGIN_SDATA_ORGANIZATION_TYPE)
-        : (defined('PLUGIN_SDATA_ORGANIZATION_TYPE') ? PLUGIN_SDATA_ORGANIZATION_TYPE : 'Organization');
-    ?>
-    <script title="Structured Data: schemaOrganisation" type="application/ld+json">
-        {
-             "@context": "https://schema.org",
-             "@type": "<?= $organization_type ?>",
-        <?php if (PLUGIN_SDATA_LEGAL_NAME !== '') { ?>
-       "legalName" : "<?= PLUGIN_SDATA_LEGAL_NAME ?>",<?= PHP_EOL ?>
-        <?php } ?>
-        "description": "<?= sdata_prepare_string(PLUGIN_SDATA_DESCRIPTION); ?>",
-        <?php if(PLUGIN_SDATA_ORGANIZATION_TYPE === 'LocalBusiness' && PLUGIN_SDATA_PROPERTY_IMAGE !== '') {
-            $photo = trim(PLUGIN_SDATA_PROPERTY_IMAGE);
-            // If multiple URLs separated by commas, convert to array and output JSON array.
-            if (str_contains($photo, ',')) {
-                $photos = array_map('trim', explode(',', $photo));
-                $image_json = json_encode($photos, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-                echo '     "image": ' . $image_json . ',' . PHP_EOL;
-            } else {
-                // Single URL
-                echo '     "image": "' . $photo . '",' . PHP_EOL;
-            }
-            ?>
-      "name": "<?= PLUGIN_SDATA_LOCAL_BUSINESS_NAME ?>",<?= PHP_EOL ?>
-      "telephone" : "<?= PLUGIN_SDATA_TELEPHONE ?>",<?= PHP_EOL ?>
-        <?php } ?>
-        "url": "<?= HTTP_SERVER; //root website ?>",
-     "logo": "<?= PLUGIN_SDATA_LOGO ?>",
-        <?php echo ((PLUGIN_SDATA_ORGANIZATION_TYPE === 'LocalBusiness' && PLUGIN_SDATA_PRICE_RANGE !== '') ? '"priceRange": "'. PLUGIN_SDATA_PRICE_RANGE .'",' : '');  ?><?= PHP_EOL ?>
-        "contactPoint" : [{
-              "@type" : "ContactPoint",
-          "telephone" : "<?= PLUGIN_SDATA_TELEPHONE ?>",
-      "contactType" : "customer service"<?php //a comma may not be necessary here as the following items are optional ?>
-  <?php if(defined('PLUGIN_SDATA_HOURS') && PLUGIN_SDATA_HOURS !== '') {
+<?php
+if (PLUGIN_SDATA_SCHEMA_ENABLE === 'true') {
+    /*
+     * Organisation Schema
+     */
 
-            $hours_specs = [];
-            // Map short days to Schema URLs
+    $organization_type = 'Organization';
+
+    if (defined('PLUGIN_SDATA_ORGANIZATION_TYPE') && PLUGIN_SDATA_ORGANIZATION_TYPE !== '') {
+
+        // LocalBusiness or subtype
+        if (PLUGIN_SDATA_ORGANIZATION_TYPE === 'LocalBusiness') {
+            $organization_type =
+                (defined('PLUGIN_SDATA_LOCAL_BUSINESS_TYPE') && PLUGIN_SDATA_LOCAL_BUSINESS_TYPE !== '')
+                    ? PLUGIN_SDATA_LOCAL_BUSINESS_TYPE
+                    : 'LocalBusiness';
+        // Any other valid type
+        } else {
+            $organization_type = PLUGIN_SDATA_ORGANIZATION_TYPE;
+        }
+    }
+
+    /*
+     * Build base schema
+     */
+    $schema = [
+        '@context' => 'https://schema.org',
+        '@type' => $organization_type,
+
+        // Core fields
+        'name' => PLUGIN_SDATA_LOCAL_BUSINESS_NAME ?: PLUGIN_SDATA_LEGAL_NAME ?: STORE_NAME,
+        'legalName' => PLUGIN_SDATA_LEGAL_NAME,
+        'description' => sdata_prepare_string(PLUGIN_SDATA_DESCRIPTION),
+        'url' => HTTP_SERVER,
+        'logo' => PLUGIN_SDATA_LOGO,
+        'email' => PLUGIN_SDATA_EMAIL,
+        'telephone' => PLUGIN_SDATA_TELEPHONE,
+        'faxNumber' => PLUGIN_SDATA_FAX,
+
+        // Identifiers
+        'duns' => PLUGIN_SDATA_DUNS,
+        'taxID' => PLUGIN_SDATA_TAXID,
+        'vatID' => PLUGIN_SDATA_VATID,
+
+        // Address
+        'address' => [
+            '@type' => 'PostalAddress',
+            'streetAddress' => PLUGIN_SDATA_STREET_ADDRESS,
+            'addressLocality' => PLUGIN_SDATA_LOCALITY,
+            'addressRegion' => PLUGIN_SDATA_REGION,
+            'postalCode' => PLUGIN_SDATA_POSTALCODE,
+            'addressCountry' => PLUGIN_SDATA_COUNTRYNAME,
+        ],
+
+        // Contact point
+        'contactPoint' => [[
+            '@type' => 'ContactPoint',
+            'telephone' => PLUGIN_SDATA_TELEPHONE,
+            'contactType' => 'customer service',
+        ]],
+
+        // Optional arrays
+        'sameAs' => $sameAs ,
+        'areaServed' => (PLUGIN_SDATA_AREA_SERVED !== '' ? array_map('trim', explode(',', PLUGIN_SDATA_AREA_SERVED)) : []),
+        'availableLanguage' => (PLUGIN_SDATA_AVAILABLE_LANGUAGE !== '' ? array_map('trim', explode(',', PLUGIN_SDATA_AVAILABLE_LANGUAGE)) : []),
+    ];
+
+    /*
+     * LocalBusiness extras (NOT for OnlineBusiness or Organization)
+     */
+    if ($organization_type !== 'Organization' && $organization_type !== 'OnlineBusiness') {
+
+        // Images
+        if (PLUGIN_SDATA_PROPERTY_IMAGE !== '') {
+            $photo = trim(PLUGIN_SDATA_PROPERTY_IMAGE);
+            $schema['image'] = str_contains($photo, ',')
+                ? array_map('trim', explode(',', $photo))
+                : $photo;
+        }
+
+        // Price range
+        if (PLUGIN_SDATA_PRICE_RANGE !== '') {
+            $schema['priceRange'] = PLUGIN_SDATA_PRICE_RANGE;
+        }
+
+        /*
+         * Opening hours (LocalBusiness only)
+         */
+        if (defined('PLUGIN_SDATA_HOURS') && PLUGIN_SDATA_HOURS !== '') {
             $day_map = [
                 'Mon' => 'https://schema.org/Monday',
                 'Tue' => 'https://schema.org/Tuesday',
@@ -790,16 +845,19 @@ if (!empty(PLUGIN_SDATA_RETURNS_POLICY_COUNTRY)) {
                 'Thu' => 'https://schema.org/Thursday',
                 'Fri' => 'https://schema.org/Friday',
                 'Sat' => 'https://schema.org/Saturday',
-                'Sun' => 'https://schema.org/Sunday'
+                'Sun' => 'https://schema.org/Sunday',
             ];
 
+            $hours_specs = [];
             // break into groups (e.g., Weekdays | Weekends)
             $groups = explode('|', PLUGIN_SDATA_HOURS);
 
             foreach ($groups as $group) {
                 // Separate days from times (Mon,Tue;09:00-17:00)
                 $parts = explode(';', $group);
-                if (count($parts) !== 2) continue; // skip malformed
+                if (count($parts) !== 2) {
+                    continue; // skip malformed
+                }
 
                 $days_str = trim($parts[0]);
                 $times_str = trim($parts[1]);
@@ -813,13 +871,17 @@ if (!empty(PLUGIN_SDATA_RETURNS_POLICY_COUNTRY)) {
                         $schema_days[] = $day_map[$d];
                     }
                 }
-                if (empty($schema_days)) continue;
+                if (empty($schema_days)) {
+                    continue;
+                }
 
                 // process times (handles split shifts like 09:00-12:00,13:00-17:00)
                 $time_ranges = explode(',', $times_str);
                 foreach ($time_ranges as $range) {
                     $times = explode('-', $range);
-                    if (count($times) !== 2) continue;
+                    if (count($times) !== 2) {
+                        continue;
+                    }
                     $hours_specs[] = [
                         '@type' => 'OpeningHoursSpecification',
                         'dayOfWeek' => $schema_days,
@@ -829,380 +891,568 @@ if (!empty(PLUGIN_SDATA_RETURNS_POLICY_COUNTRY)) {
                 }
             }
 
-            // inject hours if they exist
             if (!empty($hours_specs)) {
-                echo ',' . PHP_EOL . '          "hoursAvailable": ' . json_encode($hours_specs, JSON_UNESCAPED_SLASHES);
+                $schema['contactPoint'][0]['hoursAvailable'] = $hours_specs;
             }
-        } ?>
-<?= (PLUGIN_SDATA_AREA_SERVED !== '' ? ",\n" . '       "areaServed" : "' . PLUGIN_SDATA_AREA_SERVED . '"' : '') //if not declared, assumed worldwide ?>
-<?= (PLUGIN_SDATA_AVAILABLE_LANGUAGE !== '' ? ",\n" . '"availableLanguage" : "' . PLUGIN_SDATA_AVAILABLE_LANGUAGE . '"' : '') //if not declared, english is assumed ?>
-<?= "\n                  }],\n" ?>
-<?php if ($sameAs !== '' ) { ?>      "sameAs" : [<?= $sameAs . PHP_EOL ?>
-                 ],<?= PHP_EOL ?><?php } ?>
-<?php if (PLUGIN_SDATA_DUNS !== '') { ?>        "duns" : "<?= PLUGIN_SDATA_DUNS ?>",<?= PHP_EOL ?><?php } ?>
-<?php if (PLUGIN_SDATA_TAXID !== '') { ?>       "taxID" : "<?= PLUGIN_SDATA_TAXID ?>",<?= PHP_EOL ?><?php } ?>
-<?php if (PLUGIN_SDATA_VATID !== '') { ?>       "vatID" : "<?= PLUGIN_SDATA_VATID ?>",<?= PHP_EOL ?><?php } ?>
-<?php if (PLUGIN_SDATA_EMAIL !== '') { ?>       "email" : "<?= PLUGIN_SDATA_EMAIL ?>",<?= PHP_EOL ?><?php } ?>
-<?php if (PLUGIN_SDATA_FAX !== '') { ?>     "faxNumber" : "<?= PLUGIN_SDATA_FAX ?>",<?= PHP_EOL ?><?php } ?>
-        "address": {
-              "@type": "PostalAddress",
-     "streetAddress" : "<?= PLUGIN_SDATA_STREET_ADDRESS ?>",
-  "addressLocality": "<?= PLUGIN_SDATA_LOCALITY ?>",
-    "addressRegion": "<?= PLUGIN_SDATA_REGION ?>",
-       "postalCode": "<?= PLUGIN_SDATA_POSTALCODE ?>",
-  "addressCountry" : "<?= PLUGIN_SDATA_COUNTRYNAME ?>"
-                 }
-}
-    </script>
-    <?php if ($breadcrumb_count > 1) { ?>
-        <script title="Structured Data: schemaBreadcrumb" type="application/ld+json">
-            {
-                   "@context": "https://schema.org",
-                      "@type": "BreadcrumbList",
-            "itemListElement":
-              [
-            <?php foreach ($breadcrumb_schema as $key => $value) { ?>
-  {
-        "@type": "ListItem",
-     "position": <?= $value['position'] //does not need to be quoted, but IDE complains ?>,
-         "name": "<?= json_encode_sdata($value['name']) ?>",
-         "item": "<?= $value['id'] ?>"
-       }<?= (((int)$key + 1) < $breadcrumb_count)? ',': ''; ?>
-       
-             <?php } ?>
-            ]
-          }
-        </script>
-    <?php } //eof breadcrumb ?>
+        }
+    }
 
-    <?php
-// Check if we are on the Contact Us page
+    $schema = sdata_clean_schema($schema);
+?>
+<script title="Structured Data: schemaOrganisation" type="application/ld+json">
+<?= json_encode($schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . PHP_EOL; ?>
+</script>
+<?php
+    /*
+     *  Breadcrumb Schema
+     */
+
+    // Get breadcrumb trail
+    $trail = $breadcrumb->getTrail();
+
+    // Build normalised breadcrumb list
+    $items = [];
+
+    foreach ($trail as $i => $item) {
+        $items[] = [
+            'position' => $i + 1,
+            'id' => htmlspecialchars_decode($item['link']),
+            'name' => $item['title']
+        ];
+    }
+
+    $breadcrumb_count = count($items);
+
+
+    // Remove duplicate last breadcrumb (Bootstrap issue)
+    if ($breadcrumb_count > 1 &&
+        $items[$breadcrumb_count - 1]['id'] === $items[$breadcrumb_count - 2]['id']
+    ) {
+        array_pop($items);
+        $breadcrumb_count--;
+    }
+
+    // Ensure final breadcrumb has a URL Zen cart default is not to show the url.
+    if ($breadcrumb_count > 0 && empty($items[$breadcrumb_count - 1]['id'])) {
+        $items[$breadcrumb_count - 1]['id'] = htmlspecialchars_decode($canonicalLink);
+    }
+
+    // Only output schema if more than one breadcrumb exists
+    if ($breadcrumb_count > 1) {
+
+        $breadcrumbSchema = [
+            '@context' => 'https://schema.org',
+            '@type' => 'BreadcrumbList',
+            'itemListElement' => []
+        ];
+
+        foreach ($items as $item) {
+            $breadcrumbSchema['itemListElement'][] = [
+                '@type' => 'ListItem',
+                'position' => $item['position'],
+                'name' => $item['name'],
+                'item' => $item['id']
+            ];
+        }
+?>
+<script title="Structured Data: schemaBreadcrumb" type="application/ld+json">
+<?= json_encode($breadcrumbSchema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . PHP_EOL; ?>
+</script>
+<?php
+    } // end breadcrumb
+
+    // Check if we are on the Contact Us page
     if ($current_page_base === 'contact_us') {
-        ?>
-        <script type="application/ld+json">
-            {
-              "@context": "https://schema.org",
-              "@type": "ContactPage",
-              "name": "<?php echo sdata_prepare_string(STORE_NAME); ?> Contact Us",
-              "description": "Contact information for <?php echo sdata_prepare_string(STORE_NAME); ?>",
-              "url": "<?= htmlspecialchars_decode(zen_href_link(FILENAME_CONTACT_US, '', 'SSL')); ?>",
-              "mainEntity": {
-                "@type": "Organization",
-                "name": "<?php echo sdata_prepare_string(STORE_NAME); ?>",
-                "url": "<?php echo HTTP_SERVER; ?>",
-                "contactPoint": {
-                  "@type": "ContactPoint",
-                  "telephone": "<?php echo sdata_prepare_string(STORE_TELEPHONE_CUSTSERVICE); ?>",
-<?php
+
+        // Build ContactPoint
+        $contactPoint = [
+            '@type' => 'ContactPoint',
+            'telephone' => sdata_prepare_string(STORE_TELEPHONE_CUSTSERVICE),
+            'contactType' => 'customer service',
+        ];
+
         if (!empty(PLUGIN_SDATA_AREA_SERVED)) {
-?>            
-                  "areaServed": "<?php echo PLUGIN_SDATA_AREA_SERVED; ?>",
-<?php
+            $contactPoint['areaServed'] = PLUGIN_SDATA_AREA_SERVED;
         }
+
         if (!empty(PLUGIN_SDATA_AVAILABLE_LANGUAGE)) {
-?>
-                  "availableLanguage": "<?php echo PLUGIN_SDATA_AVAILABLE_LANGUAGE; ?>"
-<?php
+            $contactPoint['availableLanguage'] = PLUGIN_SDATA_AVAILABLE_LANGUAGE;
         }
-?>
-                  "contactType": "customer service"
-                }
-              }
-            }
-        </script>
-    <?php } ?>
 
-    <?php
+        // Build mainEntity Organization
+        $mainEntity = [
+            '@type' => 'Organization',
+            'name' => sdata_prepare_string(STORE_NAME),
+            'url' => HTTP_SERVER,
+            'contactPoint' => $contactPoint
+        ];
+
+        // Build ContactPage schema
+        $contactSchema = [
+            '@context' => 'https://schema.org',
+            '@type' => 'ContactPage',
+            'name' => sdata_prepare_string(STORE_NAME) . ' Contact Us',
+            'description' => 'Contact information for ' . sdata_prepare_string(STORE_NAME),
+            'url' => htmlspecialchars_decode(zen_href_link(FILENAME_CONTACT_US, '', 'SSL')),
+            'mainEntity' => $mainEntity
+        ];
+
+
+        $contactSchema = sdata_clean_schema($contactSchema);
+?>
+<script title="Structured Data: schemaContactPage" type="application/ld+json">
+<?= json_encode($contactSchema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . PHP_EOL; ?>
+</script>
+<?php
+    } // end contact us.
+
     // BOF ZenExpert: Product Listing schema for category pages
-    if (!empty($listing_schema)) { ?>
-        <script title="Structured Data: schemaItemList" type="application/ld+json">
-            {
-              "@context": "https://schema.org",
-              "@type": "ItemList",
-              "itemListElement": [
-            <?php
-            $count = count($listing_schema);
-            foreach ($listing_schema as $key => $element) {
-                // Direct output of the pre-built array
-                echo json_encode($element, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    /*
+     * Category Page: ItemList Schema
+     */
 
-                // Add comma if it's not the last item
-                if ($key + 1 < $count) {
-                    echo ',' . PHP_EOL;
-                } else {
-                    echo PHP_EOL;
+    if (!empty($listing_schema)) {
+
+        // Build ItemList schema
+        $itemListSchema = [
+            '@context' => 'https://schema.org',
+            '@type' => 'ItemList',
+            'itemListElement' => []
+        ];
+
+        foreach ($listing_schema as $element) {
+            // Each $element is already a valid ListItem array
+            $itemListSchema['itemListElement'][] = $element;
+        }
+
+        // Remove empty schema entries
+        $itemListSchema = sdata_clean_schema($itemListSchema);
+?>
+<script title="Structured Data: schemaItemList" type="application/ld+json">
+<?= json_encode($itemListSchema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . PHP_EOL; ?>
+</script>
+<?php
+    }
+// EOF ZenExpert: Product Listing schema for category pages
+    /*
+     * product page schema
+     */
+
+    if ($is_product_page) {
+
+        // Base Product schema
+        $productSchema = [
+            '@context' => 'https://schema.org',
+            '@type' => 'Product',
+            'name' => sdata_truncate($product_name, PLUGIN_SDATA_MAX_NAME),
+            'url' => htmlspecialchars_decode($canonicalLink),
+            'image' => $image,
+            'description' => sdata_truncate($description, PLUGIN_SDATA_MAX_DESCRIPTION),
+            'sku' => $product_base_sku,
+            'weight' => [
+                '@type' => 'QuantitativeValue',
+                'value' => $weight,
+                'unitCode' => ((SHIPPING_WEIGHT_UNITS === 'kgs') ? 'KGM' : 'LBR'),
+            ],
+            'brand' => [
+                '@type' => 'Brand',
+                'name' => (isset($manufacturer_name) && trim($manufacturer_name) !== '')
+                    ? $manufacturer_name
+                    : (defined('STORE_NAME') ? STORE_NAME : ''),
+            ],
+            'category' => $category_name,
+        ];
+
+        // Optional identifiers
+        if ($product_base_mpn !== '') {
+            $productSchema['mpn'] = $product_base_mpn;
+        }
+        if ($product_base_gtin !== '') {
+            $productSchema['gtin'] = $product_base_gtin;
+        }
+        if ($product_base_productID !== '') {
+            $productSchema['productID'] = $product_base_productID;
+        }
+
+        // Google product category (both variants kept)
+        if ($product_base_gpc !== 0) {
+            $productSchema['googleProductCategory']  = (string)$product_base_gpc;
+            $productSchema['google_product_category'] = (string)$product_base_gpc;
+        }
+
+        /*
+         * OFFERS
+         * Three modes:
+         *  - POSM attribute stock handler → offers as array
+         *  - Default attribute pricing → offers as Offer/AggregateOffer object
+         *  - Simple product (no attributes) → offers as Offer object
+         */
+
+        if ($product_attributes) {
+
+            switch ($attribute_stock_handler) {
+
+                case 'posm':
+                    // POSM: multiple offers, one per attribute
+                    $productSchema['__comment'] = 'attribute stock handling:' . $attribute_stock_handler;
+
+                    $offers = [];
+
+                    $attributes_count = count($product_attributes);
+                    foreach ($product_attributes as $index => $product_attribute) {
+
+                        $offer = [
+                            '@type' => 'Offer',
+                            'price' => number_format((float)$product_attribute['price'], $decimal_places, '.', ''),
+                            'weight' => [
+                                '@type' => 'QuantitativeValue',
+                                'value' => ($weight + $product_attribute['weight'] > 0
+                                                ? $weight + $product_attribute['weight']
+                                                : $weight),
+                                'unitCode' => ((SHIPPING_WEIGHT_UNITS === 'kgs') ? 'KGM' : 'LBR'),
+                            ],
+                            'priceCurrency' => PLUGIN_SDATA_PRICE_CURRENCY,
+                            'availability' => $product_attribute['stock'] > 0
+                                ? $itemAvailability['InStock']
+                                : $oosItemAvailability,
+                            'priceValidUntil' => date('Y') . '-12-31',
+                            'url' => htmlspecialchars_decode($canonicalLink),
+                        ];
+
+                        // Optional: merchant return policy (previously injected as raw JSON)
+                        if (!empty($hasMerchantReturnPolicy)) {
+                            // If $hasMerchantReturnPolicy is an array, merge it here.
+                            // If it's a JSON fragment, you may want to refactor it to an array first.
+                            $offer = array_merge($offer, $hasMerchantReturnPolicy);
+                        }
+
+                        if (!empty($product_attribute['sku'])) {
+                            $offer['sku'] = $product_attribute['sku'];
+                        }
+                        if (!empty($product_attribute['mpn'])) {
+                            $offer['mpn'] = $product_attribute['mpn'];
+                        }
+                        if (!empty($product_attribute['gtin'])) {
+                            $offer['gtin'] = $product_attribute['gtin'];
+                        }
+
+                        if ($product_attribute['stock'] < 1 && $backPreOrderDate !== '') {
+                            $offer['availability_date'] = $backPreOrderDate;
+                        }
+
+                        $offers[] = $offer;
+                    }
+
+                    $productSchema['offers'] = $offers;
+                    break;
+
+                default:
+                    // Default Zen Cart attribute pricing
+                    $productSchema['__comment'] = 'attribute stock handling default:' . $attribute_stock_handler;
+
+                    $offer = [
+                        'url' => htmlspecialchars_decode($canonicalLink),
+                        'priceCurrency' => PLUGIN_SDATA_PRICE_CURRENCY,
+                        'priceValidUntil'=> date('Y') . '-12-31',
+                        'itemCondition' => 'https://schema.org/' . $itemCondition[PLUGIN_SDATA_FOG_PRODUCT_CONDITION],
+                        'availability' => ($product_base_stock > 0 ? $itemAvailability['InStock'] : $oosItemAvailability),
+                        'seller' => [
+                            '@type' => 'Organization',
+                            'name' => STORE_NAME,
+                        ],
+                    ];
+
+                    // Optional: merchant return policy
+                    if (!empty($hasMerchantReturnPolicy)) {
+                        $offer = array_merge($offer, $hasMerchantReturnPolicy);
+                    }
+
+                    if ($attribute_lowPrice === $attribute_highPrice) {
+                        $offer['@type'] = 'Offer';
+                        $offer['price'] = $attribute_lowPrice;
+                    } else {
+                        $offer['@type']    = 'AggregateOffer';
+                        $offer['lowPrice'] = $attribute_lowPrice;
+                        $offer['highPrice'] = $attribute_highPrice;
+                        $offer['offerCount'] = $offerCount;
+                    }
+
+                    if ($backPreOrderDate !== '') {
+                        $offer['availability_date'] = $backPreOrderDate;
+                    }
+
+                    $leadTime = ($product_base_stock > 0
+                        ? (int)PLUGIN_SDATA_DELIVERYLEADTIME
+                        : (int)PLUGIN_SDATA_DELIVERYLEADTIME_OOS);
+                    if (!empty($leadTime)) {
+                        $offer['deliveryLeadTime'] = [
+                            '@type' => 'QuantitativeValue',
+                            'value' => $leadTime,
+                            'unitCode' => 'DAY',
+                        ];
+                    }
+
+                    if (PLUGIN_SDATA_ELIGIBLE_REGION !== '') {
+                        $offer['eligibleRegion'] = PLUGIN_SDATA_ELIGIBLE_REGION;
+                    }
+
+                    $offer['acceptedPaymentMethod'] =  $PaymentMethods;
+
+                    $productSchema['offers'] = $offer;
+                    break;
+            }
+
+        } else {
+            // Simple product (no attributes)
+            $offer = [
+                '@type' => 'Offer',
+                'price' => $product_base_displayed_price,
+                'url' => htmlspecialchars_decode($canonicalLink),
+                'priceCurrency' => PLUGIN_SDATA_PRICE_CURRENCY,
+                'priceValidUntil'=> date('Y') . '-12-31',
+                'itemCondition' => 'https://schema.org/' . $itemCondition[PLUGIN_SDATA_FOG_PRODUCT_CONDITION],
+                'availability' => ($product_base_stock > 0 ? $itemAvailability['InStock'] : $oosItemAvailability),
+                'seller' => [
+                        '@type' => 'Organization',
+                        'name' => STORE_NAME,
+                    ],
+            ];
+
+            // Optional: merchant return policy
+            if (!empty($hasMerchantReturnPolicy)) {
+                $offer = array_merge($offer, $hasMerchantReturnPolicy);
+            }
+
+            if ($backPreOrderDate !== '') {
+                $offer['availability_date'] = $backPreOrderDate;
+            }
+
+            $leadTime = ($product_base_stock > 0
+                ? (int)PLUGIN_SDATA_DELIVERYLEADTIME
+                : (int)PLUGIN_SDATA_DELIVERYLEADTIME_OOS);
+            if (!empty($leadTime)) {
+                $offer['deliveryLeadTime'] = [
+                    '@type' => 'QuantitativeValue',
+                    'value' => $leadTime,
+                    'unitCode' => 'DAY',
+                ];
+            }
+
+            if (PLUGIN_SDATA_ELIGIBLE_REGION !== '') {
+                $offer['eligibleRegion'] = PLUGIN_SDATA_ELIGIBLE_REGION;
+            }
+
+            $offer['acceptedPaymentMethod']  = $PaymentMethods;
+
+            $productSchema['offers'] = $offer;
+        }
+
+        /*
+         * REVIEWS & AGGREGATE RATING
+         */
+
+        if ($reviewCount > 0) {
+            $productSchema['aggregateRating'] = [
+                '@type' => 'AggregateRating',
+                'ratingValue' => $ratingValue,
+                'reviewCount' => $reviewCount,
+            ];
+
+            $reviews = [];
+            if (!empty($reviewsArr)) {
+                foreach ($reviewsArr as $review) {
+                    $reviews[] = [
+                        '@type' => 'Review',
+                        'author' => [
+                            '@type' => 'Person',
+                            'name' => strtok($review['customersName'], ' '),
+                        ],
+                        'reviewBody' => ($review['reviewsText'] ?: 'Reviewer did not leave a written comment.'),
+                        'datePublished'=> substr($review['dateAdded'], 0, 10),
+                        'reviewRating' => [
+                            '@type' => 'Rating',
+                            'ratingValue'=> $review['reviewsRating'],
+                        ],
+                    ];
                 }
             }
-            ?>
-            ]
-          }
-        </script>
-    <?php }
-    // EOF ZenExpert: Product Listing schema for category pages
-    ?>
-    <?php if ($is_product_page) {//product page only ?>
-        <script title="Structured Data: schemaProduct" type="application/ld+json">
-            {<?php //structured as per Google example for comparison:https://developers.google.com/search/docs/data-types/product ?>
-            "@context": "https://schema.org",
-               "@type": "Product",
-                "name": "<?= json_encode_sdata(sdata_truncate($product_name, PLUGIN_SDATA_MAX_NAME)) ?>",
-      "image": "<?= $image ?>",
-"description": "<?= json_encode_sdata(sdata_truncate($description, PLUGIN_SDATA_MAX_DESCRIPTION)) ?>",
-        "sku": "<?= json_encode_sdata($product_base_sku) //The Stock Keeping Unit (SKU), i.e. a merchant-specific identifier for a product or service ?>",
-     "weight": "<?= json_encode_sdata($weight . TEXT_PRODUCT_WEIGHT_UNIT) ?>",
-            <?php
-            if ($product_base_mpn !== '') {//The Manufacturer Part Number (MPN) of the product
-                echo '        "mpn": ' . json_encode($product_base_mpn) . ",\n";
-            }
-            if ($product_base_gtin !== '') {//The Manufacturer-supplied standard international code
-                echo '       "gtin": ' . json_encode($product_base_gtin) . ",\n";
-            }
-            if ($product_base_productID !== '') {//a non-standard code according to Google, but a real product identifier (ISBN, EAN) according to Schema. Default is products_model, so if not being used, this will not be created.
-                echo '  "productID": ' . json_encode($product_base_productID) . ",\n";
-            }
-            if ($product_base_gpc !== 0) {//google product category
-                echo '  "googleProductCategory": "' . $product_base_gpc . '"' . ",\n";
-                echo '  "google_product_category": "' . $product_base_gpc . '"' . ",\n";//belt and braces
-            } ?>
-            "brand": {
-                    "@type" : "Brand",
-                     "name" : "<?= json_encode_sdata((isset($manufacturer_name) && trim($manufacturer_name) !== '') ? $manufacturer_name : (defined('STORE_NAME') ? STORE_NAME : '')) ?>"
-                },
-             "category" : "<?= json_encode_sdata($category_name) // impossible to find conclusive information on this, but it is NOT google_product_category number/it must be text ?>",
-            <?php if ($product_attributes) {// There is some field duplication between attributes, default and simple product...but having the [ around the multiple offers when attributes-stock is handled complicates the code so leave separate for easier maintenance. Need to test on all three scenarios: simple (no attributes) / attributes - Zen Cart default / attributes - stock handled by 3rd-party plugin
-                switch ($attribute_stock_handler) {
-                    case ('posm'): ?>
-"__comment" : "attribute stock handling:<?= $attribute_stock_handler ?>",
-    "offers" : [
-    <?php $i = 0;$attributes_count=count($product_attributes);foreach($product_attributes as $index=>$product_attribute) { $i++; ?>
-            {
-            <?php if (!empty($hasMerchantReturnPolicy)) {
-                        echo $hasMerchantReturnPolicy;
-                    } ?>
-            "@type" : "Offer",
-<?php if (!empty($product_attribute['sku'])) { ?>
-                   "sku" : "<?= $product_attribute['sku'] ?>",
-<?php } ?>
-                        <?php if (!empty($product_attribute['mpn'])) { ?>
-                   "mpn" : "<?= $product_attribute['mpn'] ?>",
-<?php } ?>
-                        <?php if (!empty($product_attribute['gtin'])) { ?>
-                  "gtin" : "<?= $product_attribute['gtin'] ?>",
-<?php } ?>
-                 "price" : "<?= $product_attribute['price'] ?>",
-                "weight" : "<?= ($weight + $product_attribute['weight'] > 0 ? $weight + $product_attribute['weight'] : $weight) . TEXT_PRODUCT_WEIGHT_UNIT //if a subtracted attribute weight is less than zero, use base weight ?>",
-         "priceCurrency" : "<?= PLUGIN_SDATA_PRICE_CURRENCY ?>",
-          "availability" : "<?= $product_attribute['stock'] > 0 ? $itemAvailability['InStock'] : $oosItemAvailability ?>",
-    <?php if ($product_attribute['stock'] < 1 && $backPreOrderDate !== '') { ?> "availability_date" : "<?= $backPreOrderDate ?>",
-    <?php } ?>
-   "priceValidUntil" : "<?= date('Y') . '-12-31' //e.g. 2020-12-31 NOT 2020-31-12: The date after which the price is no longer available. ?>",
-                    "url": "<?= htmlspecialchars_decode($url) ?>"}<?php if ($i < $attributes_count) { echo ",\n    "; } else { echo PHP_EOL; } ?>
-                    <?php } ?>
-         ]
-<?php break;
 
-                    default://'default' Zen Cart attribute prices only (no sku/mpn/gtin) ?>
-            "__comment" : "attribute stock handling default:<?= $attribute_stock_handler ?>",
-               "offers" : {
-               <?php if (!empty($hasMerchantReturnPolicy)) {
-                        echo $hasMerchantReturnPolicy;
-                    } ?>
-        "url": "<?= htmlspecialchars_decode($url) ?>",
-<?php if ($attribute_lowPrice === $attribute_highPrice) { //or if price not set by attributes, this is already set to base price ?>
-                    "@type" : "Offer",
-                    "price" : "<?= $attribute_lowPrice ?>",
-                <?php } else { ?>
-                    "@type" : "AggregateOffer",
-<?php } ?>
- "lowPrice" : "<?= $attribute_lowPrice ?>",
-                "highPrice" : "<?= $attribute_highPrice ?>",
-               "offerCount" : "<?= $offerCount //required for AggregateOffer. Not zero ?>",
-            "priceCurrency" : "<?= PLUGIN_SDATA_PRICE_CURRENCY ?>",
-          "priceValidUntil" : "<?= date('Y') . '-12-31' //e.g. 2020-12-31 NOT 2020-31-12: The date after which the price is no longer available. ?>",
-            "itemCondition" : "https://schema.org/<?= $itemCondition[PLUGIN_SDATA_FOG_PRODUCT_CONDITION] ?>",
-             "availability" : "<?= ($product_base_stock > 0 ? $itemAvailability['InStock'] : $oosItemAvailability) ?>",
-    <?php if ($backPreOrderDate !== '') { ?>    "availability_date" : "<?= $backPreOrderDate ?>",
-    <?php } ?>               "seller" : "<?= json_encode_sdata(STORE_NAME) ?>",
-<?php
- $leadTime  = ($product_base_stock > 0 ? (int)PLUGIN_SDATA_DELIVERYLEADTIME : (int)PLUGIN_SDATA_DELIVERYLEADTIME_OOS);
-if (!empty($leadTime)) {
+            $productSchema['review'] = $reviews;
+        }
+
+        // Remove empty echema entries
+        $productSchema = sdata_clean_schema($productSchema);
 ?>
-            "deliveryLeadTime" : {
-                "@type": "QuantitativeValue",
-                "value": <?= $leadTime ?>,
-                "unitCode": "DAY"
-            },
+<script title="Structured Data: schemaProduct" type="application/ld+json">
+<?= json_encode($productSchema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . PHP_EOL; ?>
+</script>
 <?php
-}                
-if (PLUGIN_SDATA_ELIGIBLE_REGION !== '') { ?>
-           "eligibleRegion" : "<?=PLUGIN_SDATA_ELIGIBLE_REGION ?>",<?= PHP_EOL ?>
-                    <?php } ?>
-    "acceptedPaymentMethod" : {
-                       "@type" : "PaymentMethod",
-                        "name" : [<?= $PaymentMethods ?>]
-                              }
-                          }
-<?php }//close attributes switch-
-            } else { //simple product (no attributes) ?>
-            "offers" :     {
-              <?php if (!empty($hasMerchantReturnPolicy)) {
-                echo $hasMerchantReturnPolicy;
-            } ?>
-  "@type" : "Offer",
-                "price" : "<?= $product_base_displayed_price ?>",
-                   "url": "<?= htmlspecialchars_decode($url) ?>",
-        "priceCurrency" : "<?= PLUGIN_SDATA_PRICE_CURRENCY ?>",
-      "priceValidUntil" : "<?= date('Y') . '-12-31' //e.g. 2020-12-31 NOT 2020-31-12: The date after which the price is no longer available. ?>",
-        "itemCondition" : "https://schema.org/<?= $itemCondition[PLUGIN_SDATA_FOG_PRODUCT_CONDITION] ?>",
-         "availability" : "<?= ($product_base_stock > 0 ? $itemAvailability['InStock'] : $oosItemAvailability) ?>",
-    <?php if ($backPreOrderDate !== '') { ?>"availability_date" : "<?= $backPreOrderDate ?>",
-    <?php } ?>           "seller" : "<?= json_encode_sdata(STORE_NAME) ?>",
-<?php
-$leadTime  = ($product_base_stock > 0 ? (int)PLUGIN_SDATA_DELIVERYLEADTIME : (int)PLUGIN_SDATA_DELIVERYLEADTIME_OOS);
-if (!empty($leadTime)) {
+    } //eof Product Schema
+}//eof Schema enabled
+
+if (PLUGIN_SDATA_FOG_ENABLE === 'true') {
 ?>
-            "deliveryLeadTime" : {
-                "@type": "QuantitativeValue",
-                "value": <?= $leadTime ?>,
-                "unitCode": "DAY"
-            },
-<?php
-}                
-if (PLUGIN_SDATA_ELIGIBLE_REGION !== '') { ?>
-       "eligibleRegion" : "<?= PLUGIN_SDATA_ELIGIBLE_REGION ?>",
-<?php } ?>
-"acceptedPaymentMethod" : {
-                  "@type" : "PaymentMethod",
-                   "name" : [<?= $PaymentMethods ?>]
-                          }
-               }
-<?php } ?>
-<?php if ( $reviewCount > 0 ) { // Do not bother if no reviews at all. Note best/worstRating is for the max and min rating used in this review system. Default is 1 and 5 so no need to be declared ?>
-,
-  "aggregateRating": {
-    "@type": "AggregateRating",
-    "ratingValue": "<?= $ratingValue //average rating based on all reviews ?>",
-    "reviewCount": "<?= $reviewCount ?>"
-  },
-  "review" : [
-  <?php for ($i = 0, $n = count($reviewsArr); $i<$n; $i ++) { ?>
-  {
-    "@type" : "Review",
-    "author" : {
-      "@type" : "Person",
-      "name" : "<?= json_encode_sdata(strtok($reviewsArr[$i]['customersName'], ' ')) //to use only the forename, encoded ?>"
-    },
-    "reviewBody" : "<?= json_encode_sdata($reviewsArr[$i]['reviewsText'] ?: 'Reviewer did not leave a written comment.') //added json_encode to catch quotation marks and accents, etc. ?>",
-    "datePublished" : "<?= substr($reviewsArr[$i]['dateAdded'], 0, 10) ?>",
-    "reviewRating" : {
-      "@type" : "Rating",
-      "ratingValue" : "<?= $reviewsArr[$i]['reviewsRating'] ?>"
-      }
-    }<?php if ($i+1 !== $n) { echo ','; } ?>
-            <?php } ?>
-  ]
-<?php } //if no reviews, aggregateRating makes no sense ?>
-            }
-        </script>
-    <?php } //eof Product Schema
-}//eof Schema enabled ?>
-<?php if (PLUGIN_SDATA_FOG_ENABLE === 'true') {?>
     <!-- Facebook structured data general-->
-    <?php if (PLUGIN_SDATA_FOG_APPID !== '') { ?>
-        <meta property="fb:app_id" content="<?= (int)PLUGIN_SDATA_FOG_APPID ?>">
-    <?php } ?>
-    <?php if (PLUGIN_SDATA_FOG_ADMINID !== '') { ?>
-        <meta property="fb:admins" content="<?= (int)PLUGIN_SDATA_FOG_ADMINID ?>">
-    <?php } ?>
+<?php
+// opeing php tags from this point forward must be at the begining of the line or the meta tag formatting will look wrong.
+    if (PLUGIN_SDATA_FOG_APPID !== '') {
+?>
+    <meta property="fb:app_id" content="<?= (int)PLUGIN_SDATA_FOG_APPID ?>">
+<?php
+    }
+?>
+<?php
+    if (PLUGIN_SDATA_FOG_ADMINID !== '') {
+?>
+    <meta property="fb:admins" content="<?= (int)PLUGIN_SDATA_FOG_ADMINID ?>">
+<?php
+    }
+?>
     <meta property="og:title" content="<?= $title ?>">
     <meta property="og:site_name" content="<?= STORE_NAME ?>">
-    <meta property="og:url" content="<?= $url ?>">
-    <?php if (!empty($locale)) { echo '<meta property="og:locale" content="' . $locale . '">';
+    <meta property="og:url" content="<?= $canonicalLink ?>">
+<?php
+    if (!empty($locale)) {
+?>
+    <meta property="og:locale" content="<?= $locale ?>">
+<?php
         if (count($locales_array) > 0) {
-            foreach($locales_array as $key=>$value){ ?>
-                <meta property="og:locale:alternate" content="<?= $value ?>">
-            <?php }}} ?>
-    <?php $image = ($image_default ? $image_default_facebook : $image); ?>
-    <?php if ($debug_sd) {echo __LINE__ . ' $image_default=' . $image_default . '<br>';} ?>
+            foreach($locales_array as $key=>$value){
+?>
+    <meta property="og:locale:alternate" content="<?= $value ?>">
+<?php
+            }
+        }
+    }
+    $image = ($image_default ? $image_default_facebook : $image);
+    if ($debug_sd) {
+        echo __LINE__ . ' $image_default=' . $image_default . '<br>';
+    }
+?>
     <meta property="og:image" content="<?= $image ?>">
     <meta property="og:image:url" content="<?= $image ?>">
-    <?php
+<?php
     if (is_readable(str_replace(HTTP_SERVER . DIR_WS_CATALOG, '', $image))) {
         $image_info = @getimagesize(str_replace(HTTP_SERVER . DIR_WS_CATALOG, '', $image));
 //log the problem for correction
         if ($image_info === false) {
             error_log(__FILE__ . ":getimagesize($image) returned FALSE: image is corrupt");
             $image = DIR_WS_IMAGES . PRODUCTS_IMAGE_NO_IMAGE;
-            $image_info = getimagesize(str_replace(HTTP_SERVER . DIR_WS_CATALOG, '', $image)); ?>
+            $image_info = getimagesize(str_replace(HTTP_SERVER . DIR_WS_CATALOG, '', $image));
+?>
             <!-- ERROR: image is corrupt: see debug logs -->
-        <?php } ?>
-        <meta property="og:image:alt" content="<?= htmlentities($image_alt, ENT_QUOTES, CHARSET, false) ?>">
-        <meta property="og:image:type" content="<?= $image_info['mime'] ?>">
-        <meta property="og:image:width" content="<?= $image_info[0] ?>">
-        <meta property="og:image:height" content="<?= $image_info[1] ?>">
-    <?php } ?>
+<?php
+        }
+?>
+    <meta property="og:image:alt" content="<?= htmlentities($image_alt, ENT_QUOTES, CHARSET, false) ?>">
+    <meta property="og:image:type" content="<?= $image_info['mime'] ?>">
+    <meta property="og:image:width" content="<?= $image_info[0] ?>">
+    <meta property="og:image:height" content="<?= $image_info[1] ?>">
+<?php
+    }
+?>
     <meta property="og:description" content="<?= htmlentities($description) ?>">
-    <?php if ($facebook_type !== 'product') { ?>
-        <meta property="og:type" content="<?= PLUGIN_SDATA_FOG_TYPE_SITE ?>">
-        <?php if (PLUGIN_SDATA_STREET_ADDRESS !== '') { ?>
-            <meta property="business:contact_data:street_address" content="<?= PLUGIN_SDATA_STREET_ADDRESS ?>">
-        <?php } ?>
-        <?php if (PLUGIN_SDATA_LOCALITY !== '') { ?>
-            <meta property="business:contact_data:locality" content="<?= PLUGIN_SDATA_LOCALITY ?>">
-        <?php } ?>
-        <?php if (PLUGIN_SDATA_REGION !== '') { ?>
-            <meta property="business:contact_data:region" content="<?= PLUGIN_SDATA_REGION ?>">
-        <?php } ?>
-        <?php if (PLUGIN_SDATA_POSTALCODE !== '') { ?>
-            <meta property="business:contact_data:postal_code" content="<?= PLUGIN_SDATA_POSTALCODE ?>">
-        <?php } ?>
-        <?php if (PLUGIN_SDATA_COUNTRYNAME !== '') { ?>
-            <meta property="business:contact_data:country_name" content="<?= PLUGIN_SDATA_COUNTRYNAME ?>">
-        <?php } ?>
-        <?php if (PLUGIN_SDATA_EMAIL !== '') { ?>
-            <meta property="business:contact_data:email" content="<?= PLUGIN_SDATA_EMAIL ?>">
-        <?php } ?>
-        <?php if (PLUGIN_SDATA_TELEPHONE !== '') { ?>
-            <meta property="business:contact_data:phone_number" content="<?= PLUGIN_SDATA_TELEPHONE ?>">
-        <?php } ?>
-        <?php if (PLUGIN_SDATA_FAX !== '') { ?>
-            <meta property="business:contact_data:fax_number" content="<?= PLUGIN_SDATA_FAX ?>">
-        <?php } ?>
-        <meta property="business:contact_data:website" content="<?= HTTP_SERVER ?>">
-        <!-- eof Facebook structured data general-->
-    <?php } else { ?>
-        <!-- Facebook structured data for product-->
-        <meta property="og:type" content="<?= trim(PLUGIN_SDATA_FOG_TYPE_PRODUCT) ?>">
-        <meta property="product:availability" content="<?php if ($product_base_stock > 0) { ?>instock<?php } ?><?php if ($product_base_stock < 1) { ?>pending<?php } ?>">
-        <meta property="product:brand" content="<?= $manufacturer_name ?>">
-        <meta property="product:category" content="<?= htmlentities($category_name) ?>">
-        <meta property="product:condition" content="<?= PLUGIN_SDATA_FOG_PRODUCT_CONDITION ?>">
-        <?php if ($product_base_mpn !== '') {
-            echo '<meta property="product:mfr_part_no" content="' . $product_base_mpn . '">' . PHP_EOL;
-        } ?>
-        <meta property="product:price:amount" content="<?= $product_base_displayed_price ?>">
-        <meta property="product:price:currency" content="<?= PLUGIN_SDATA_PRICE_CURRENCY ?>">
-        <meta property="product:product_link" content="<?= $url ?>">
-        <meta property="product:retailer" content="<?= PLUGIN_SDATA_FOG_APPID ?>">
-        <meta property="product:retailer_category" content="<?= htmlentities($category_name) ?>">
-        <meta property="product:retailer_part_no" content="<?= $product_base_sku ?>">
-        <!-- eof Facebook structured data -->
-    <?php } }//end facebook enabled  ?>
-<?php if (PLUGIN_SDATA_TWITTER_CARD_ENABLE === 'true') { ?>
+<?php
+    if ($facebook_type !== 'product') {
+?>
+    <meta property="og:type" content="<?= PLUGIN_SDATA_FOG_TYPE_SITE ?>">
+<?php
+        if (PLUGIN_SDATA_STREET_ADDRESS !== '') {
+?>
+    <meta property="business:contact_data:street_address" content="<?= PLUGIN_SDATA_STREET_ADDRESS ?>">
+<?php
+        }
+        if (PLUGIN_SDATA_LOCALITY !== '') {
+?>
+    <meta property="business:contact_data:locality" content="<?= PLUGIN_SDATA_LOCALITY ?>">
+<?php
+        }
+        if (PLUGIN_SDATA_REGION !== '') {
+ ?>
+    <meta property="business:contact_data:region" content="<?= PLUGIN_SDATA_REGION ?>">
+<?php
+        }
+        if (PLUGIN_SDATA_POSTALCODE !== '') {
+?>
+    <meta property="business:contact_data:postal_code" content="<?= PLUGIN_SDATA_POSTALCODE ?>">
+<?php
+        }
+        if (PLUGIN_SDATA_COUNTRYNAME !== '') {
+?>
+    <meta property="business:contact_data:country_name" content="<?= PLUGIN_SDATA_COUNTRYNAME ?>">
+<?php
+        }
+        if (PLUGIN_SDATA_EMAIL !== '') {
+?>
+    <meta property="business:contact_data:email" content="<?= PLUGIN_SDATA_EMAIL ?>">
+<?php
+        }
+        if (PLUGIN_SDATA_TELEPHONE !== '') {
+?>
+    <meta property="business:contact_data:phone_number" content="<?= PLUGIN_SDATA_TELEPHONE ?>">
+<?php
+        }
+        if (PLUGIN_SDATA_FAX !== '') {
+?>
+    <meta property="business:contact_data:fax_number" content="<?= PLUGIN_SDATA_FAX ?>">
+<?php
+        }
+?>
+    <meta property="business:contact_data:website" content="<?= HTTP_SERVER ?>">
+    <!-- eof Facebook structured data general-->
+<?php
+    } else {
+?>
+    <!-- Facebook structured data for product-->
+    <meta property="og:type" content="<?= trim(PLUGIN_SDATA_FOG_TYPE_PRODUCT) ?>">
+    <meta property="product:availability" content="<?= (($product_base_stock > 0) ? 'instock' : $facebookAvailability[PLUGIN_SDATA_OOS_DEFAULT]) ?>">
+    <meta property="product:brand" content="<?= (isset($manufacturer_name) && trim($manufacturer_name) !== '')
+                    ? $manufacturer_name
+                    : (defined('STORE_NAME') ? STORE_NAME : '') ?>">
+    <meta property="product:category" content="<?= htmlentities($category_name) ?>">
+    <meta property="product:condition" content="<?= PLUGIN_SDATA_FOG_PRODUCT_CONDITION ?>">
+<?php
+        if ($product_base_mpn !== '') {
+?>
+    <meta property="product:mfr_part_no" content="' . $product_base_mpn . '">' . PHP_EOL;
+<?php
+        }
+?>
+    <meta property="product:price:amount" content="<?= $product_base_displayed_price ?>">
+    <meta property="product:price:currency" content="<?= PLUGIN_SDATA_PRICE_CURRENCY ?>">
+    <meta property="product:product_link" content="<?= $canonicalLink ?>">
+    <meta property="product:retailer" content="<?= !empty(PLUGIN_SDATA_FOG_APPID) ? PLUGIN_SDATA_FOG_APPID : HTTP_SERVER . DIR_WS_CATALOG ?>">
+    <meta property="product:retailer_category" content="<?= htmlentities($category_name) ?>">
+    <meta property="product:retailer_part_no" content="<?= $product_base_sku ?>">
+    <!-- eof Facebook structured data -->
+<?php
+    }
+} //end facebook enabled
+?>
+<?php
+if (PLUGIN_SDATA_TWITTER_CARD_ENABLE === 'true') {
+?>
     <!-- Twitter Card markup -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:site" content="<?= PLUGIN_SDATA_TWITTER_USERNAME ?>">
     <meta name="twitter:title" content="<?= $title ?>">
     <meta name="twitter:description" content="<?= htmlentities($description) ?>">
-    <?php $image = ($image_default ? $image_default_twitter : $image); ?>
+<?php
+$image = ($image_default ? $image_default_twitter : $image);
+?>
     <meta name="twitter:image" content="<?= $image ?>">
     <meta name="twitter:image:alt" content="<?= htmlentities($image_alt, ENT_QUOTES, CHARSET, false) ?>">
-    <meta name="twitter:url" content="<?= htmlentities($url, ENT_COMPAT, CHARSET, false) ?>">
+    <meta name="twitter:url" content="<?= htmlentities($canonicalLink, ENT_COMPAT, CHARSET, false) ?>">
     <meta name="twitter:domain" content="<?= HTTP_SERVER ?>">
     <!-- eof Twitter Card markup -->
-<?php } //end of Twitter enabled ?>
+<?php
+} //end of Twitter enabled
+?>
 <?php //google+ markup
-if (PLUGIN_SDATA_GOOGLE_PUBLISHER !== '') { ?>
+if (PLUGIN_SDATA_GOOGLE_PUBLISHER !== '') {
+?>
     <!-- Google+-->
     <link href="<?= PLUGIN_SDATA_GOOGLE_PUBLISHER ?>" rel="publisher">
-    <!-- eof Google+--><?php } //eof Google+ ?>
+    <!-- eof Google+-->
+<?php
+} //eof Google+
