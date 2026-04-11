@@ -488,7 +488,7 @@ if ($is_product_page && (isset($product_info) && is_object($product_info))) {
     // BOF ZenExpert: capture product listing data
     global $listing_sql;
 
-    if (!empty($listing_sql) && defined('MAX_DISPLAY_PRODUCTS_LISTING')) {
+    if (!empty($listing_sql) && defined('MAX_DISPLAY_PRODUCTS_LISTING') &&  stripos($listing_sql, 'products_id') !== false) {
         $listing_page = (isset($_GET['page']) && is_numeric($_GET['page'])) ? (int)$_GET['page'] : 1;
         $listing_limit = (int)MAX_DISPLAY_PRODUCTS_LISTING;
         $listing_offset = ($listing_page - 1) * $listing_limit;
