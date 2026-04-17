@@ -554,10 +554,10 @@ if ($is_product_page && (isset($product_info) && is_object($product_info))) {
 
         $sub_cat_data = $db->Execute($sub_cat_sql);
         $list_pos = 0;
-        $base_cPath = $_GET['cPath'];
+        $base_cPath = (!empty($_GET['cPath']))? $_GET['cPath'] . '_' : '';
         foreach ($sub_cat_data as $list_category) {
             $list_pos++;
-            $list_cpath = $base_cPath . '_' . $list_category['categories_id'];
+            $list_cpath = $base_cPath . $list_category['categories_id'];
             $item_link = zen_href_link(FILENAME_DEFAULT, 'cPath=' . $list_cpath);
             $item_image_url = (!empty($list_category['categories_image']))
                     ? HTTP_SERVER . DIR_WS_CATALOG . DIR_WS_IMAGES . $list_category['categories_image']
