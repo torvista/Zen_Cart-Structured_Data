@@ -498,7 +498,7 @@ if ($is_product_page && (isset($product_info) && is_object($product_info))) {
 
     $image_alt = $product_name;
     $facebook_type = 'product';
-} elseif (isset($_GET['cPath'])) { // NOT a product page
+} else { // NOT a product page
 
     if ($debug_sd) {
         echo __LINE__ . ': $current_page=' . $current_page . ', is NOT product page<br>';
@@ -564,42 +564,47 @@ if ($is_product_page && (isset($product_info) && is_object($product_info))) {
                     : '';
             $listing_schema[] = sdata_set_listItem($list_pos, $item_link, $list_category['categories_name'], $item_image_url);
 
-    $category_name = zen_get_category_name($current_category_id, (int)$_SESSION['languages_id']); // ZC158 does not need language parameter
-    if (!empty($category_name)) { //a valid category
-        $category_image = zen_get_categories_image($current_category_id);
-
-        if ($debug_sd) {
-            echo __LINE__ . ' $category_image=' . $category_image . '<br>';
-            echo __LINE__ . ' gettype $category_image=' . gettype($category_image) . '<br>';
         }
+    }
+    // EOF ZenExpert: capture product/sub-category listing data
+    if (isset($_GET['cPath'])) {
+        $category_name = zen_get_category_name($current_category_id, (int)$_SESSION['languages_id']); // ZC158 does not need language parameter
+        if (!empty($category_name)) { //a valid category
+            $category_image = zen_get_categories_image($current_category_id);
 
-        if (empty($category_image)) {
-            $image_default = true;
+            if ($debug_sd) {
+                echo __LINE__ . ' $category_image=' . $category_image . '<br>';
+                echo __LINE__ . ' gettype $category_image=' . gettype($category_image) . '<br>';
+            }
+
+            if (empty($category_image)) {
+                $image_default = true;
+            } else {
+                $image = HTTP_SERVER . DIR_WS_CATALOG . DIR_WS_IMAGES . $category_image;
+            }
+            $description = zen_get_category_description($current_category_id, (int)$_SESSION['languages_id']) !== '' ? zen_get_category_description($current_category_id, (int)$_SESSION['languages_id'])
+                : META_TAG_DESCRIPTION;
+            $product_category_name = $category_name;//used for twitter title, it changes depending on if page is product or category
+            $image_alt = $category_name;
+            $facebook_type = 'product.group';
+            $title = META_TAG_TITLE;
         } else {
-            $image = HTTP_SERVER . DIR_WS_CATALOG . DIR_WS_IMAGES .  $category_image;
+            // something wrong: a category with no name/does not exist!
+            $image_default = true;
+            $image_alt = '';
+            $product_category_name = '';
+            $title = META_TAG_TITLE;
         }
-        $description = zen_get_category_description($current_category_id, (int)$_SESSION['languages_id']) !== '' ? zen_get_category_description($current_category_id, (int)$_SESSION['languages_id'])
-            : META_TAG_DESCRIPTION;
-        $product_category_name = $category_name;//used for twitter title, it changes depending on if page is product or category
-        $image_alt = $category_name;
-        $facebook_type = 'product.group';
-        $title = META_TAG_TITLE;
-    } else {
-        // something wrong: a category with no name/does not exist!
-        $image_default = true;
-        $image_alt = '';
-        $product_category_name = '';
-        $title = META_TAG_TITLE;
-    }
-} else {//some other page - not product or category
-    if ($debug_sd) {
-        echo __LINE__ . ' is "Other" page<br>';
-    }
+    } else {//some other page - not product or category and does not contain product list or sub categories
+        if ($debug_sd) {
+            echo __LINE__ . ' is "Other" page<br>';
+        }
 
-    $image_default = true;
-    //$image_alt = $breadcrumb_this_page;//todo, needed??
-    $title = META_TAG_TITLE;
-    $description = META_TAG_DESCRIPTION;
+        $image_default = true;
+        //$image_alt = $breadcrumb_this_page;//todo, needed??
+        $title = META_TAG_TITLE;
+        $description = META_TAG_DESCRIPTION;
+    }
 }
 
 //$description could be null from META_TAG_DESCRIPTION
