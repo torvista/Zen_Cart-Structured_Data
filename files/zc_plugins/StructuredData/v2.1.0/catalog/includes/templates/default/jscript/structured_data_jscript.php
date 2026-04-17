@@ -505,10 +505,10 @@ if ($is_product_page && (isset($product_info) && is_object($product_info))) {
     }
 
     // BOF ZenExpert: capture product/ sub-category listing data
-    global $current_category_has_products;
+    global $current_category_has_products, $current_category_has_subcats, $current_category_id;
     if ($current_category_has_products) {
         global $listing_sql;
-        $listing_schema_name = "Products";
+        $listing_schema_name = 'Products';
     // if (!empty($listing_sql) && defined('MAX_DISPLAY_PRODUCTS_LISTING') &&  stripos($listing_sql, 'products_id') !== false) {
         $listing_page = (isset($_GET['page']) && is_numeric($_GET['page'])) ? (int)$_GET['page'] : 1;
         $listing_limit = (int)MAX_DISPLAY_PRODUCTS_LISTING;
@@ -543,15 +543,30 @@ if ($is_product_page && (isset($product_info) && is_object($product_info))) {
                 $list_pos++;
             }
         }
-    }
-    // EOF ZenExpert: capture product
+    } elseif ($current_category_has_subcats) {
+        // get sub category list
+        $listing_schema_name = 'Subcategories';
+        $sub_cat_sql = "SELECT c.categories_id, cd.categories_name, c.categories_image
+                            FROM " . TABLE_CATEGORIES . " c
+                            LEFT JOIN " . TABLE_CATEGORIES_DESCRIPTION . " cd ON (c.categories_id = cd.categories_id AND cd.language_id = " . (int)$_SESSION['languages_id'] . ")
+                            WHERE c.parent_id = " . (int)$current_category_id . " AND c.categories_status = 1
+                            ORDER BY c.sort_order ASC, cd.categories_name ASC";
 
-    $cPath_array = explode('_', $_GET['cPath']);
-    $category_id = end($cPath_array);
+        $sub_cat_data = $db->Execute($sub_cat_sql);
+        $list_pos = 0;
+        $base_cPath = $_GET['cPath'];
+        foreach ($sub_cat_data as $list_category) {
+            $list_pos++;
+            $list_cpath = $base_cPath . '_' . $list_category['categories_id'];
+            $item_link = zen_href_link(FILENAME_DEFAULT, 'cPath=' . $list_cpath);
+            $item_image_url = (!empty($list_category['categories_image']))
+                    ? HTTP_SERVER . DIR_WS_CATALOG . DIR_WS_IMAGES . $list_category['categories_image']
+                    : '';
+            $listing_schema[] = sdata_set_listItem($list_pos, $item_link, $list_category['categories_name'], $item_image_url);
 
-    $category_name = zen_get_category_name($category_id, (int)$_SESSION['languages_id']); // ZC158 does not need language parameter
+    $category_name = zen_get_category_name($current_category_id, (int)$_SESSION['languages_id']); // ZC158 does not need language parameter
     if (!empty($category_name)) { //a valid category
-        $category_image = zen_get_categories_image($category_id);
+        $category_image = zen_get_categories_image($current_category_id);
 
         if ($debug_sd) {
             echo __LINE__ . ' $category_image=' . $category_image . '<br>';
@@ -561,9 +576,9 @@ if ($is_product_page && (isset($product_info) && is_object($product_info))) {
         if (empty($category_image)) {
             $image_default = true;
         } else {
-            $image = HTTP_SERVER . DIR_WS_CATALOG . DIR_WS_IMAGES . zen_get_categories_image($category_id);
+            $image = HTTP_SERVER . DIR_WS_CATALOG . DIR_WS_IMAGES .  $category_image;
         }
-        $description = zen_get_category_description($category_id, (int)$_SESSION['languages_id']) !== '' ? zen_get_category_description($category_id, (int)$_SESSION['languages_id'])
+        $description = zen_get_category_description($current_category_id, (int)$_SESSION['languages_id']) !== '' ? zen_get_category_description($current_category_id, (int)$_SESSION['languages_id'])
             : META_TAG_DESCRIPTION;
         $product_category_name = $category_name;//used for twitter title, it changes depending on if page is product or category
         $image_alt = $category_name;
