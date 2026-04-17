@@ -488,7 +488,7 @@ if ($is_product_page && (isset($product_info) && is_object($product_info))) {
     // BOF ZenExpert: capture product listing data
     global $listing_sql;
 
-    if (!empty($listing_sql) && defined('MAX_DISPLAY_PRODUCTS_LISTING')) {
+    if (!empty($listing_sql) && defined('MAX_DISPLAY_PRODUCTS_LISTING') &&  stripos($listing_sql, 'products_id') !== false) {
         $listing_page = (isset($_GET['page']) && is_numeric($_GET['page'])) ? (int)$_GET['page'] : 1;
         $listing_limit = (int)MAX_DISPLAY_PRODUCTS_LISTING;
         $listing_offset = ($listing_page - 1) * $listing_limit;
@@ -1038,6 +1038,44 @@ if (PLUGIN_SDATA_SCHEMA_ENABLE === 'true') {
 <?php
     }
 // EOF ZenExpert: Product Listing schema for category pages
+    // Add web page schema
+    $webPageSchema = [
+        '@context' => 'https://schema.org',
+        '@type' => 'WebPage',
+        'name' => sdata_truncate(META_TAG_TITLE, PLUGIN_SDATA_MAX_NAME),
+        'url' => htmlspecialchars_decode($canonicalLink),
+        'isPartOf' => [
+            '@type' => "WebSite",
+            'name' => PLUGIN_SDATA_LOCAL_BUSINESS_NAME ?: PLUGIN_SDATA_LEGAL_NAME ?: STORE_NAME,
+            'url' => HTTP_SERVER
+            ]
+    ];
+
+    // add description if home page
+    if (!$is_product_page && $breadcrumb_count === 1) {
+        $webSiteSchema = [
+            '@context' => 'https://schema.org',
+            '@type' => 'WebSite',
+            'name' => PLUGIN_SDATA_LOCAL_BUSINESS_NAME ?: PLUGIN_SDATA_LEGAL_NAME ?: STORE_NAME,
+            'url' => HTTP_SERVER,
+            'potentialAction' => [
+                '@type' => 'SearchAction',
+                'target' => HTTP_SERVER . DIR_WS_CATALOG .'?main_page=search_result&search_in_description=1&keyword={search_term_string}',
+                'query-input' => 'required name=search_term_string'
+                ]
+            ]
+?>
+<script title="Structured Data: schemaWebSite" type="application/ld+json">
+<?= json_encode($webSiteSchema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . PHP_EOL; ?>
+</script>
+<?php
+        $webPageSchema['description'] = META_TAG_DESCRIPTION;
+    } elseif (!$is_product_page && $breadcrumb_count > 1 ) {
+        //get the category description
+        $category_description = zen_get_category_description($category_id, $language['id']) ;
+        $webPageSchema['description'] = $category_description; // optional but recommended
+    }
+
     /*
      * product page schema
      */
@@ -1291,7 +1329,19 @@ if (PLUGIN_SDATA_SCHEMA_ENABLE === 'true') {
 <?= json_encode($productSchema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . PHP_EOL; ?>
 </script>
 <?php
+
+        // add product name to webpage schema
+        $webPageSchema['about'] = [
+            '@type' => 'Product',
+            'name' => sdata_truncate($product_name, PLUGIN_SDATA_MAX_NAME)
+        ];
     } //eof Product Schema
+// output web page schema
+?>
+<script title="Structured Data: schemaWebPage" type="application/ld+json">
+<?= json_encode($webPageSchema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . PHP_EOL; ?>
+</script>
+<?php
 }//eof Schema enabled
 
 if (PLUGIN_SDATA_FOG_ENABLE === 'true') {
