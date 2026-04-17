@@ -180,6 +180,25 @@ function sdata_clean_schema($value):mixed {
     return $value;
 }
 
+/**
+ *  Function to populate listItem schema array
+ *
+ * @param $pos Integer position in list item array
+ * @param $link String Url of item
+ * @param $name String name of item
+ * @param $image String Url of item image
+ * @return array
+ */
+function sdata_set_listItem(int $pos, string $link, string $name, string $image): array {
+    return [
+                    '@type' => 'ListItem',
+                    'position' => $pos,
+                    'url' => htmlspecialchars_decode($link),
+                    'name' => sdata_prepare_string($name),
+                    'image' => $image
+                ];
+}
+
 // Initialize defaults to prevent php notices
 $category_name = '';
 $description = '';
@@ -485,10 +504,12 @@ if ($is_product_page && (isset($product_info) && is_object($product_info))) {
         echo __LINE__ . ': $current_page=' . $current_page . ', is NOT product page<br>';
     }
 
-    // BOF ZenExpert: capture product listing data
-    global $listing_sql;
-
-    if (!empty($listing_sql) && defined('MAX_DISPLAY_PRODUCTS_LISTING') &&  stripos($listing_sql, 'products_id') !== false) {
+    // BOF ZenExpert: capture product/ sub-category listing data
+    global $current_category_has_products;
+    if ($current_category_has_products) {
+        global $listing_sql;
+        $listing_schema_name = "Products";
+    // if (!empty($listing_sql) && defined('MAX_DISPLAY_PRODUCTS_LISTING') &&  stripos($listing_sql, 'products_id') !== false) {
         $listing_page = (isset($_GET['page']) && is_numeric($_GET['page'])) ? (int)$_GET['page'] : 1;
         $listing_limit = (int)MAX_DISPLAY_PRODUCTS_LISTING;
         $listing_offset = ($listing_page - 1) * $listing_limit;
@@ -517,19 +538,13 @@ if ($is_product_page && (isset($product_info) && is_object($product_info))) {
 
                 $p_name = $item['products_name'] ?? zen_get_products_name((int)$item['products_id']);
 
-                $listing_schema[] = [
-                    '@type' => 'ListItem',
-                    'position' => $list_pos,
-                    'url' => htmlspecialchars_decode($item_link),
-                    'name' => sdata_prepare_string($p_name),
-                    'image' => $item_image_url
-                ];
+                $listing_schema[] = sdata_set_listItem($list_pos, $item_link, $p_name, $item_image_url);
 
                 $list_pos++;
             }
         }
     }
-    // EOF ZenExpert: capture product listing data
+    // EOF ZenExpert: capture product
 
     $cPath_array = explode('_', $_GET['cPath']);
     $category_id = end($cPath_array);
@@ -1021,6 +1036,7 @@ if (PLUGIN_SDATA_SCHEMA_ENABLE === 'true') {
         $itemListSchema = [
             '@context' => 'https://schema.org',
             '@type' => 'ItemList',
+            'name' => $listing_schema_name,
             'itemListElement' => []
         ];
 
@@ -1071,9 +1087,8 @@ if (PLUGIN_SDATA_SCHEMA_ENABLE === 'true') {
 <?php
         $webPageSchema['description'] = META_TAG_DESCRIPTION;
     } elseif (!$is_product_page && $breadcrumb_count > 1 ) {
-        //get the category description
-        $category_description = zen_get_category_description($category_id, $language['id']) ;
-        $webPageSchema['description'] = $category_description; // optional but recommended
+        // add the category description
+        $webPageSchema['description'] = $description; // optional but recommended
     }
 
     /*
