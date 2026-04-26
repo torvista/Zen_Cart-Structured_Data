@@ -1363,11 +1363,8 @@ if (PLUGIN_SDATA_SCHEMA_ENABLE === 'true') {
 <?= json_encode($productSchema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . PHP_EOL; ?>
 </script>
 <?php
-// add product name to webpage schema
-$webPageSchema['about'] = [
-    '@type' => 'Product',
-    'name' => sdata_truncate($product_name, PLUGIN_SDATA_MAX_NAME)
-   ];
+// add product details to webpage schema
+$webPageSchema['about'] = $productSchema;
 }
 // eof Product schema for product pages
 
