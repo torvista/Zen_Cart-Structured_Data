@@ -1074,6 +1074,45 @@ if (PLUGIN_SDATA_SCHEMA_ENABLE === 'true') {
     }
 // eof Product Listing schema for category pages with products
 
+// Create web page schema
+    $webPageSchema = [
+        '@context' => 'https://schema.org',
+        '@type' => 'WebPage',
+        'name' => sdata_truncate(META_TAG_TITLE, PLUGIN_SDATA_MAX_NAME),
+        'url' => htmlspecialchars_decode($canonicalLink),
+        'isPartOf' => [
+            '@type' => "WebSite",
+            'name' => PLUGIN_SDATA_LOCAL_BUSINESS_NAME ?: PLUGIN_SDATA_LEGAL_NAME ?: STORE_NAME,
+            'url' => HTTP_SERVER
+            ]
+    ];
+
+    // add description if home page
+    if (!$is_product_page && $breadcrumb_count === 1) {
+        $webSiteSchema = [
+            '@context' => 'https://schema.org',
+            '@type' => 'WebSite',
+            'name' => PLUGIN_SDATA_LOCAL_BUSINESS_NAME ?: PLUGIN_SDATA_LEGAL_NAME ?: STORE_NAME,
+            'url' => HTTP_SERVER,
+            'potentialAction' => [
+                '@type' => 'SearchAction',
+                'target' => HTTP_SERVER . DIR_WS_CATALOG .'?main_page=search_result&search_in_description=1&keyword={search_term_string}',
+                'query-input' => 'required name=search_term_string'
+                ]
+            ]
+?>
+<script title="Structured Data: schemaWebSite" type="application/ld+json">
+<?= json_encode($webSiteSchema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . PHP_EOL; ?>
+</script>
+<?php
+        $webPageSchema['description'] = META_TAG_DESCRIPTION;
+    } elseif (!$is_product_page && $breadcrumb_count > 1 ) {
+        // add the category description
+        $webPageSchema['description'] = $description; // optional but recommended
+    }
+
+// eof Create web page schema
+
 // Product schema for product pages
     if ($is_product_page) {
 
@@ -1324,10 +1363,22 @@ if (PLUGIN_SDATA_SCHEMA_ENABLE === 'true') {
 <?= json_encode($productSchema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . PHP_EOL; ?>
 </script>
 <?php
-    }
+// add product name to webpage schema
+$webPageSchema['about'] = [
+    '@type' => 'Product',
+    'name' => sdata_truncate($product_name, PLUGIN_SDATA_MAX_NAME)
+   ];
+}
 // eof Product schema for product pages
 
-}//eof Schema enabled
+// output web page schema
+?>
+<script title="Structured Data: schemaWebPage" type="application/ld+json">
+<?= json_encode($webPageSchema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . PHP_EOL; ?>
+</script>
+<?php
+}
+// eof Schema enabled
 
 if (PLUGIN_SDATA_FOG_ENABLE === 'true') {
 ?>
