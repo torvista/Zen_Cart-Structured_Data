@@ -217,7 +217,7 @@ $title = '';
 
 $url = $canonicalLink;
 global $currencies;
-$decimal_places = $currencies->currencies[PLUGIN_SDATA_PRICE_CURRENCY]['decimal_places'];
+$decimal_places = $currencies->currencies[DEFAULT_CURRENCY]['decimal_places'];
 
 // Images
 if (PLUGIN_SDATA_FOG_DEFAULT_IMAGE !== '') {
@@ -1228,7 +1228,7 @@ if (PLUGIN_SDATA_SCHEMA_ENABLE === 'true') {
 
                     $offer = [
                         'url' => htmlspecialchars_decode($canonicalLink),
-                        'priceCurrency' => PLUGIN_SDATA_PRICE_CURRENCY,
+                        'priceCurrency' => DEFAULT_CURRENCY,
                         'priceValidUntil'=> date('Y') . '-12-31',
                         'itemCondition' => 'https://schema.org/' . $itemCondition[PLUGIN_SDATA_FOG_PRODUCT_CONDITION],
                         'availability' => ($product_base_stock > 0 ? $itemAvailability['InStock'] : $oosItemAvailability),
