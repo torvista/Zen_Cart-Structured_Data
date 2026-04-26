@@ -6,10 +6,10 @@ declare(strict_types=1);
  * @author: torvista
  * @link: https://github.com/torvista/Zen_Cart-Structured_Data
  * @license https://www.zen-cart.com/license/2_0.txt GNU Public License V2.0
- * @version auto.structured_data.php torvista 08 Feb 2025
+ * @version auto.structured_data.php torvista 27 Feb 2026
  */
-use App\Models\PluginControl;
-use App\Models\PluginControlVersion;
+use Zencart\DbRepositories\PluginControlRepository;
+use Zencart\DbRepositories\PluginControlVersionRepository;
 use Zencart\PluginManager\PluginManager;
 
 if (!defined('IS_ADMIN_FLAG')) {
@@ -32,7 +32,8 @@ class zcObserverStructuredData extends base
         }
 
         // Determine this zc_plugin's installed directory
-        $plugin_manager = new PluginManager(new PluginControl(), new PluginControlVersion());
+        global $db;
+        $plugin_manager = new PluginManager(new PluginControlRepository($db), new PluginControlVersionRepository($db));
         $this->zcPluginDir = str_replace(
             DIR_FS_CATALOG,
             '',
