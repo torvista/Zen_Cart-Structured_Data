@@ -8,7 +8,7 @@ declare(strict_types=1);
  * @author: torvista
  * @link: https://github.com/torvista/Zen_Cart-Structured_Data
  * @license https://www.zen-cart.com/license/2_0.txt GNU Public License V2.0
- * @version structured_data_jscript.php markbrittain 29 Jan 2026
+ * @version structured_data_jscript.php torvista 26 Apr 2026
  */
 
 /** directives for phpStorm code inspector
@@ -534,7 +534,7 @@ if ($is_product_page && (isset($product_info) && is_object($product_info))) {
     $cPath_array = explode('_', $_GET['cPath']);
     $category_id = end($cPath_array);
 
-    $category_name = zen_get_category_name($category_id, (int)$_SESSION['languages_id']); // ZC158 does not need language parameter
+    $category_name = zen_get_category_name((int)$category_id, (int)$_SESSION['languages_id']); // ZC158 does not need language parameter
     if (!empty($category_name)) { //a valid category
         $category_image = zen_get_categories_image($category_id);
 
@@ -548,7 +548,7 @@ if ($is_product_page && (isset($product_info) && is_object($product_info))) {
         } else {
             $image = HTTP_SERVER . DIR_WS_CATALOG . DIR_WS_IMAGES . zen_get_categories_image($category_id);
         }
-        $description = zen_get_category_description($category_id, (int)$_SESSION['languages_id']) !== '' ? zen_get_category_description($category_id, (int)$_SESSION['languages_id'])
+        $description = zen_get_category_description((int)$category_id, (int)$_SESSION['languages_id']) !== '' ? zen_get_category_description((int)$category_id, (int)$_SESSION['languages_id'])
             : META_TAG_DESCRIPTION;
         $product_category_name = $category_name;//used for twitter title, it changes depending on if page is product or category
         $image_alt = $category_name;
