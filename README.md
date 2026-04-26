@@ -1,5 +1,5 @@
 # Structured Data for Zen Cart v2.1.0
-Tested on Zen Cart 2.1.0+ on php 8+
+Tested on Zen Cart 2.2.0+ on php 8+
 
 Encapsulated Plugin that adds Schema (in JSON-LD format), Facebook and Twitter structured markup to all pages.
 Schema markup is added in three blocks: organisation, breadcrumbs and product (including reviews).
@@ -248,6 +248,12 @@ maximum size: approx. 1MB.
 ## Changelog
 See the commit history for all details.
 
+2026 01 26 - britainmark & torvista
+- add schema for web page
+- add list items for category with sub-categories
+- use DEFAULT_CURRENCY instead of PLUGIN_SDATA_PRICE_CURRENCY
+- replace laravel namespaces
+  
 2026 01 19 - brittainmark
 - Breadcrumb: handle empty final page (zen cart default) and templates (Bootstrap) that put the landing page in twice.
 - Url: so they are the actual url not the html safe ones. (Apparently &amp; is not valid in json files for url's).
