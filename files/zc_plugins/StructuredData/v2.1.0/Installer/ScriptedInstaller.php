@@ -76,7 +76,7 @@ class ScriptedInstaller extends ScriptedInstallBase
                 ('City (Schema/OG)', 'PLUGIN_SDATA_LOCALITY', '', 'Enter the business town/city.', $this->cgi, 40, null),
                 ('State (Schema/OG)', 'PLUGIN_SDATA_REGION', '', 'Enter the business state/province.', $this->cgi, 45, null),
                 ('Postal Code (Schema/OG)', 'PLUGIN_SDATA_POSTALCODE', '', 'Enter the business postal code/zip', $this->cgi, 50, null),
-                ('Country (Schema/OG)', 'PLUGIN_SDATA_COUNTRYNAME', '', 'Enter the business country name or <a href=\"https://en.wikipedia.org/wiki/ISO_3166-1\" target=\"_blank\">2 letter ISO code</a>', $this->cgi, 55, null),
+                ('Country (Schema/OG)', 'PLUGIN_SDATA_COUNTRYNAME', '', 'Enter the country <a href=\"https://en.wikipedia.org/wiki/ISO_3166-1\" target=\"_blank\">2 letter ISO code</a>', $this->cgi, 55, null),
                 ('Email (Schema, optional)', 'PLUGIN_SDATA_EMAIL', '', 'Enter your Customer Service email address (lower case).', $this->cgi, 60, null),
                 ('Telephone (Schema)', 'PLUGIN_SDATA_TELEPHONE', '', 'Enter the Customer Service phone number in international format eg.: +1-330-871-4357. The format (spaces/dashes) is not important.', $this->cgi, 65, null),
                 ('Fax (Schema, optional)', 'PLUGIN_SDATA_FAX', '', 'Enter the Customer Service fax number in international format e.g. +1-877-453-1304). The format (spaces/dashes) is not important.', $this->cgi, 70, null),
