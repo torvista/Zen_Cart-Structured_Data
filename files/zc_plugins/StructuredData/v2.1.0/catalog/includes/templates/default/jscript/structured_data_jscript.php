@@ -180,6 +180,25 @@ function sdata_clean_schema($value):mixed {
     return $value;
 }
 
+/**
+ *  Function to populate listItem schema array
+ *
+ * @param int $pos  position in list item array
+ * @param string $link  Url of item
+ * @param string $name  name of item
+ * @param string $image Url of item image
+ * @return array
+ */
+function sdata_set_listItem(int $pos, string $link, string $name, string $image): array {
+    return [
+        '@type' => 'ListItem',
+        'position' => $pos,
+        'url' => htmlspecialchars_decode($link),
+        'name' => sdata_prepare_string($name),
+        'image' => $image
+    ];
+}
+
 // Initialize defaults to prevent php notices
 $category_name = '';
 $description = '';
@@ -517,13 +536,7 @@ if ($is_product_page && (isset($product_info) && is_object($product_info))) {
 
                 $p_name = $item['products_name'] ?? zen_get_products_name((int)$item['products_id']);
 
-                $listing_schema[] = [
-                    '@type' => 'ListItem',
-                    'position' => $list_pos,
-                    'url' => htmlspecialchars_decode($item_link),
-                    'name' => sdata_prepare_string($p_name),
-                    'image' => $item_image_url
-                ];
+                $listing_schema[] = sdata_set_listItem($list_pos, $item_link, $p_name, $item_image_url);
 
                 $list_pos++;
             }
