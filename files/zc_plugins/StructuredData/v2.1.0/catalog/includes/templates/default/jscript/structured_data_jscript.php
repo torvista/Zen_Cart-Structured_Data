@@ -234,17 +234,21 @@ if (PLUGIN_SDATA_TWITTER_DEFAULT_IMAGE !== '') {
 } else {
     $image_default_twitter = HTTP_SERVER . DIR_WS_CATALOG . DIR_WS_IMAGES . PRODUCTS_IMAGE_NO_IMAGE;
 }
-// Test for a product
+// Is a product page?
 $is_product_page = (
     str_ends_with($current_page_base, '_info')
     && !empty($_GET['products_id'])
-    && zen_get_info_page($_GET['products_id']) === $current_page_base);
+    && zen_get_info_page($_GET['products_id']) === $current_page_base
+    && (isset($product_info) && is_object($product_info))
+);
 
-// for a product page only
-if ($is_product_page && (isset($product_info) && is_object($product_info))) {
+// Handle product page only
+if ($is_product_page) {
     $product_id = (int)$product_info->fields['products_id'];
     $product_name = sdata_prepare_string($product_info->fields['lang'][$language['code']]['products_name'] ?? $product_info->fields['products_name']);
-    // Use a function instead of $product_info so the notifier in function gets parsed
+
+    // Use a function instead of $product_info so the notifier in function zen_get_products_description gets parsed
+    // TODO has description already been parsed/modified anyway?
     $description = zen_get_products_description($product_id);
     $description = sdata_prepare_string($description);
     $title = htmlspecialchars(STORE_NAME . ' - ' . $product_name, ENT_QUOTES);
@@ -259,8 +263,8 @@ if ($is_product_page && (isset($product_info) && is_object($product_info))) {
             2
         );
     }
-    $product_date_added = $product_info->fields['products_date_added'];//should never be default '0001-01-01 00:00:00'
-    $manufacturer_name = zen_get_products_manufacturers_name((int)$_GET['products_id']);
+    $product_date_added = $product_info->fields['products_date_added']; // Should never be default '0001-01-01 00:00:00'
+    $manufacturer_name = zen_get_products_manufacturers_name($product_id);
     $product_base_stock = $product_info->fields['products_quantity'];
 
     // OOS BackOrder/PreSales need to have a date field
@@ -498,27 +502,27 @@ if ($is_product_page && (isset($product_info) && is_object($product_info))) {
 
     $image_alt = $product_name;
     $facebook_type = 'product';
-} elseif (isset($_GET['cPath'])) { // NOT a product page
-
+// Handle a Category page (may have a product listing or sub-categories)
+} else {
     if ($debug_sd) {
-        echo __LINE__ . ': $current_page=' . $current_page . ', is NOT product page<br>';
+        echo __LINE__ . ': $current_page=' . $current_page . ', is NOT a product page<br>';
     }
 
-    // BOF ZenExpert: capture product listing data
-    global $listing_sql;
+    // bof create product/ sub-category listing schema
+    global $current_category_has_products, $current_category_has_subcats, $current_category_id, $listing_sql;
 
-    if (!empty($listing_sql) && defined('MAX_DISPLAY_PRODUCTS_LISTING')) {
+    // There are no sub-categories: category contains products
+    if ($current_category_has_products) {
+        $listing_schema_name = 'Products';
         $listing_page = (isset($_GET['page']) && is_numeric($_GET['page'])) ? (int)$_GET['page'] : 1;
         $listing_limit = (int)MAX_DISPLAY_PRODUCTS_LISTING;
         $listing_offset = ($listing_page - 1) * $listing_limit;
-
         $listing_query = $listing_sql . " LIMIT " . $listing_offset . ", " . $listing_limit;
         $listing_results = $db->Execute($listing_query);
 
         if ($listing_results->RecordCount() > 0) {
             $list_pos = 1;
             foreach ($listing_results as $item) {
-
                 $sql_extra = "SELECT products_image, products_model
                               FROM " . TABLE_PRODUCTS . "
                               WHERE products_id = " . (int)$item['products_id'];
@@ -527,65 +531,84 @@ if ($is_product_page && (isset($product_info) && is_object($product_info))) {
                 // use data from the lookup, fallback to empty string
                 $prod_image = $extra_info->fields['products_image'] ?? '';
                 $prod_model = $extra_info->fields['products_model'] ?? '';
-
                 $item_link = zen_href_link(zen_get_info_page($item['products_id']), 'cPath=' . $_GET['cPath'] . '&products_id=' . $item['products_id']);
-
                 $item_image_url = ($prod_image !== '')
                     ? HTTP_SERVER . DIR_WS_CATALOG . DIR_WS_IMAGES . $prod_image
                     : $image_default_facebook;
-
-                $p_name = $item['products_name'] ?? zen_get_products_name((int)$item['products_id']);
-
-                $listing_schema[] = sdata_set_listItem($list_pos, $item_link, $p_name, $item_image_url);
-
+                $prod_name = $item['products_name'] ?? zen_get_products_name((int)$item['products_id']);
+                $listing_schema[] = sdata_set_listItem($list_pos, $item_link, $prod_name, $item_image_url);
                 $list_pos++;
             }
         }
-    }
-    // EOF ZenExpert: capture product listing data
+        // Category contains sub-categories
+    } elseif ($current_category_has_subcats) {
+        $listing_schema_name = 'Subcategories';
+        $sub_cat_sql = "SELECT c.categories_id, cd.categories_name, c.categories_image
+                            FROM " . TABLE_CATEGORIES . " c
+                            LEFT JOIN " . TABLE_CATEGORIES_DESCRIPTION . " cd ON (c.categories_id = cd.categories_id AND cd.language_id = " . (int)$_SESSION['languages_id'] . ")
+                            WHERE c.parent_id = " . (int)$current_category_id . " AND c.categories_status = 1
+                            ORDER BY c.sort_order ASC, cd.categories_name ASC";
+        $sub_cat_data = $db->Execute($sub_cat_sql);
 
-    $cPath_array = explode('_', $_GET['cPath']);
-    $category_id = end($cPath_array);
+        $base_cPath = !empty($_GET['cPath']) ? $_GET['cPath'] . '_' : '';
 
-    $category_name = zen_get_category_name((int)$category_id, (int)$_SESSION['languages_id']); // ZC158 does not need language parameter
-    if (!empty($category_name)) { //a valid category
-        $category_image = zen_get_categories_image($category_id);
-
-        if ($debug_sd) {
-            echo __LINE__ . ' $category_image=' . $category_image . '<br>';
-            echo __LINE__ . ' gettype $category_image=' . gettype($category_image) . '<br>';
+        $list_pos = 1;
+        foreach ($sub_cat_data as $list_category) {
+            $list_cpath = $base_cPath . $list_category['categories_id'];
+            $item_link = zen_href_link(FILENAME_DEFAULT, 'cPath=' . $list_cpath);
+            $item_image_url = (!empty($list_category['categories_image']))
+                ? HTTP_SERVER . DIR_WS_CATALOG . DIR_WS_IMAGES . $list_category['categories_image']
+                : '';
+            $listing_schema[] = sdata_set_listItem($list_pos, $item_link, $list_category['categories_name'], $item_image_url);
+            $list_pos++;
         }
+    }
+    // eof create product/sub-category listing schema
 
-        if (empty($category_image)) {
-            $image_default = true;
+    if (isset($_GET['cPath'])) {
+        $category_name = zen_get_category_name($current_category_id);
+
+        // a valid category
+        if (!empty($category_name)) {
+            $category_image = zen_get_categories_image($current_category_id);
+
+            if (empty($category_image)) {
+                $image_default = true;
+            } else {
+                $image = HTTP_SERVER . DIR_WS_CATALOG . DIR_WS_IMAGES . $category_image;
+            }
+            if ($debug_sd) {
+                echo __LINE__ . ' $category_image=' . $category_image . '<br>';
+                echo __LINE__ . ' gettype $category_image=' . gettype($category_image) . '<br>';
+            }
+
+            $description = zen_get_category_description($current_category_id) !== '' ? zen_get_category_description($current_category_id) : META_TAG_DESCRIPTION;
+            $product_category_name = $category_name;//used for twitter title, it changes depending on if page is product or category
+            $image_alt = $category_name;
+            $facebook_type = 'product.group';
+            $title = META_TAG_TITLE;
         } else {
-            $image = HTTP_SERVER . DIR_WS_CATALOG . DIR_WS_IMAGES . zen_get_categories_image($category_id);
+            // something wrong: a category with no name/does not exist!
+            $image_default = true;
+            $image_alt = '';
+            $product_category_name = '';
+            $title = META_TAG_TITLE;
         }
-        $description = zen_get_category_description((int)$category_id, (int)$_SESSION['languages_id']) !== '' ? zen_get_category_description((int)$category_id, (int)$_SESSION['languages_id'])
-            : META_TAG_DESCRIPTION;
-        $product_category_name = $category_name;//used for twitter title, it changes depending on if page is product or category
-        $image_alt = $category_name;
-        $facebook_type = 'product.group';
-        $title = META_TAG_TITLE;
-    } else {
-        // something wrong: a category with no name/does not exist!
-        $image_default = true;
-        $image_alt = '';
-        $product_category_name = '';
-        $title = META_TAG_TITLE;
-    }
-} else {//some other page - not product or category
-    if ($debug_sd) {
-        echo __LINE__ . ' is "Other" page<br>';
-    }
 
-    $image_default = true;
-    //$image_alt = $breadcrumb_this_page;//todo, needed??
-    $title = META_TAG_TITLE;
-    $description = META_TAG_DESCRIPTION;
+    // Some other page - not a product or category page
+    } else {
+        if ($debug_sd) {
+            echo __LINE__ . ' is "Other" page<br>';
+        }
+
+        $image_default = true;
+        //$image_alt = $breadcrumb_this_page;//todo, needed??
+        $title = META_TAG_TITLE;
+        $description = META_TAG_DESCRIPTION;
+    }
 }
 
-//$description could be null from META_TAG_DESCRIPTION
+// $description could be null from META_TAG_DESCRIPTION
 if (empty($description)) {
     $description = '';
 }
@@ -594,7 +617,7 @@ $description = sdata_prepare_string($description);
 // ZenExpert - note: Contact Us page should NOT be in sameAs list if it's not an external link
 $sameAs = [];
 
-// Add comma-separated list from PLUGIN_SDATA_SAMEAS
+// Add the comma-separated list from PLUGIN_SDATA_SAMEAS
 if (PLUGIN_SDATA_SAMEAS !== '') {
     $sameAs = array_map(
         static fn($url) => trim($url, " \t\n\r\0\x0B\"'"),
@@ -710,7 +733,7 @@ if (!empty(PLUGIN_SDATA_RETURNS_POLICY_COUNTRY)) {
     ];
 
     if (PLUGIN_SDATA_RETURNS_POLICY === 'Finite') {
-        $policyData['merchantReturnDays'] = (int) PLUGIN_SDATA_RETURNS_DAYS;
+        $policyData['merchantReturnDays'] = (int)PLUGIN_SDATA_RETURNS_DAYS;
     }
 
     $rType = defined('PLUGIN_SDATA_RETURNS_TYPE') ? PLUGIN_SDATA_RETURNS_TYPE : 'FreeReturn';
@@ -718,7 +741,7 @@ if (!empty(PLUGIN_SDATA_RETURNS_POLICY_COUNTRY)) {
     $rCurrency = defined('PLUGIN_SDATA_PRICE_CURRENCY') ? PLUGIN_SDATA_PRICE_CURRENCY : 'GBP';
 
     // Set the Schema URL for the fee type
-    if($rType === 'RestockingFees') {
+    if ($rType === 'RestockingFees') {
         // although valid enumeration, Google doesn't accept it so we must use ReturnFeesCustomerResponsibility
         $policyData['returnFees'] = 'https://schema.org/ReturnFeesCustomerResponsibility';
     } else {
@@ -734,7 +757,7 @@ if (!empty(PLUGIN_SDATA_RETURNS_POLICY_COUNTRY)) {
 
             // Calculate actual value if we have a product price
             if (isset($product_base_displayed_price) && is_numeric($product_base_displayed_price)) {
-                $percent = (float) str_replace('%', '', $rFeeVal) / 100;
+                $percent = (float)str_replace('%', '', $rFeeVal) / 100;
 
                 $policyData['restockingFee'] = [
                     '@type' => 'MonetaryAmount',
@@ -748,16 +771,16 @@ if (!empty(PLUGIN_SDATA_RETURNS_POLICY_COUNTRY)) {
             $policyData['restockingFee'] = [
                 '@type' => 'MonetaryAmount',
                 'currency' => $rCurrency,
-                'value' => number_format((float) $rFeeVal, $decimal_places, '.', '')
+                'value' => number_format((float)$rFeeVal, $decimal_places, '.', '')
             ];
         }
 
-    // Handle "ReturnShippingFees" (Fixed shipping cost)
-    } elseif ($rType === 'ReturnShippingFees' && (float) $rFeeVal > 0) {
+        // Handle "ReturnShippingFees" (Fixed shipping cost)
+    } elseif ($rType === 'ReturnShippingFees' && (float)$rFeeVal > 0) {
         $policyData['returnShippingFeesAmount'] = [
             '@type' => 'MonetaryAmount',
             'currency' => $rCurrency,
-            'value' => number_format((float) $rFeeVal, $decimal_places, '.', '')
+            'value' => number_format((float)$rFeeVal, $decimal_places, '.', '')
         ];
     }
 
@@ -821,14 +844,16 @@ if (PLUGIN_SDATA_SCHEMA_ENABLE === 'true') {
         ],
 
         // Contact point
-        'contactPoint' => [[
-            '@type' => 'ContactPoint',
-            'telephone' => PLUGIN_SDATA_TELEPHONE,
-            'contactType' => 'customer service',
-        ]],
+        'contactPoint' => [
+            [
+                '@type' => 'ContactPoint',
+                'telephone' => PLUGIN_SDATA_TELEPHONE,
+                'contactType' => 'customer service',
+            ]
+        ],
 
         // Optional arrays
-        'sameAs' => $sameAs ,
+        'sameAs' => $sameAs,
         'areaServed' => (PLUGIN_SDATA_AREA_SERVED !== '' ? array_map('trim', explode(',', PLUGIN_SDATA_AREA_SERVED)) : []),
         'availableLanguage' => (PLUGIN_SDATA_AVAILABLE_LANGUAGE !== '' ? array_map('trim', explode(',', PLUGIN_SDATA_AVAILABLE_LANGUAGE)) : []),
     ];
@@ -915,7 +940,7 @@ if (PLUGIN_SDATA_SCHEMA_ENABLE === 'true') {
     }
 
     $schema = sdata_clean_schema($schema);
-?>
+    ?>
 <script title="Structured Data: schemaOrganisation" type="application/ld+json">
 <?= json_encode($schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . PHP_EOL; ?>
 </script>
@@ -1014,7 +1039,6 @@ if (PLUGIN_SDATA_SCHEMA_ENABLE === 'true') {
             'mainEntity' => $mainEntity
         ];
 
-
         $contactSchema = sdata_clean_schema($contactSchema);
 ?>
 <script title="Structured Data: schemaContactPage" type="application/ld+json">
@@ -1023,26 +1047,24 @@ if (PLUGIN_SDATA_SCHEMA_ENABLE === 'true') {
 <?php
     } // end contact us.
 
-    // BOF ZenExpert: Product Listing schema for category pages
-    /*
-     * Category Page: ItemList Schema
-     */
-
+// bof Product Listing schema for category pages with products
     if (!empty($listing_schema)) {
 
-        // Build ItemList schema
+        // Create ItemList schema header
         $itemListSchema = [
             '@context' => 'https://schema.org',
             '@type' => 'ItemList',
+            'name' => $listing_schema_name,
             'itemListElement' => []
         ];
 
+        // Add items to ItemList
         foreach ($listing_schema as $element) {
             // Each $element is already a valid ListItem array
             $itemListSchema['itemListElement'][] = $element;
         }
 
-        // Remove empty schema entries
+        // Remove any empty schema entries
         $itemListSchema = sdata_clean_schema($itemListSchema);
 ?>
 <script title="Structured Data: schemaItemList" type="application/ld+json">
@@ -1050,11 +1072,9 @@ if (PLUGIN_SDATA_SCHEMA_ENABLE === 'true') {
 </script>
 <?php
     }
-// EOF ZenExpert: Product Listing schema for category pages
-    /*
-     * product page schema
-     */
+// eof Product Listing schema for category pages with products
 
+// Product schema for product pages
     if ($is_product_page) {
 
         // Base Product schema
@@ -1304,7 +1324,9 @@ if (PLUGIN_SDATA_SCHEMA_ENABLE === 'true') {
 <?= json_encode($productSchema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . PHP_EOL; ?>
 </script>
 <?php
-    } //eof Product Schema
+    }
+// eof Product schema for product pages
+
 }//eof Schema enabled
 
 if (PLUGIN_SDATA_FOG_ENABLE === 'true') {
