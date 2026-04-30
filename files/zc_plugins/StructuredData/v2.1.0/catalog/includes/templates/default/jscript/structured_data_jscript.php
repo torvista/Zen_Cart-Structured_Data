@@ -1,4 +1,4 @@
-<?php
+<?php //steve with personal hack
 // DO NOT LET YOUR IDE RE-FORMAT THE CODE: it is structured so the HTML SOURCE is readable/the parentheses line up.
 declare(strict_types=1);
 
@@ -237,285 +237,298 @@ if (PLUGIN_SDATA_TWITTER_DEFAULT_IMAGE !== '') {
 } else {
     $image_default_twitter = HTTP_SERVER . DIR_WS_CATALOG . DIR_WS_IMAGES . PRODUCTS_IMAGE_NO_IMAGE;
 }
-// Is a product page?
-$is_product_page = (
-    str_ends_with($current_page_base, '_info')
+
+// Determine page type
+$page_type = '';
+global $current_category_has_products, $current_category_has_subcats, $current_category_id, $listing_sql;
+
+if (str_ends_with($current_page_base, '_info')
     && !empty($_GET['products_id'])
     && zen_get_info_page($_GET['products_id']) === $current_page_base
     && (isset($product_info) && is_object($product_info))
-);
+) {
+    $page_type = 'product';
+} elseif ($current_category_has_products && !$current_category_has_subcats) {
+    $page_type = 'category_products';
+} elseif ($current_category_has_subcats) {
+    $page_type = 'category_subs';
+} else {
+    $page_type = 'other (default)';
+}
+if ($debug_sd) {
+    echo __LINE__ . ': $page_type=' . $page_type . '<br>';
+}
+switch ($page_type) {
+    case 'product':
 
-// Handle product page only
-if ($is_product_page) {
-    $product_id = (int)$product_info->fields['products_id'];
-    $product_name = sdata_prepare_string($product_info->fields['lang'][$language['code']]['products_name'] ?? $product_info->fields['products_name']);
+        $product_id = (int)$product_info->fields['products_id'];
+        $product_name = sdata_prepare_string($product_info->fields['lang'][$language['code']]['products_name'] ?? $product_info->fields['products_name']);
 
-    // Use a function instead of $product_info so the notifier in function zen_get_products_description gets parsed
-    // TODO has description already been parsed/modified anyway?
-    $description = zen_get_products_description($product_id);
-    $description = sdata_prepare_string($description);
-    $title = htmlspecialchars(STORE_NAME . ' - ' . $product_name, ENT_QUOTES);
-    $weight = (float)($product_info->fields['products_weight'] === '0' ? PLUGIN_SDATA_DEFAULT_WEIGHT : $product_info->fields['products_weight']);
-    $tax_class_id = (int)$product_info->fields['products_tax_class_id'];
-    if ($product_info->fields['product_is_call'] === '1') {
-        $product_base_displayed_price = 0;
-    } else {
-        // Use price with tax, decimal point (not comma) to two decimal places
-        $product_base_displayed_price = round(
-            zen_get_products_actual_price($product_id) * (1 + zen_get_tax_rate($tax_class_id) / 100),
-            2
-        );
-    }
-    $product_date_added = $product_info->fields['products_date_added']; // Should never be default '0001-01-01 00:00:00'
-    $manufacturer_name = zen_get_products_manufacturers_name($product_id);
-    $product_base_stock = $product_info->fields['products_quantity'];
+        // Use a function instead of $product_info so the notifier in function zen_get_products_description gets parsed
+        // TODO has description already been parsed/modified anyway?
+        $description = zen_get_products_description($product_id);
+        $description = sdata_prepare_string($description);
+        $title = htmlspecialchars(STORE_NAME . ' - ' . $product_name, ENT_QUOTES);
+        $weight = (float)($product_info->fields['products_weight'] === '0' ? PLUGIN_SDATA_DEFAULT_WEIGHT : $product_info->fields['products_weight']);
+        $tax_class_id = (int)$product_info->fields['products_tax_class_id'];
+        if ($product_info->fields['product_is_call'] === '1') {
+            $product_base_displayed_price = 0;
+        } else {
+            // Use price with tax, decimal point (not comma) to two decimal places
+            $product_base_displayed_price = round(
+                zen_get_products_actual_price($product_id) * (1 + zen_get_tax_rate($tax_class_id) / 100),
+                2
+            );
+        }
+        $product_date_added = $product_info->fields['products_date_added']; // Should never be default '0001-01-01 00:00:00'
+        $manufacturer_name = zen_get_products_manufacturers_name($product_id);
+        $product_base_stock = $product_info->fields['products_quantity'];
 
-    // OOS BackOrder/PreSales need to have a date field
-    $oosItemAvailability = array_key_exists(PLUGIN_SDATA_OOS_DEFAULT, $itemAvailability) ? $itemAvailability[PLUGIN_SDATA_OOS_DEFAULT] : $itemAvailability['OutOfStock'];
-    if (PLUGIN_SDATA_OOS_DEFAULT === 'BackOrder' || PLUGIN_SDATA_OOS_DEFAULT === 'PreSales') {
-        $backPreOrderDate = date('Y-m-d', strtotime('+' . (int)PLUGIN_SDATA_OOS_AVAILABILITY_DELAY . ' days'));
-    } else {
-        $backPreOrderDate = '';
-    }
+        // OOS BackOrder/PreSales need to have a date field
+        $oosItemAvailability = array_key_exists(PLUGIN_SDATA_OOS_DEFAULT, $itemAvailability) ? $itemAvailability[PLUGIN_SDATA_OOS_DEFAULT] : $itemAvailability['OutOfStock'];
+        if (PLUGIN_SDATA_OOS_DEFAULT === 'BackOrder' || PLUGIN_SDATA_OOS_DEFAULT === 'PreSales') {
+            $backPreOrderDate = date('Y-m-d', strtotime('+' . (int)PLUGIN_SDATA_OOS_AVAILABILITY_DELAY . ' days'));
+        } else {
+            $backPreOrderDate = '';
+        }
 
-    // SKU: the merchant/shop-specific product identifier (normally different to the manufacturer mpn and the product gtin)
-    $product_base_sku = $product_info->fields['products_model'];
+        // SKU: the merchant/shop-specific product identifier (normally different to the manufacturer mpn and the product gtin)
+        $product_base_sku = $product_info->fields['products_model'];
 
-    // MPN: Manufacturers Product Number
-    $product_base_mpn = $product_info->fields['products_mpn'] ?? '';
+        // MPN: Manufacturers Product Number
+        $product_base_mpn = $product_info->fields['products_mpn'] ?? '';
 
-    // Google Product Category
-    // A field for Google Product Category needs to be added to the product table unless all products are under the same category.
-    // Initialize with the default category
-    $product_base_gpc = (int)PLUGIN_SDATA_GOOGLE_PRODUCT_CATEGORY;
+        // Google Product Category
+        // A field for Google Product Category needs to be added to the product table unless all products are under the same category.
+        // Initialize with the default category
+        $product_base_gpc = (int)PLUGIN_SDATA_GOOGLE_PRODUCT_CATEGORY;
 
-    // GTIN: a standardized international code UPC / GTIN-12 / EAN / JAN / ISBN / ITF-14. It may be subsequently updated by attribute data.
-    // A field for GTIN needs to be added to the product table.
-    $product_base_gtin = '';
+        // GTIN: a standardized international code UPC / GTIN-12 / EAN / JAN / ISBN / ITF-14. It may be subsequently updated by attribute data.
+        // A field for GTIN needs to be added to the product table.
+        $product_base_gtin = '';
 
-    //productID (Schema only): same as GTIN
-    $product_base_productID = $product_base_gtin;
+        //productID (Schema only): same as GTIN
+        $product_base_productID = $product_base_gtin;
 
-    // Get base (non-attribute) GPC and GTIN from custom fields
-    if ($sniffer->field_exists(TABLE_PRODUCTS, PLUGIN_SDATA_GPC_FIELD)) {
-        $sql = 'SELECT ' . PLUGIN_SDATA_GPC_FIELD . ' FROM ' . TABLE_PRODUCTS . ' WHERE products_id = ' . $product_id;
-        $result = $db->Execute($sql);
-        $product_base_gpc = !empty($result->fields[PLUGIN_SDATA_GPC_FIELD]) ? $result->fields[PLUGIN_SDATA_GPC_FIELD] : (int)PLUGIN_SDATA_GOOGLE_PRODUCT_CATEGORY;
-    }
-    if ($sniffer->field_exists(TABLE_PRODUCTS, PLUGIN_SDATA_GTIN_FIELD)) {
-        $sql = 'SELECT ' . PLUGIN_SDATA_GTIN_FIELD . ' FROM ' . TABLE_PRODUCTS . ' WHERE products_id = ' . $product_id;
-        $result = $db->Execute($sql);
-        //Google Merchant Center feed complains if no GTIN. I use "no" in this field to omit that product from that feed.
-        $product_base_gtin = (empty($result->fields[PLUGIN_SDATA_GTIN_FIELD]) || $result->fields[PLUGIN_SDATA_GTIN_FIELD] === 'no')
-            ? ''
-            : $result->fields[PLUGIN_SDATA_GTIN_FIELD];
-    }
+        // Get base (non-attribute) GPC and GTIN from custom fields
+        if ($sniffer->field_exists(TABLE_PRODUCTS, PLUGIN_SDATA_GPC_FIELD)) {
+            $sql = 'SELECT ' . PLUGIN_SDATA_GPC_FIELD . ' FROM ' . TABLE_PRODUCTS . ' WHERE products_id = ' . $product_id;
+            $result = $db->Execute($sql);
+            $product_base_gpc = !empty($result->fields[PLUGIN_SDATA_GPC_FIELD]) ? $result->fields[PLUGIN_SDATA_GPC_FIELD] : (int)PLUGIN_SDATA_GOOGLE_PRODUCT_CATEGORY;
+        }
+        if ($sniffer->field_exists(TABLE_PRODUCTS, PLUGIN_SDATA_GTIN_FIELD)) {
+            $sql = 'SELECT ' . PLUGIN_SDATA_GTIN_FIELD . ' FROM ' . TABLE_PRODUCTS . ' WHERE products_id = ' . $product_id;
+            $result = $db->Execute($sql);
+            //Google Merchant Center feed complains if no GTIN. I use "no" in this field to omit that product from that feed.
+            $product_base_gtin = (empty($result->fields[PLUGIN_SDATA_GTIN_FIELD]) || $result->fields[PLUGIN_SDATA_GTIN_FIELD] === 'no')
+                ? ''
+                : $result->fields[PLUGIN_SDATA_GTIN_FIELD];
+        }
 
-    //ATTRIBUTES
-    //sku/mpn/gtin, price, stock may all vary per attribute
-    $product_attributes = false;
-    if ($product_info->fields['product_is_call'] === '0' && zen_has_product_attributes($product_id)) {
-        $attribute_stock_handler = 'not_defined';
-        $attribute_lowPrice = 0;
-        $attribute_highPrice = 0;
-        $offerCount = 1; // but exactly what is this? The sum of the stocks of all the variants or just the quantity of variants that exist? Should not be zero.
-        $product_attributes = [];
-        $attribute_prices = [];
+        //ATTRIBUTES
+        //sku/mpn/gtin, price, stock may all vary per attribute
+        $product_attributes = false;
+        if ($product_info->fields['product_is_call'] === '0' && zen_has_product_attributes($product_id)) {
+            $attribute_stock_handler = 'not_defined';
+            $attribute_lowPrice = 0;
+            $attribute_highPrice = 0;
+            $offerCount = 1; // but exactly what is this? The sum of the stocks of all the variants or just the quantity of variants that exist? Should not be zero.
+            $product_attributes = [];
+            $attribute_prices = [];
 
 // Get attribute info
-        $sql = 'SELECT patrib.products_attributes_id, patrib.options_id, patrib.options_values_id, patrib.options_values_price, patrib.products_attributes_weight, patrib.products_attributes_weight_prefix, popt.products_options_name, poptv.products_options_values_name
+            $sql = 'SELECT patrib.products_attributes_id, patrib.options_id, patrib.options_values_id, patrib.options_values_price, patrib.products_attributes_weight, patrib.products_attributes_weight_prefix, popt.products_options_name, poptv.products_options_values_name
                     FROM ' . TABLE_PRODUCTS_OPTIONS . ' popt
                     LEFT JOIN ' . TABLE_PRODUCTS_ATTRIBUTES . ' patrib ON (popt.products_options_id = patrib.options_id)
                     LEFT JOIN ' . TABLE_PRODUCTS_OPTIONS_VALUES . ' poptv ON (poptv.products_options_values_id = patrib.options_values_id AND poptv.language_id = popt.language_id)
                     WHERE patrib.products_id = ' . $product_id . '
                     AND popt.language_id = ' . $language['id'] . '
                     ORDER BY popt.products_options_name, poptv.products_options_values_name';
-        $results = $db->Execute($sql);
+            $results = $db->Execute($sql);
 
-        foreach ($results as $attribute) {
-            if (zen_get_attributes_valid($product_id, $attribute['options_id'], $attribute['options_values_id'])) { // skips "display only"
-                $product_attributes[$attribute['products_attributes_id']]['option_name_id'] = $attribute['options_id'];
-                $product_attributes[$attribute['products_attributes_id']]['option_name'] = $attribute['products_options_name'];
-                $product_attributes[$attribute['products_attributes_id']]['option_value_id'] = $attribute['options_values_id'];
-                $product_attributes[$attribute['products_attributes_id']]['option_value'] = $attribute['products_options_values_name'];
-                $product_attributes[$attribute['products_attributes_id']]['price'] = zen_get_products_price_is_priced_by_attributes($product_id) ? $attribute['options_values_price']
-                    : $product_base_displayed_price;
-                // It's unlikely that a product price is 0, so only store non-zero prices to subsequently get the high and low prices
-                if ($product_attributes[$attribute['products_attributes_id']]['price'] > 0) {
-                    $attribute_prices[] = $product_attributes[$attribute['products_attributes_id']]['price'];
-                }
-                $product_attributes[$attribute['products_attributes_id']]['weight'] = 0;
-                if ($attribute['products_attributes_weight'] !== '0') {
-                    $product_attributes[$attribute['products_attributes_id']]['weight'] = (float)(($attribute['products_attributes_weight_prefix'] === '-' ? '-' : '')
-                        . $attribute['products_attributes_weight']);
+            foreach ($results as $attribute) {
+                if (zen_get_attributes_valid($product_id, $attribute['options_id'], $attribute['options_values_id'])) { // skips "display only"
+                    $product_attributes[$attribute['products_attributes_id']]['option_name_id'] = $attribute['options_id'];
+                    $product_attributes[$attribute['products_attributes_id']]['option_name'] = $attribute['products_options_name'];
+                    $product_attributes[$attribute['products_attributes_id']]['option_value_id'] = $attribute['options_values_id'];
+                    $product_attributes[$attribute['products_attributes_id']]['option_value'] = $attribute['products_options_values_name'];
+                    $product_attributes[$attribute['products_attributes_id']]['price'] = zen_get_products_price_is_priced_by_attributes($product_id) ? $attribute['options_values_price']
+                        : $product_base_displayed_price;
+                    // It's unlikely that a product price is 0, so only store non-zero prices to subsequently get the high and low prices
+                    if ($product_attributes[$attribute['products_attributes_id']]['price'] > 0) {
+                        $attribute_prices[] = $product_attributes[$attribute['products_attributes_id']]['price'];
+                    }
+                    $product_attributes[$attribute['products_attributes_id']]['weight'] = 0;
+                    if ($attribute['products_attributes_weight'] !== '0') {
+                        $product_attributes[$attribute['products_attributes_id']]['weight'] = (float)(($attribute['products_attributes_weight_prefix'] === '-' ? '-' : '')
+                            . $attribute['products_attributes_weight']);
+                    }
                 }
             }
-        }
-        if (count($attribute_prices) > 0) {
-            $attribute_lowPrice = min($attribute_prices);
-            $attribute_highPrice = max($attribute_prices);
-        } else {
-            $attribute_lowPrice = 0;
-            $attribute_highPrice = 0;
-        }
+            if (count($attribute_prices) > 0) {
+                $attribute_lowPrice = min($attribute_prices);
+                $attribute_highPrice = max($attribute_prices);
+            } else {
+                $attribute_lowPrice = 0;
+                $attribute_highPrice = 0;
+            }
 
-        if ($debug_sd) {
-            echo __LINE__ . ' $attribute_lowPrice=' . $attribute_lowPrice . ' | $attribute_highPrice=' . $attribute_highPrice . '<br>count($product_attributes)=' . count($product_attributes);
-            sdata_printvar($product_attributes);
-            sdata_printvar($attribute_prices);
-        }
-        /* $product_attributes array structure
-        key is products_attributes_id, ordered by the option value text
+            if ($debug_sd) {
+                echo __LINE__ . ' $attribute_lowPrice=' . $attribute_lowPrice . ' | $attribute_highPrice=' . $attribute_highPrice . '<br>count($product_attributes)=' . count($product_attributes);
+                sdata_printvar($product_attributes);
+                sdata_printvar($attribute_prices);
+            }
+            /* $product_attributes array structure
+            key is products_attributes_id, ordered by the option value text
 
-        example
-        [2682] => Array
-            (
-                [option_name_id] => 24
-                [option_name] => SH cable
-                [option_value_id] => 148
-                [option_value] => SH-A01
-                [price] => 26
-            )
-        **********************************************************************************************************
-        ATTRIBUTE STOCK-MPN-GTIN HANDLING
-        In the case where the attributes are products in their own right, the above array "$product_attributes" needs extra elements to be added PER ATTRIBUTE as per the example.
-        [2682] => Array
-            (
-                [option_name_id] => 24
-                [option_name] => SH cable
-                [option_value_id] => 148
-                [option_value] => SH-A01
-                [price] => 26
-                [stock] => 99
-                [sku] => HT-1212
-                [mpn] => SH-A01
-                [gtin] => 5055780349776
-            )
-        The ZC core plugin POSM supplies stock and sku elements.
-        The mpn and gtin are custom fields added into the product_options_stock table and defined in Admin.
-        */
-        switch (true) {
+            example
+            [2682] => Array
+                (
+                    [option_name_id] => 24
+                    [option_name] => SH cable
+                    [option_value_id] => 148
+                    [option_value] => SH-A01
+                    [price] => 26
+                )
+            **********************************************************************************************************
+            ATTRIBUTE STOCK-MPN-GTIN HANDLING
+            In the case where the attributes are products in their own right, the above array "$product_attributes" needs extra elements to be added PER ATTRIBUTE as per the example.
+            [2682] => Array
+                (
+                    [option_name_id] => 24
+                    [option_name] => SH cable
+                    [option_value_id] => 148
+                    [option_value] => SH-A01
+                    [price] => 26
+                    [stock] => 99
+                    [sku] => HT-1212
+                    [mpn] => SH-A01
+                    [gtin] => 5055780349776
+                )
+            The ZC core plugin POSM supplies stock and sku elements.
+            The mpn and gtin are custom fields added into the product_options_stock table and defined in Admin.
+            */
+            switch (true) {
 
-            // ZC core plugin POSM is in use
-            case (defined('POSM_ENABLE') && POSM_ENABLE === 'true' && function_exists('is_pos_product') && is_pos_product($product_id)):
-                $attribute_stock_handler = 'posm';
-                if ($debug_sd) {
-                    echo __LINE__ . ' Attributes: using POSM<br>';
-                }
+                // ZC core plugin POSM is in use
+                case (defined('POSM_ENABLE') && POSM_ENABLE === 'true' && function_exists('is_pos_product') && is_pos_product($product_id)):
+                    $attribute_stock_handler = 'posm';
+                    if ($debug_sd) {
+                        echo __LINE__ . ' Attributes: using POSM<br>';
+                    }
 
-                //@todo bof hack to break to default attribute handling (no POSM/stock control) when dependant attributes are in use
-                $option_ids = [];
-                foreach ($product_attributes as $key => $product_attribute) {
-                    $option_ids[] = $product_attribute['option_name_id'];
-                }
-                $option_id_min = min($option_ids);
-                $option_id_max = max($option_ids);
-                if ($option_id_min !== $option_id_max) {//there are two or more option names...RUN AWAY!
-                    $attribute_stock_handler = 'posm_multiple'; //todo
+                    //@todo bof hack to break to default attribute handling (no POSM/stock control) when dependant attributes are in use
+                    $option_ids = [];
+                    foreach ($product_attributes as $key => $product_attribute) {
+                        $option_ids[] = $product_attribute['option_name_id'];
+                    }
+                    $option_id_min = min($option_ids);
+                    $option_id_max = max($option_ids);
+                    if ($option_id_min !== $option_id_max) {//there are two or more option names...RUN AWAY!
+                        $attribute_stock_handler = 'posm_multiple'; //todo
+                        break;
+                    }
+                    //eof hack
+
+                    $total_attributes_stock = 0;
+                    foreach ($product_attributes as $key => $product_attribute) {
+                        //set some defaults from the base product in case there is no POSM entry for the attribute, despite an attribute existing
+                        $product_attributes[$key]['stock'] = 0;
+                        $product_attributes[$key]['sku'] = $product_base_productID;
+                        $product_attributes[$key]['mpn'] = $product_base_mpn;
+                        $product_attributes[$key]['gtin'] = $product_base_gtin;
+
+                        //copied from observer function getOptionsStockRecord as it's a Protected function
+                        $hash = generate_pos_option_hash($product_id, [$product_attribute['option_name_id'] => $product_attribute['option_value_id']]);
+
+                        $posm_record = $db->Execute('SELECT * FROM ' . TABLE_PRODUCTS_OPTIONS_STOCK . ' WHERE products_id = ' . $product_id . ' AND pos_hash = "' . $hash . '" LIMIT 1', false, false, 0, true);
+                        /* example output if extra fields have been added:
+                        (
+                            [pos_id] => 2737
+                            [products_id] => 115
+                            [pos_name_id] => 2
+                            [products_quantity] => 1
+                            [pos_hash] => 456b69e6df96dd253fc746afd1c3d04d
+                            [pos_model] => HT-1156
+                            [pos_mpn] =>SH-A01
+                            [pos_ean] =>1234567891234
+                            [pos_date] => 0001-01-01
+                            [last_modified] => 2020-06-19 14:48:16
+                        )
+                         */
+                        if ($posm_record->EOF) {
+                            continue;
+                        }
+                        $product_attributes[$key]['stock'] = $posm_record->fields['products_quantity'];
+                        $product_attributes[$key]['sku'] = $posm_record->fields['pos_model'];//as per individual shop
+                        $total_attributes_stock += $posm_record->fields['products_quantity'];
+
+                        //CUSTOM CODING REQUIRED***************************************
+                        if ($sniffer->field_exists(TABLE_PRODUCTS_OPTIONS_STOCK, 'pos_mpn') && $sniffer->field_exists(TABLE_PRODUCTS_OPTIONS_STOCK, 'pos_gtin')) {
+                            //$product_attributes[$key]['mpn'] = $product_attributes[$key]['option_value'];//as per individual shop
+                            $product_attributes[$key]['mpn'] = $posm_record->fields['pos_mpn'];//as per individual shop
+                            $product_attributes[$key]['gtin'] = $posm_record->fields['pos_gtin'];//as per individual shop
+                        }
+                        //eof CUSTOM CODING REQUIRED***********************************
+                    }
+                    $offerCount = (max($product_base_stock + $total_attributes_stock, 1)); //maybe, hard to find a definition
+
                     break;
-                }
-                //eof hack
 
-                $total_attributes_stock = 0;
-                foreach ($product_attributes as $key => $product_attribute) {
-                    //set some defaults from the base product in case there is no POSM entry for the attribute, despite an attribute existing
-                    $product_attributes[$key]['stock'] = 0;
-                    $product_attributes[$key]['sku'] = $product_base_productID;
-                    $product_attributes[$key]['mpn'] = $product_base_mpn;
-                    $product_attributes[$key]['gtin'] = $product_base_gtin;
+                case (defined('STOCK BY ATTRIBUTES')):
+                    // over to YOU
 
-                    //copied from observer function getOptionsStockRecord as it's a Protected function
-                    $hash = generate_pos_option_hash($product_id, [$product_attribute['option_name_id'] => $product_attribute['option_value_id']]);
+                case (defined('NUMINIX PRODUCT VARIANTS INVENTORY MANAGER')):
+                    // over to YOU
 
-                    $posm_record = $db->Execute('SELECT * FROM ' . TABLE_PRODUCTS_OPTIONS_STOCK . ' WHERE products_id = ' . $product_id . ' AND pos_hash = "' . $hash . '" LIMIT 1', false, false, 0, true);
-                    /* example output if extra fields have been added:
-                    (
-                        [pos_id] => 2737
-                        [products_id] => 115
-                        [pos_name_id] => 2
-                        [products_quantity] => 1
-                        [pos_hash] => 456b69e6df96dd253fc746afd1c3d04d
-                        [pos_model] => HT-1156
-                        [pos_mpn] =>SH-A01
-                        [pos_ean] =>1234567891234
-                        [pos_date] => 0001-01-01
-                        [last_modified] => 2020-06-19 14:48:16
-                    )
-                     */
-                    if ($posm_record->EOF) {
-                        continue;
+                default://Zen Cart default/no handling of attribute stock...so no individual sku/mpn/gtin possible is per attribute
+                    $attribute_stock_handler = 'zc_default';
+                    foreach ($product_attributes as $key => $product_attribute) {
+                        $product_attributes[$key]['stock'] = $product_base_stock;
+                        $product_attributes[$key]['sku'] = $product_base_sku;//as per individual shop
+                        $product_attributes[$key]['mpn'] = '';
+                        $product_attributes[$key]['gtin'] = '';//as per individual shop
                     }
-                    $product_attributes[$key]['stock'] = $posm_record->fields['products_quantity'];
-                    $product_attributes[$key]['sku'] = $posm_record->fields['pos_model'];//as per individual shop
-                    $total_attributes_stock += $posm_record->fields['products_quantity'];
-
-                    //CUSTOM CODING REQUIRED***************************************
-                    if ($sniffer->field_exists(TABLE_PRODUCTS_OPTIONS_STOCK, 'pos_mpn') && $sniffer->field_exists(TABLE_PRODUCTS_OPTIONS_STOCK, 'pos_gtin')) {
-                        //$product_attributes[$key]['mpn'] = $product_attributes[$key]['option_value'];//as per individual shop
-                        $product_attributes[$key]['mpn'] = $posm_record->fields['pos_mpn'];//as per individual shop
-                        $product_attributes[$key]['gtin'] = $posm_record->fields['pos_gtin'];//as per individual shop
-                    }
-                    //eof CUSTOM CODING REQUIRED***********************************
-                }
-                $offerCount = (max($product_base_stock + $total_attributes_stock, 1)); //maybe, hard to find a definition
-
-                break;
-
-            case (defined('STOCK BY ATTRIBUTES')):
-                // over to YOU
-
-            case (defined('NUMINIX PRODUCT VARIANTS INVENTORY MANAGER')):
-                // over to YOU
-
-            default://Zen Cart default/no handling of attribute stock...so no individual sku/mpn/gtin possible is per attribute
-                $attribute_stock_handler = 'zc_default';
-                foreach ($product_attributes as $key => $product_attribute) {
-                    $product_attributes[$key]['stock'] = $product_base_stock;
-                    $product_attributes[$key]['sku'] = $product_base_sku;//as per individual shop
-                    $product_attributes[$key]['mpn'] = '';
-                    $product_attributes[$key]['gtin'] = '';//as per individual shop
-                }
-                $offerCount = (max($product_base_stock, 1));
-        }
-    }
-    if ($debug_sd) {
-        echo __LINE__;
-        sdata_printvar($product_attributes);
-    }
-    $product_image = $product_info->fields['products_image'];
-    if ($product_image !== '') {
-        if (!defined('IH_RESIZE') || IH_RESIZE !== 'yes') {//Image Handler not installed/not in use so get a larger image
-            $products_image_extension = substr($product_image, strrpos($product_image, '.'));
-            $products_image_base = str_replace($products_image_extension, '', $product_image);
-            if (file_exists(DIR_WS_IMAGES . 'large/' . $products_image_base . IMAGE_SUFFIX_LARGE . $products_image_extension)) {
-                $product_image = 'large/' . $products_image_base . IMAGE_SUFFIX_LARGE . $products_image_extension;
-            } elseif (file_exists(DIR_WS_IMAGES . 'medium/' . $products_image_base . IMAGE_SUFFIX_MEDIUM . $products_image_extension)) {
-                $product_image = 'medium/' . $products_image_base . IMAGE_SUFFIX_MEDIUM . $products_image_extension;
+                    $offerCount = (max($product_base_stock, 1));
             }
-        }//Image Handler is in use
-        $image = HTTP_SERVER . DIR_WS_CATALOG . DIR_WS_IMAGES . $product_image;
-    } else {//no image defined in product info
-        //note PLUGIN_SDATA_FOG_DEFAULT_PRODUCT_IMAGE is a FULL path with protocol
-        $image = (PLUGIN_SDATA_FOG_DEFAULT_PRODUCT_IMAGE !== '' ? PLUGIN_SDATA_FOG_DEFAULT_PRODUCT_IMAGE
-            : HTTP_SERVER . DIR_WS_CATALOG . DIR_WS_IMAGES . PRODUCTS_IMAGE_NO_IMAGE);//if no default image, use standard no-image file.
-    }
+        }
+        if ($debug_sd) {
+            echo __LINE__;
+            sdata_printvar($product_attributes);
+        }
+        $product_image = $product_info->fields['products_image'];
+        if ($product_image !== '') {
+            if (!defined('IH_RESIZE') || IH_RESIZE !== 'yes') {//Image Handler not installed/not in use so get a larger image
+                $products_image_extension = substr($product_image, strrpos($product_image, '.'));
+                $products_image_base = str_replace($products_image_extension, '', $product_image);
+                if (file_exists(DIR_WS_IMAGES . 'large/' . $products_image_base . IMAGE_SUFFIX_LARGE . $products_image_extension)) {
+                    $product_image = 'large/' . $products_image_base . IMAGE_SUFFIX_LARGE . $products_image_extension;
+                } elseif (file_exists(DIR_WS_IMAGES . 'medium/' . $products_image_base . IMAGE_SUFFIX_MEDIUM . $products_image_extension)) {
+                    $product_image = 'medium/' . $products_image_base . IMAGE_SUFFIX_MEDIUM . $products_image_extension;
+                }
+            }//Image Handler is in use
+            $image = HTTP_SERVER . DIR_WS_CATALOG . DIR_WS_IMAGES . $product_image;
+        } else {//no image defined in product info
+            //note PLUGIN_SDATA_FOG_DEFAULT_PRODUCT_IMAGE is a FULL path with protocol
+            $image = (PLUGIN_SDATA_FOG_DEFAULT_PRODUCT_IMAGE !== '' ? PLUGIN_SDATA_FOG_DEFAULT_PRODUCT_IMAGE
+                : HTTP_SERVER . DIR_WS_CATALOG . DIR_WS_IMAGES . PRODUCTS_IMAGE_NO_IMAGE);//if no default image, use standard no-image file.
+        }
 
-    $category_id = zen_get_products_category_id($product_id);
-    $category_name = zen_get_category_name($category_id, (int)$_SESSION['languages_id']); // ZC158 does not need language parameter
+        $category_id = zen_get_products_category_id($product_id);
+        $category_name = zen_get_category_name($category_id, (int)$_SESSION['languages_id']); // ZC158 does not need language parameter
 
-    $image_alt = $product_name;
-    $facebook_type = 'product';
-// Handle a Category page (may have a product listing or sub-categories)
-} else {
-    if ($debug_sd) {
-        echo __LINE__ . ': $current_page=' . $current_page . ', is NOT a product page<br>';
-    }
+        $image_alt = $product_name;
+        $facebook_type = 'product';
 
-    // bof create product/ sub-category listing schema
-    global $current_category_has_products, $current_category_has_subcats, $current_category_id, $listing_sql;
+        break;
 
-    // There are no sub-categories: category contains products
-    if ($current_category_has_products) {
+    case 'category_products':
+
+        // spider may use a malformed url e.g. WEBSITE/?products_id=4097&disp_order=9&page=10
+        if (empty($_GET['cPath']) && !empty($_GET['products_id'])) {
+            $_GET['cPath'] = zen_get_generated_category_path_rev($current_category_id);
+        }
+
         $listing_schema_name = 'Products';
         $listing_page = (isset($_GET['page']) && is_numeric($_GET['page'])) ? (int)$_GET['page'] : 1;
         $listing_limit = (int)MAX_DISPLAY_PRODUCTS_LISTING;
@@ -543,14 +556,15 @@ if ($is_product_page) {
                 $list_pos++;
             }
         }
-        // Category contains sub-categories
-    } elseif ($current_category_has_subcats) {
+        break;
+
+    case 'category_subs':
         $listing_schema_name = 'Subcategories';
         $sub_cat_sql = "SELECT c.categories_id, cd.categories_name, c.categories_image
                             FROM " . TABLE_CATEGORIES . " c
                             LEFT JOIN " . TABLE_CATEGORIES_DESCRIPTION . " cd ON (c.categories_id = cd.categories_id AND cd.language_id = " . (int)$_SESSION['languages_id'] . ")
                             WHERE c.parent_id = " . (int)$current_category_id . " AND c.categories_status = 1
-                            ORDER BY c.sort_order ASC, cd.categories_name ASC";
+                            ORDER BY c.sort_order, cd.categories_name";
         $sub_cat_data = $db->Execute($sub_cat_sql);
 
         $base_cPath = !empty($_GET['cPath']) ? $_GET['cPath'] . '_' : '';
@@ -565,51 +579,39 @@ if ($is_product_page) {
             $listing_schema[] = sdata_set_listItem($list_pos, $item_link, $list_category['categories_name'], $item_image_url);
             $list_pos++;
         }
-    }
-    // eof create product/sub-category listing schema
+        break;
 
-    if (isset($_GET['cPath'])) {
-        $category_name = zen_get_category_name($current_category_id);
-
-        // a valid category
-        if (!empty($category_name)) {
-            $category_image = zen_get_categories_image($current_category_id);
-
-            if (empty($category_image)) {
-                $image_default = true;
-            } else {
-                $image = HTTP_SERVER . DIR_WS_CATALOG . DIR_WS_IMAGES . $category_image;
-            }
-            if ($debug_sd) {
-                echo __LINE__ . ' $category_image=' . $category_image . '<br>';
-                echo __LINE__ . ' gettype $category_image=' . gettype($category_image) . '<br>';
-            }
-
-            $description = zen_get_category_description($current_category_id) !== '' ? zen_get_category_description($current_category_id) : META_TAG_DESCRIPTION;
-            $product_category_name = $category_name;//used for twitter title, it changes depending on if page is product or category
-            $image_alt = $category_name;
-            $facebook_type = 'product.group';
-            $title = META_TAG_TITLE;
-        } else {
-            // something wrong: a category with no name/does not exist!
-            $image_default = true;
-            $image_alt = '';
-            $product_category_name = '';
-            $title = META_TAG_TITLE;
-        }
-
-    // Some other page - not a product or category page
-    } else {
-        if ($debug_sd) {
-            echo __LINE__ . ' is "Other" page<br>';
-        }
-
+        //Other page
+    default:
         $image_default = true;
         //$image_alt = $breadcrumb_this_page;//todo, needed??
         $title = META_TAG_TITLE;
         $description = META_TAG_DESCRIPTION;
-    }
+
 }
+
+if ($page_type === 'category_products' || $page_type === 'category_subs') {
+    $category_name = zen_get_category_name($current_category_id);
+
+    if (!empty($category_name)) {
+        $category_image = zen_get_categories_image($current_category_id);
+
+        if (empty($category_image)) {
+            $image_default = true;
+        } else {
+            $image = HTTP_SERVER . DIR_WS_CATALOG . DIR_WS_IMAGES . $category_image;
+        }
+
+        if ($debug_sd) {
+            echo __LINE__ . ' $category_image=' . $category_image . '<br>';
+        }
+        $description = zen_get_category_description($current_category_id) !== '' ? zen_get_category_description($current_category_id) : META_TAG_DESCRIPTION;
+        $product_category_name = $category_name;//used for twitter title, it changes depending on if page is product or category
+        $image_alt = $category_name;
+        $facebook_type = 'product.group';
+        $title = META_TAG_TITLE;
+}
+    }
 
 // $description could be null from META_TAG_DESCRIPTION
 if (empty($description)) {
@@ -680,7 +682,7 @@ if ($locale_count > 1 && ($locale_count % 2 === 0)) { // is more than one value 
 }
 
 // build a Reviews array if not already created by the product_info page
-if ($is_product_page) {
+if ($page_type === 'product') {
     if (count($reviewsArr) === 0) {
         $ratingSum = 0;
         $ratingValue = 0;
@@ -1091,7 +1093,7 @@ if (PLUGIN_SDATA_SCHEMA_ENABLE === 'true') {
     ];
 
     // add description if home page
-    if (!$is_product_page && $breadcrumb_count === 1) {
+    if (!($page_type === 'product') && $breadcrumb_count === 1) {
         $webSiteSchema = [
             '@context' => 'https://schema.org',
             '@type' => 'WebSite',
@@ -1109,7 +1111,7 @@ if (PLUGIN_SDATA_SCHEMA_ENABLE === 'true') {
 </script>
 <?php
         $webPageSchema['description'] = META_TAG_DESCRIPTION;
-    } elseif (!$is_product_page && $breadcrumb_count > 1 ) {
+    } elseif (!($page_type === 'product') && $breadcrumb_count > 1 ) {
         // add the category description
         $webPageSchema['description'] = $description; // optional but recommended
     }
@@ -1117,7 +1119,7 @@ if (PLUGIN_SDATA_SCHEMA_ENABLE === 'true') {
 // eof Create web page schema
 
 // Product schema for product pages
-    if ($is_product_page) {
+    if ($page_type === 'product') {
 
         // Base Product schema
         $productSchema = [
@@ -1416,7 +1418,8 @@ if (PLUGIN_SDATA_FOG_ENABLE === 'true') {
     }
     $image = ($image_default ? $image_default_facebook : $image);
     if ($debug_sd) {
-        echo __LINE__ . ' $image_default=' . $image_default . '<br>';
+        echo __LINE__ . ' facebook, $image_default_facebook=' . $image_default_facebook . '<br>';
+        echo __LINE__ . ' $image=' . $image . '<br>';
     }
 ?>
     <meta property="og:image" content="<?= $image ?>">
