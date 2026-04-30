@@ -119,6 +119,9 @@ function sdata_prepare_string($string): string
  */
 function sdata_truncate($string, $max_length): string
 {
+    if (empty($string)) {
+    return '';
+    }
     $string_json = json_encode_sdata($string);
     $string_json_length = strlen($string_json);
     //encoded multibyte characters increase the length
