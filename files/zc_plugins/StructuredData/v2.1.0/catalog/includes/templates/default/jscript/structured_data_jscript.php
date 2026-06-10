@@ -1,4 +1,4 @@
-<?php //steve with personal hack
+<?php
 // DO NOT LET YOUR IDE RE-FORMAT THE CODE: it is structured so the HTML SOURCE is readable/the parentheses line up.
 declare(strict_types=1);
 
@@ -8,7 +8,7 @@ declare(strict_types=1);
  * @author: torvista
  * @link: https://github.com/torvista/Zen_Cart-Structured_Data
  * @license https://www.zen-cart.com/license/2_0.txt GNU Public License V2.0
- * @version structured_data_jscript.php torvista 26 Apr 2026
+ * @version structured_data_jscript.php 10 June 2026 torvista
  */
 
 /** directives for phpStorm code inspector
@@ -525,8 +525,8 @@ switch ($page_type) {
     case 'category_products':
 
         // spider may use a malformed url e.g. WEBSITE/?products_id=4097&disp_order=9&page=10
-        if (empty($_GET['cPath']) && !empty($_GET['products_id'])) {
-            $_GET['cPath'] = zen_get_generated_category_path_rev($current_category_id);
+        if (empty($_GET['cPath'])) {
+          $_GET['cPath'] = zen_get_generated_category_path_rev($current_category_id);
         }
 
         $listing_schema_name = 'Products';
