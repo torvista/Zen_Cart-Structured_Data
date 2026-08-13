@@ -268,7 +268,9 @@ switch ($page_type) {
         // TODO has description already been parsed/modified anyway?
         $description = zen_get_products_description($product_id);
         $description = sdata_prepare_string($description);
-        $title = htmlspecialchars(STORE_NAME . ' - ' . $product_name, ENT_QUOTES);
+        // NOTE: kept unescaped here (like $description/$category_name elsewhere in this file) -
+        // it's HTML-escaped once, at each point it's actually echoed into an attribute, below.
+        $title = STORE_NAME . ' - ' . $product_name;
         $weight = (float)($product_info->fields['products_weight'] === '0' ? PLUGIN_SDATA_DEFAULT_WEIGHT : $product_info->fields['products_weight']);
         $tax_class_id = (int)$product_info->fields['products_tax_class_id'];
         if ($product_info->fields['product_is_call'] === '1') {
@@ -1400,18 +1402,18 @@ if (PLUGIN_SDATA_FOG_ENABLE === 'true') {
 <?php
     }
 ?>
-    <meta property="og:title" content="<?= $title ?>">
-    <meta property="og:site_name" content="<?= STORE_NAME ?>">
+    <meta property="og:title" content="<?= htmlentities($title, ENT_QUOTES, CHARSET, false) ?>">
+    <meta property="og:site_name" content="<?= htmlentities(STORE_NAME, ENT_QUOTES, CHARSET, false) ?>">
     <meta property="og:url" content="<?= $canonicalLink ?>">
 <?php
     if (!empty($locale)) {
 ?>
-    <meta property="og:locale" content="<?= $locale ?>">
+    <meta property="og:locale" content="<?= htmlentities($locale, ENT_QUOTES, CHARSET, false) ?>">
 <?php
         if (count($locales_array) > 0) {
             foreach($locales_array as $key=>$value){
 ?>
-    <meta property="og:locale:alternate" content="<?= $value ?>">
+    <meta property="og:locale:alternate" content="<?= htmlentities($value, ENT_QUOTES, CHARSET, false) ?>">
 <?php
             }
         }
@@ -1448,46 +1450,46 @@ if (PLUGIN_SDATA_FOG_ENABLE === 'true') {
 <?php
     if ($facebook_type !== 'product') {
 ?>
-    <meta property="og:type" content="<?= PLUGIN_SDATA_FOG_TYPE_SITE ?>">
+    <meta property="og:type" content="<?= htmlentities(PLUGIN_SDATA_FOG_TYPE_SITE, ENT_QUOTES, CHARSET, false) ?>">
 <?php
         if (PLUGIN_SDATA_STREET_ADDRESS !== '') {
 ?>
-    <meta property="business:contact_data:street_address" content="<?= PLUGIN_SDATA_STREET_ADDRESS ?>">
+    <meta property="business:contact_data:street_address" content="<?= htmlentities(PLUGIN_SDATA_STREET_ADDRESS, ENT_QUOTES, CHARSET, false) ?>">
 <?php
         }
         if (PLUGIN_SDATA_LOCALITY !== '') {
 ?>
-    <meta property="business:contact_data:locality" content="<?= PLUGIN_SDATA_LOCALITY ?>">
+    <meta property="business:contact_data:locality" content="<?= htmlentities(PLUGIN_SDATA_LOCALITY, ENT_QUOTES, CHARSET, false) ?>">
 <?php
         }
         if (PLUGIN_SDATA_REGION !== '') {
  ?>
-    <meta property="business:contact_data:region" content="<?= PLUGIN_SDATA_REGION ?>">
+    <meta property="business:contact_data:region" content="<?= htmlentities(PLUGIN_SDATA_REGION, ENT_QUOTES, CHARSET, false) ?>">
 <?php
         }
         if (PLUGIN_SDATA_POSTALCODE !== '') {
 ?>
-    <meta property="business:contact_data:postal_code" content="<?= PLUGIN_SDATA_POSTALCODE ?>">
+    <meta property="business:contact_data:postal_code" content="<?= htmlentities(PLUGIN_SDATA_POSTALCODE, ENT_QUOTES, CHARSET, false) ?>">
 <?php
         }
         if (PLUGIN_SDATA_COUNTRYNAME !== '') {
 ?>
-    <meta property="business:contact_data:country_name" content="<?= PLUGIN_SDATA_COUNTRYNAME ?>">
+    <meta property="business:contact_data:country_name" content="<?= htmlentities(PLUGIN_SDATA_COUNTRYNAME, ENT_QUOTES, CHARSET, false) ?>">
 <?php
         }
         if (PLUGIN_SDATA_EMAIL !== '') {
 ?>
-    <meta property="business:contact_data:email" content="<?= PLUGIN_SDATA_EMAIL ?>">
+    <meta property="business:contact_data:email" content="<?= htmlentities(PLUGIN_SDATA_EMAIL, ENT_QUOTES, CHARSET, false) ?>">
 <?php
         }
         if (PLUGIN_SDATA_TELEPHONE !== '') {
 ?>
-    <meta property="business:contact_data:phone_number" content="<?= PLUGIN_SDATA_TELEPHONE ?>">
+    <meta property="business:contact_data:phone_number" content="<?= htmlentities(PLUGIN_SDATA_TELEPHONE, ENT_QUOTES, CHARSET, false) ?>">
 <?php
         }
         if (PLUGIN_SDATA_FAX !== '') {
 ?>
-    <meta property="business:contact_data:fax_number" content="<?= PLUGIN_SDATA_FAX ?>">
+    <meta property="business:contact_data:fax_number" content="<?= htmlentities(PLUGIN_SDATA_FAX, ENT_QUOTES, CHARSET, false) ?>">
 <?php
         }
 ?>
@@ -1497,26 +1499,31 @@ if (PLUGIN_SDATA_FOG_ENABLE === 'true') {
     } else {
 ?>
     <!-- Facebook structured data for product-->
-    <meta property="og:type" content="<?= trim(PLUGIN_SDATA_FOG_TYPE_PRODUCT) ?>">
+    <meta property="og:type" content="<?= htmlentities(trim(PLUGIN_SDATA_FOG_TYPE_PRODUCT), ENT_QUOTES, CHARSET, false) ?>">
     <meta property="product:availability" content="<?= (($product_base_stock > 0) ? 'instock' : $facebookAvailability[PLUGIN_SDATA_OOS_DEFAULT]) ?>">
-    <meta property="product:brand" content="<?= (isset($manufacturer_name) && trim($manufacturer_name) !== '')
-                    ? $manufacturer_name
-                    : (defined('STORE_NAME') ? STORE_NAME : '') ?>">
+    <meta property="product:brand" content="<?= htmlentities(
+                    (isset($manufacturer_name) && trim($manufacturer_name) !== '')
+                        ? $manufacturer_name
+                        : (defined('STORE_NAME') ? STORE_NAME : ''),
+                    ENT_QUOTES,
+                    CHARSET,
+                    false
+                ) ?>">
     <meta property="product:category" content="<?= htmlentities($category_name) ?>">
     <meta property="product:condition" content="<?= PLUGIN_SDATA_FOG_PRODUCT_CONDITION ?>">
 <?php
         if ($product_base_mpn !== '') {
 ?>
-    <meta property="product:mfr_part_no" content="<?= $product_base_mpn ?>">
+    <meta property="product:mfr_part_no" content="<?= htmlentities($product_base_mpn, ENT_QUOTES, CHARSET, false) ?>">
 <?php
         }
 ?>
     <meta property="product:price:amount" content="<?= $product_base_displayed_price ?>">
-    <meta property="product:price:currency" content="<?= PLUGIN_SDATA_PRICE_CURRENCY ?>">
+    <meta property="product:price:currency" content="<?= htmlentities(PLUGIN_SDATA_PRICE_CURRENCY, ENT_QUOTES, CHARSET, false) ?>">
     <meta property="product:product_link" content="<?= $canonicalLink ?>">
-    <meta property="product:retailer" content="<?= !empty(PLUGIN_SDATA_FOG_APPID) ? PLUGIN_SDATA_FOG_APPID : HTTP_SERVER . DIR_WS_CATALOG ?>">
+    <meta property="product:retailer" content="<?= !empty(PLUGIN_SDATA_FOG_APPID) ? htmlentities(PLUGIN_SDATA_FOG_APPID, ENT_QUOTES, CHARSET, false) : HTTP_SERVER . DIR_WS_CATALOG ?>">
     <meta property="product:retailer_category" content="<?= htmlentities($category_name) ?>">
-    <meta property="product:retailer_part_no" content="<?= $product_base_sku ?>">
+    <meta property="product:retailer_part_no" content="<?= htmlentities($product_base_sku, ENT_QUOTES, CHARSET, false) ?>">
     <!-- eof Facebook structured data -->
 <?php
     }
@@ -1527,8 +1534,8 @@ if (PLUGIN_SDATA_TWITTER_CARD_ENABLE === 'true') {
 ?>
     <!-- Twitter Card markup -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:site" content="<?= PLUGIN_SDATA_TWITTER_USERNAME ?>">
-    <meta name="twitter:title" content="<?= $title ?>">
+    <meta name="twitter:site" content="<?= htmlentities(PLUGIN_SDATA_TWITTER_USERNAME, ENT_QUOTES, CHARSET, false) ?>">
+    <meta name="twitter:title" content="<?= htmlentities($title, ENT_QUOTES, CHARSET, false) ?>">
     <meta name="twitter:description" content="<?= htmlentities($description) ?>">
 <?php
 $image = ($image_default ? $image_default_twitter : $image);
