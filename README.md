@@ -248,7 +248,10 @@ maximum size: approx. 1MB.
 ## Changelog
 See the commit history for all details.
 
-2026 01 26 - britainmark & torvista
+2026 08 13 - Dr.Byte
+- sanitation of admin-defined constants
+
+2026 01 26 - brittainmark & torvista
 - add schema for web page
 - add list items for category with sub-categories
 - use DEFAULT_CURRENCY instead of PLUGIN_SDATA_PRICE_CURRENCY

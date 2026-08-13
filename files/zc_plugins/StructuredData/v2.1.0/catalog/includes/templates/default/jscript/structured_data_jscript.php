@@ -8,7 +8,7 @@ declare(strict_types=1);
  * @author: torvista
  * @link: https://github.com/torvista/Zen_Cart-Structured_Data
  * @license https://www.zen-cart.com/license/2_0.txt GNU Public License V2.0
- * @version structured_data_jscript.php 10 June 2026 torvista
+ * @version structured_data_jscript.php 13 August 2026 Dr.Byte
  */
 
 /** directives for phpStorm code inspector
