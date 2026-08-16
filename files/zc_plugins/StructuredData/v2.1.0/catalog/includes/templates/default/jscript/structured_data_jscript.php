@@ -8,7 +8,7 @@ declare(strict_types=1);
  * @author: torvista
  * @link: https://github.com/torvista/Zen_Cart-Structured_Data
  * @license https://www.zen-cart.com/license/2_0.txt GNU Public License V2.0
- * @version structured_data_jscript.php 13 August 2026 Dr.Byte
+ * @version structured_data_jscript.php 16 August 2026 torvista
  */
 
 /** directives for phpStorm code inspector
@@ -611,7 +611,7 @@ if ($page_type === 'category_products' || $page_type === 'category_subs') {
         $product_category_name = $category_name;//used for twitter title, it changes depending on if page is product or category
         $image_alt = $category_name;
         $facebook_type = 'product.group';
-        $title = META_TAG_TITLE;
+        $title = !empty(META_TAG_TITLE) ? META_TAG_TITLE : '';
 }
     }
 
