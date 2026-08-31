@@ -1,5 +1,5 @@
-# Structured Data for Zen Cart v2.1.0
-Tested on Zen Cart 2.2.0+ on php 8+
+# Structured Data for Zen Cart v2.2.2
+Tested on Zen Cart 2.2.2+ on php 8+
 
 Encapsulated Plugin that adds Schema (in JSON-LD format), Facebook and Twitter structured markup to all pages.
 Schema markup is added in three blocks: organisation, breadcrumbs and product (including reviews).
