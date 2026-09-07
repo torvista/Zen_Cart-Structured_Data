@@ -8,7 +8,7 @@ declare(strict_types=1);
  * @author: torvista
  * @link: https://github.com/torvista/Zen_Cart-Structured_Data
  * @license https://www.zen-cart.com/license/2_0.txt GNU Public License V2.0
- * @version structured_data_jscript.php 16 August 2026 torvista
+ * @version structured_data_jscript.php 18 August 2026 torvista
  */
 
 /** directives for phpStorm code inspector
@@ -587,7 +587,7 @@ switch ($page_type) {
     default:
         $image_default = true;
         //$image_alt = $breadcrumb_this_page;//todo, needed??
-        $title = META_TAG_TITLE;
+        $title = !empty(META_TAG_TITLE) ? META_TAG_TITLE : '';
         $description = META_TAG_DESCRIPTION;
 
 }
